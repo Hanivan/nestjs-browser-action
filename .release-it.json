@@ -1,0 +1,39 @@
+{
+  "$schema": "https://unpkg.com/release-it@17/schema/release-it.json",
+  "git": {
+    "commitMessage": "chore: release v${version}",
+    "tagName": "v${version}",
+    "push": true,
+    "requireCleanWorkingDir": true,
+    "requireBranch": ["main", "master"],
+    "requireUpstream": true
+  },
+  "npm": {
+    "publish": true,
+    "skipChecks": false,
+    "allowBranch": ["main", "master"],
+    "versionArgs": ["--workspaces-update=false"]
+  },
+  "github": {
+    "release": true,
+    "releaseName": "v${version}",
+    "draft": false,
+    "preRelease": false,
+    "comments": {
+      "footer": "\n---\nAutomated release by [release-it](https://github.com/release-it/release-it)"
+    }
+  },
+  "plugins": {
+    "@release-it/conventional-changelog": {
+      "preset": "angular",
+      "infile": "CHANGELOG.md",
+      "header": "# Changelog",
+      "ignoreRecommendedBump": false
+    }
+  },
+  "hooks": {
+    "before:init": ["yarn test", "yarn build"],
+    "after:bump": ["yarn build"],
+    "after:release": "echo Successfully released ${name} v${version}!"
+  }
+}
