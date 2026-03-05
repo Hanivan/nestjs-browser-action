@@ -48,6 +48,7 @@ export class BrowserActionModule {
     const asyncOptionsProvider: Provider = {
       provide: BROWSER_ACTION_OPTIONS,
       useFactory: async (...args: any[]) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         return await options.useFactory(...args);
       },
       inject: options.inject || [],

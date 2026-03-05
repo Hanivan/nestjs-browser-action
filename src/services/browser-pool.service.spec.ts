@@ -19,7 +19,7 @@ describe('BrowserPoolService', () => {
 
     // Create mock browser factory
     puppeteer.launch.mockImplementation(async () => {
-      const mockBrowser: any = {
+      const mockBrowser: Partial<Browser> = {
         close: jest.fn().mockResolvedValue(undefined),
         newPage: jest.fn(),
         isConnected: jest.fn().mockReturnValue(true),

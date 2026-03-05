@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BrowserManagerService } from './browser-manager.service';
 import { BrowserPoolService } from './browser-pool.service';
+import { Browser } from 'puppeteer';
 
 describe('BrowserManagerService', () => {
   let service: BrowserManagerService;
@@ -31,7 +32,7 @@ describe('BrowserManagerService', () => {
   });
 
   it('should acquire browser from pool', async () => {
-    const mockBrowser = {} as any;
+    const mockBrowser: Partial<Browser> = {};
     (poolService.acquire as jest.Mock).mockResolvedValue(mockBrowser);
 
     const browser = await service.getBrowser();
@@ -40,8 +41,8 @@ describe('BrowserManagerService', () => {
   });
 
   it('should release browser back to pool', async () => {
-    const mockBrowser = {} as any;
-    service.releaseBrowser(mockBrowser);
+    const mockBrowser: Partial<Browser> = {};
+    service.releaseBrowser(mockBrowser as Browser);
 
     expect(poolService.release).toHaveBeenCalledWith(mockBrowser);
   });
