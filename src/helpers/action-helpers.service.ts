@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type {
   Page,
   ScreenshotOptions,
@@ -6,7 +6,6 @@ import type {
   ElementHandle,
 } from 'puppeteer';
 import { PageService } from '../services/page-service';
-import type { LogLevel } from '@nestjs/common';
 import type {
   WorkflowDefinition,
   WorkflowResult,
@@ -14,40 +13,17 @@ import type {
   ActionTarget,
   VariableContext,
 } from '../interfaces/workflow-options';
+import { LoggerWithLevel } from './logger.util';
 
 @Injectable()
 export class ActionHelpersService {
-  private readonly logger = new Logger(ActionHelpersService.name);
+  private readonly logger: LoggerWithLevel;
 
-  constructor(private readonly pageService: PageService) {}
-
-  private shouldLog(level: LogLevel): boolean {
-    const currentLevel = this.pageService.getLogLevel();
-    const levels: LogLevel[] = ['log', 'error', 'warn', 'debug', 'verbose'];
-    const currentLevelIndex = levels.indexOf(currentLevel);
-    const requestedLevelIndex = levels.indexOf(level);
-    return requestedLevelIndex <= currentLevelIndex;
-  }
-
-  private log(message: string, level: LogLevel = 'log'): void {
-    if (this.shouldLog(level)) {
-      switch (level) {
-        case 'error':
-          this.logger.error(message);
-          break;
-        case 'warn':
-          this.logger.warn(message);
-          break;
-        case 'debug':
-          this.logger.debug(message);
-          break;
-        case 'verbose':
-          this.logger.verbose(message);
-          break;
-        default:
-          this.logger.log(message);
-      }
-    }
+  constructor(private readonly pageService: PageService) {
+    this.logger = new LoggerWithLevel(
+      ActionHelpersService.name,
+      this.pageService.getLogLevel(),
+    );
   }
 
   async takeScreenshot(
@@ -55,7 +31,7 @@ export class ActionHelpersService {
     path: string,
     options?: ScreenshotOptions,
   ): Promise<Buffer> {
-    this.log(`Taking screenshot of ${url}`, 'debug');
+    this.logger.log(`Taking screenshot of ${url}`, 'debug');
     const page = await this.pageService.navigateTo(url);
     const result = await page.screenshot({ path, ...options });
     await this.pageService.closePage();
@@ -67,7 +43,7 @@ export class ActionHelpersService {
     path: string,
     options?: PDFOptions,
   ): Promise<Buffer> {
-    this.log(`Generating PDF for ${url}`, 'debug');
+    this.logger.log(`Generating PDF for ${url}`, 'debug');
     const page = await this.pageService.navigateTo(url);
     const pdf = await page.pdf({ path, ...options });
     await this.pageService.closePage();
@@ -78,7 +54,7 @@ export class ActionHelpersService {
     url: string,
     selectors: T,
   ): Promise<Partial<Record<keyof T, string>>> {
-    this.log(`Scraping ${url}`, 'debug');
+    this.logger.log(`Scraping ${url}`, 'debug');
     const page = await this.pageService.navigateTo(url);
 
     const result: Partial<Record<keyof T, string>> = {};
@@ -88,7 +64,7 @@ export class ActionHelpersService {
         const value = await page.$eval(selector, (el) => el.textContent);
         (result as Record<string, string>)[key] = value;
       } catch {
-        this.log(`Failed to scrape ${selector}`, 'warn');
+        this.logger.log(`Failed to scrape ${selector}`, 'warn');
         // Property remains undefined (optional in Partial type)
       }
     }
@@ -102,7 +78,7 @@ export class ActionHelpersService {
     selector: string,
     timeout?: number,
   ): Promise<Page> {
-    this.log(`Waiting for ${selector} on ${url}`, 'debug');
+    this.logger.log(`Waiting for ${selector} on ${url}`, 'debug');
     const page = await this.pageService.navigateTo(url);
     await page.waitForSelector(selector, { timeout });
     return page;
@@ -112,7 +88,7 @@ export class ActionHelpersService {
     url: string,
     script: string | (() => any),
   ): Promise<T> {
-    this.log(`Evaluating script on ${url}`, 'debug');
+    this.logger.log(`Evaluating script on ${url}`, 'debug');
     const page = await this.pageService.navigateTo(url);
     const result = await page.evaluate(script as string);
     await this.pageService.closePage();
@@ -124,7 +100,7 @@ export class ActionHelpersService {
     workflow: WorkflowDefinition,
     variables?: VariableContext,
   ): Promise<WorkflowResult & { data: T }> {
-    this.log(`Starting workflow execution for ${url}`, 'debug');
+    this.logger.log(`Starting workflow execution for ${url}`, 'debug');
     const page = await this.pageService.navigateTo(url);
     const result: WorkflowResult & { data: T } = {
       success: false,
@@ -143,7 +119,7 @@ export class ActionHelpersService {
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : String(error);
-          this.log(`Action failed: ${errorMessage}`, 'error');
+          this.logger.log(`Action failed: ${errorMessage}`, 'error');
 
           if (action.onError === 'continue' || action.onError === 'skip') {
             continue;
@@ -170,7 +146,7 @@ export class ActionHelpersService {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       result.errors.push(errorMessage);
-      this.log(`Workflow execution failed: ${errorMessage}`, 'error');
+      this.logger.log(`Workflow execution failed: ${errorMessage}`, 'error');
     } finally {
       await this.pageService.closePage();
     }
@@ -190,7 +166,10 @@ export class ActionHelpersService {
         action.condition,
       );
       if (!shouldExecute) {
-        this.log(`Skipping action due to condition: ${action.action}`, 'debug');
+        this.logger.log(
+          `Skipping action due to condition: ${action.action}`,
+          'debug',
+        );
         return;
       }
     }
@@ -254,9 +233,9 @@ export class ActionHelpersService {
           evalCode = value;
         }
 
-        this.log(`Evaluating: ${evalCode}`, 'debug');
+        this.logger.log(`Evaluating: ${evalCode}`, 'debug');
         const evalResult = await page.evaluate(evalCode);
-        this.log(`Result: ${JSON.stringify(evalResult)}`, 'debug');
+        this.logger.log(`Result: ${JSON.stringify(evalResult)}`, 'debug');
 
         if (action.id) {
           context[action.id] = evalResult;
@@ -294,52 +273,62 @@ export class ActionHelpersService {
     page: Page,
     target: ActionTarget,
   ): Promise<ElementHandle<Node> | null> {
+    // If shadow host is specified, find element within shadow root
+    if (target.shadowHost) {
+      return this.findElementInShadowRoot(page, target);
+    }
+
+    // Regular element lookup
     if (target.type === 'css') {
-      if (target.shadowHost) {
-        const host = await page.$(target.shadowHost);
-        if (!host) return null;
-        return host
-          .evaluateHandle((el: Element, selector: string) => {
-            const shadowRoot = el.shadowRoot;
-            if (!shadowRoot) return null;
-            return shadowRoot.querySelector(selector);
-          }, target.value)
-          .then((handle) => handle.asElement());
-      }
       return page.$(target.value) as Promise<ElementHandle<Node> | null>;
-    } else {
-      // For XPath
-      if (target.shadowHost) {
-        const host = await page.$(target.shadowHost);
-        if (!host) return null;
-        return host
-          .evaluateHandle((el: Element, selector: string) => {
-            const shadowRoot = el.shadowRoot;
-            if (!shadowRoot) return null;
-            const result = document.evaluate(
-              selector,
-              shadowRoot,
-              null,
-              XPathResult.FIRST_ORDERED_NODE_TYPE,
-              null,
-            );
-            return result.singleNodeValue;
-          }, target.value)
-          .then((handle) => handle.asElement());
-      }
-      return page
-        .evaluateHandle((selector: string) => {
+    }
+
+    // XPath lookup
+    return page
+      .evaluateHandle((selector: string) => {
+        const result = document.evaluate(
+          selector,
+          document,
+          null,
+          XPathResult.FIRST_ORDERED_NODE_TYPE,
+          null,
+        );
+        return result.singleNodeValue;
+      }, target.value)
+      .then((handle) => handle.asElement());
+  }
+
+  private async findElementInShadowRoot(
+    page: Page,
+    target: ActionTarget,
+  ): Promise<ElementHandle<Node> | null> {
+    const host = await page.$(target.shadowHost!);
+    if (!host) return null;
+
+    return host
+      .evaluateHandle(
+        (el: Element, selector: string, targetType: string) => {
+          const shadowRoot = el.shadowRoot;
+          if (!shadowRoot) return null;
+
+          if (targetType === 'css') {
+            return shadowRoot.querySelector(selector);
+          }
+
+          // XPath lookup in shadow root
           const result = document.evaluate(
             selector,
-            document,
+            shadowRoot,
             null,
             XPathResult.FIRST_ORDERED_NODE_TYPE,
             null,
           );
           return result.singleNodeValue;
-        }, target.value)
-        .then((handle) => handle.asElement());
-    }
+        },
+        target.value,
+        target.type,
+      )
+      .then((handle) => handle.asElement());
   }
 
   private async waitForTarget(
@@ -380,14 +369,7 @@ export class ActionHelpersService {
       throw new Error(`Element not found: ${target.value}`);
     }
 
-    if (options?.scrollTo) {
-      await element.evaluate(
-        (el: Element) =>
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' }),
-        {},
-      );
-      await this.wait(100);
-    }
+    await this.maybeScrollToElement(element, options?.scrollTo);
 
     // Cast to ElementHandle<Element> for Puppeteer methods
     const elem = element as ElementHandle<Element>;
@@ -411,14 +393,7 @@ export class ActionHelpersService {
       throw new Error(`Element not found: ${target.value}`);
     }
 
-    if (options?.scrollTo) {
-      await element.evaluate(
-        (el: Element) =>
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' }),
-        {},
-      );
-      await this.wait(100);
-    }
+    await this.maybeScrollToElement(element, options?.scrollTo);
 
     const elem = element as ElementHandle<Element>;
     await elem.click();
@@ -437,14 +412,7 @@ export class ActionHelpersService {
       throw new Error(`Element not found: ${target.value}`);
     }
 
-    if (options?.scrollTo) {
-      await element.evaluate(
-        (el: Element) =>
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' }),
-        {},
-      );
-      await this.wait(100);
-    }
+    await this.maybeScrollToElement(element, options?.scrollTo);
 
     const elem = element as ElementHandle<Element>;
     await elem.select(value);
@@ -459,11 +427,33 @@ export class ActionHelpersService {
       throw new Error(`Element not found: ${target.value}`);
     }
 
+    await this.scrollElementIntoView(element);
+  }
+
+  /**
+   * Scroll element into view if requested.
+   */
+  private async maybeScrollToElement(
+    element: ElementHandle<Node>,
+    shouldScroll: boolean | undefined,
+  ): Promise<void> {
+    if (shouldScroll) {
+      await this.scrollElementIntoView(element);
+    }
+  }
+
+  /**
+   * Scroll element into view with a small delay.
+   */
+  private async scrollElementIntoView(
+    element: ElementHandle<Node>,
+  ): Promise<void> {
     await element.evaluate(
       (el: Element) =>
         el.scrollIntoView({ behavior: 'smooth', block: 'center' }),
       {},
     );
+    await this.wait(100);
   }
 
   private async extractData(page: Page, target: ActionTarget): Promise<string> {

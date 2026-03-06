@@ -30,6 +30,7 @@ describe('PageService', () => {
           useValue: {
             getBrowser: jest.fn().mockResolvedValue(mockBrowser),
             releaseBrowser: jest.fn(),
+            getLogLevel: jest.fn().mockReturnValue('log' as const),
           },
         },
       ],

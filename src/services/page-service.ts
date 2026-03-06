@@ -1,47 +1,24 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type { Browser, Page, WaitForOptions } from 'puppeteer';
 import { BrowserManagerService } from './browser-manager.service';
 import type { LogLevel } from '@nestjs/common';
+import { LoggerWithLevel } from '../helpers/logger.util';
 
 @Injectable()
 export class PageService {
-  private readonly logger = new Logger(PageService.name);
+  private readonly logger: LoggerWithLevel;
   private currentBrowser?: Browser;
   private currentPage?: Page;
 
-  constructor(private readonly browserManager: BrowserManagerService) {}
-
-  private shouldLog(level: LogLevel): boolean {
-    const currentLevel = this.browserManager.getLogLevel();
-    const levels: LogLevel[] = ['log', 'error', 'warn', 'debug', 'verbose'];
-    const currentLevelIndex = levels.indexOf(currentLevel);
-    const requestedLevelIndex = levels.indexOf(level);
-    return requestedLevelIndex <= currentLevelIndex;
-  }
-
-  private log(message: string, level: LogLevel = 'log'): void {
-    if (this.shouldLog(level)) {
-      switch (level) {
-        case 'error':
-          this.logger.error(message);
-          break;
-        case 'warn':
-          this.logger.warn(message);
-          break;
-        case 'debug':
-          this.logger.debug(message);
-          break;
-        case 'verbose':
-          this.logger.verbose(message);
-          break;
-        default:
-          this.logger.log(message);
-      }
-    }
+  constructor(private readonly browserManager: BrowserManagerService) {
+    this.logger = new LoggerWithLevel(
+      PageService.name,
+      this.browserManager.getLogLevel(),
+    );
   }
 
   async createPage(): Promise<Page> {
-    this.log('Creating new page', 'debug');
+    this.logger.log('Creating new page', 'debug');
     this.currentBrowser = await this.browserManager.getBrowser();
     this.currentPage = await this.currentBrowser.newPage();
     return this.currentPage;
@@ -51,7 +28,7 @@ export class PageService {
     if (!this.currentPage) {
       await this.createPage();
     }
-    this.log(`Navigating to ${url}`, 'debug');
+    this.logger.log(`Navigating to ${url}`, 'debug');
     if (this.currentPage) {
       await this.currentPage.goto(url, options);
       return this.currentPage;
@@ -79,6 +56,6 @@ export class PageService {
   }
 
   getLogLevel(): LogLevel {
-    return this.browserManager.getLogLevel();
+    return this.logger.getLogLevel();
   }
 }

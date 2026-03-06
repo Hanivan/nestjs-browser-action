@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BrowserPoolService } from './browser-pool.service';
 import { Browser } from 'puppeteer';
+import { BROWSER_ACTION_OPTIONS } from '../constants/browser-action.constants';
 
 // Mock puppeteer
 jest.mock('puppeteer', () => ({
@@ -12,6 +13,12 @@ const puppeteer = require('puppeteer');
 describe('BrowserPoolService', () => {
   let service: BrowserPoolService;
   let mockBrowsers: Browser[] = [];
+
+  const mockOptions = {
+    launchOptions: { headless: true },
+    pool: { min: 2, max: 5 },
+    logLevel: 'log' as const,
+  };
 
   beforeEach(async () => {
     // Reset mocks
@@ -30,7 +37,13 @@ describe('BrowserPoolService', () => {
     });
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [BrowserPoolService],
+      providers: [
+        BrowserPoolService,
+        {
+          provide: BROWSER_ACTION_OPTIONS,
+          useValue: mockOptions,
+        },
+      ],
     }).compile();
 
     service = module.get<BrowserPoolService>(BrowserPoolService);
@@ -46,15 +59,14 @@ describe('BrowserPoolService', () => {
   });
 
   it('should initialize pool with min browsers on module init', async () => {
-    const launchOptions = { headless: true };
-    await service.onModuleInit(launchOptions, 2, 5);
+    await service.onModuleInit();
 
     expect(service.getPoolSize()).toBe(2);
     expect(puppeteer.launch).toHaveBeenCalledTimes(2);
   });
 
   it('should acquire browser from pool', async () => {
-    await service.onModuleInit({ headless: true }, 2, 5);
+    await service.onModuleInit();
     const browser = await service.acquire();
 
     expect(browser).toBeDefined();
@@ -62,7 +74,7 @@ describe('BrowserPoolService', () => {
   });
 
   it('should release browser back to pool', async () => {
-    await service.onModuleInit({ headless: true }, 2, 5);
+    await service.onModuleInit();
     const browser = await service.acquire();
     service.release(browser);
 
@@ -71,7 +83,7 @@ describe('BrowserPoolService', () => {
   });
 
   it('should close all browsers on module destroy', async () => {
-    await service.onModuleInit({ headless: true }, 2, 5);
+    await service.onModuleInit();
 
     await service.onModuleDestroy();
 

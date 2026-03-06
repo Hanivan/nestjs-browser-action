@@ -25,6 +25,7 @@ describe('ActionHelpersService', () => {
         await mockPage.goto(url);
         return mockPage;
       }),
+      getLogLevel: jest.fn().mockReturnValue('log' as const),
     };
 
     const module: TestingModule = await Test.createTestingModule({

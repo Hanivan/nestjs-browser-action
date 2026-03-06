@@ -2,7 +2,6 @@ import {
   Injectable,
   OnModuleInit,
   OnModuleDestroy,
-  Logger,
   Inject,
 } from '@nestjs/common';
 import type { Browser, LaunchOptions } from 'puppeteer';
@@ -10,10 +9,11 @@ import * as puppeteer from 'puppeteer';
 import { BROWSER_ACTION_OPTIONS } from '../constants/browser-action.constants';
 import type { BrowserActionOptions } from '../interfaces/browser-action-options';
 import type { LogLevel } from '@nestjs/common';
+import { LoggerWithLevel } from '../helpers/logger.util';
 
 @Injectable()
 export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(BrowserPoolService.name);
+  private readonly logger: LoggerWithLevel;
   private pool: Browser[] = [];
   private available: Set<Browser> = new Set();
   private inUse: Set<Browser> = new Set();
@@ -21,22 +21,24 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
   private minSize: number = 2;
   private maxSize: number = 10;
   private currentIndex: number = 0;
-  private logLevel: LogLevel = 'log';
 
   constructor(
     @Inject(BROWSER_ACTION_OPTIONS)
     private readonly options: BrowserActionOptions,
-  ) {}
+  ) {
+    this.logger = new LoggerWithLevel(
+      BrowserPoolService.name,
+      options.logLevel || 'log',
+    );
+  }
 
   async onModuleInit() {
     this.launchOptions = this.options.launchOptions || {};
     this.minSize = this.options.pool?.min || 2;
     this.maxSize = this.options.pool?.max || 10;
-    this.logLevel = this.options.logLevel || 'log';
 
-    this.log(
+    this.logger.log(
       `Initializing browser pool (min: ${this.minSize}, max: ${this.maxSize})`,
-      'log',
     );
 
     for (let i = 0; i < this.minSize; i++) {
@@ -45,53 +47,24 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
       this.available.add(browser);
     }
 
-    this.log(
+    this.logger.log(
       `Browser pool initialized with ${this.pool.length} browsers`,
-      'log',
     );
   }
 
-  private shouldLog(level: LogLevel): boolean {
-    const levels: LogLevel[] = ['log', 'error', 'warn', 'debug', 'verbose'];
-    const currentLevelIndex = levels.indexOf(this.logLevel);
-    const requestedLevelIndex = levels.indexOf(level);
-    return requestedLevelIndex <= currentLevelIndex;
-  }
-
-  private log(message: string, level: LogLevel = 'log'): void {
-    if (this.shouldLog(level)) {
-      switch (level) {
-        case 'error':
-          this.logger.error(message);
-          break;
-        case 'warn':
-          this.logger.warn(message);
-          break;
-        case 'debug':
-          this.logger.debug(message);
-          break;
-        case 'verbose':
-          this.logger.verbose(message);
-          break;
-        default:
-          this.logger.log(message);
-      }
-    }
-  }
-
   getLogLevel(): LogLevel {
-    return this.logLevel;
+    return this.logger.getLogLevel();
   }
 
   private async createBrowser(): Promise<Browser> {
     try {
       const browser = await puppeteer.launch(this.launchOptions);
       browser.on('disconnected', () => {
-        this.logger.warn('Browser disconnected');
+        this.logger.log('Browser disconnected', 'warn');
       });
       return browser;
     } catch (error) {
-      this.logger.error('Failed to launch browser', error);
+      this.logger.log('Failed to launch browser', 'error');
       throw error;
     }
   }
@@ -121,7 +94,7 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
     return browser;
   }
 
-  private async waitForAvailable(): Promise<void> {
+  private waitForAvailable(): Promise<void> {
     return new Promise((resolve) => {
       const checkInterval = setInterval(() => {
         if (this.available.size > 0) {
@@ -155,8 +128,8 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
           if (browser.isConnected()) {
             await browser.close();
           }
-        } catch (error) {
-          this.logger.error('Error closing browser', error);
+        } catch {
+          this.logger.log('Error closing browser', 'error');
         }
       }),
     );

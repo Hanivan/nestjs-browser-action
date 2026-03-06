@@ -47,8 +47,7 @@ export class BrowserActionModule {
   static forRootAsync(options: BrowserActionAsyncModuleOptions): DynamicModule {
     const asyncOptionsProvider: Provider = {
       provide: BROWSER_ACTION_OPTIONS,
-      useFactory: async (...args: any[]) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      useFactory: async (...args: unknown[]) => {
         return await options.useFactory(...args);
       },
       inject: options.inject || [],

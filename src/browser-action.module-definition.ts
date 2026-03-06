@@ -1,4 +1,4 @@
-import { ModuleMetadata } from '@nestjs/common';
+import { ModuleMetadata, Type } from '@nestjs/common';
 import { BrowserActionOptions } from './interfaces';
 
 export type BrowserActionModuleOptions = BrowserActionOptions;
@@ -8,7 +8,7 @@ export interface BrowserActionAsyncModuleOptions extends Pick<
   'imports'
 > {
   useFactory: (
-    ...args: any[]
+    ...args: unknown[]
   ) => Promise<BrowserActionModuleOptions> | BrowserActionModuleOptions;
-  inject?: any[];
+  inject?: Array<Type | string | symbol>;
 }
