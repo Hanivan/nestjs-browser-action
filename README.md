@@ -145,6 +145,83 @@ const data = await this.actionHelpers.scrape('https://example.com', {
 });
 ```
 
+### Workflow-Based Automation
+
+Automate complex browser interactions with declarative workflows:
+
+```typescript
+import type { WorkflowDefinition } from '@hanivanrizky/nestjs-browser-action';
+
+const workflow: WorkflowDefinition = {
+  version: '1.0',
+  actions: [
+    {
+      action: 'navigate',
+      value: '${baseUrl}',
+    },
+    {
+      action: 'waitFor',
+      target: { type: 'css', value: '#search-input' },
+      options: { timeout: 10000 },
+    },
+    {
+      action: 'type',
+      target: { type: 'css', value: '#search-input' },
+      value: '${searchQuery}',
+      options: { delay: 50, scrollTo: true },
+    },
+    {
+      action: 'click',
+      target: { type: 'css', value: 'button[type="submit"]' },
+      options: { scrollTo: true, waitForNavigation: true },
+    },
+    {
+      id: 'firstResult',
+      action: 'extract',
+      target: { type: 'css', value: '.search-result:first-child h3' },
+    },
+  ],
+  onError: {
+    screenshot: true,
+    screenshotPath: './error-screenshot.png',
+    continue: false,
+  },
+};
+
+const result = await this.actionHelpers.scrapeWithActions<{
+  firstResult: string;
+}>('https://example.com', workflow, {
+  baseUrl: 'https://example.com/search',
+  searchQuery: 'NestJS browser automation',
+});
+
+console.log(result.data.firstResult);
+console.log(result.success); // true if workflow completed successfully
+```
+
+**Supported Action Types:**
+- `navigate` - Navigate to URL
+- `wait` - Wait for specified time (in seconds)
+- `waitFor` - Wait for element to appear
+- `click` - Click on element
+- `type` - Type text into input
+- `select` - Select dropdown option
+- `scroll` - Scroll to element
+- `extract` - Extract text from element
+- `screenshot` - Take screenshot
+- `evaluate` - Execute JavaScript
+
+**Features:**
+- Variable interpolation with `${variableName}`
+- Conditional execution (ifExists/unlessExists)
+- XPath and CSS selectors
+- Shadow DOM support
+- Error handling with screenshots
+- Retry logic
+- Type-safe results
+
+For detailed documentation, see [SCRAPE_WITH_ACTIONS.md](./SCRAPE_WITH_ACTIONS.md)
+
 ### Custom Browser Control
 
 ```typescript
@@ -173,6 +250,7 @@ await this.pageService.closePage();
 | pool.idleTimeoutMs | number | 30000 | Idle timeout in milliseconds |
 | pool.strategy | 'round-robin' \| 'least-recently-used' | 'round-robin' | Pool selection strategy |
 | multiContext | boolean | false | Enable multi-context support |
+| logLevel | 'log' \| 'error' \| 'warn' \| 'debug' \| 'verbose' | 'log' | Logging verbosity level |
 
 ## API
 
@@ -194,6 +272,7 @@ await this.pageService.closePage();
 - `takeScreenshot(url, path, options?)`: Take screenshot of URL
 - `generatePDF(url, path, options?)`: Generate PDF of URL
 - `scrape(url, selectors)`: Scrape data from URL
+- `scrapeWithActions(url, workflow, variables?)`: Execute workflow-based automation
 - `waitForSelector(url, selector, timeout?)`: Wait for selector
 - `evaluate(url, script)`: Execute JavaScript in page
 
