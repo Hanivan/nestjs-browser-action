@@ -1,7 +1,12 @@
 # @hanivanrizky/nestjs-browser-action
 
 [![npm version](https://badge.fury.io/js/%40hanivanrizky%2Fnestjs-browser-action.svg)](https://www.npmjs.com/package/@hanivanrizky/nestjs-browser-action)
-[![License: MIT](https://img.shandler.com/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+
+> **⚠️ Status: Experimental**
+>
+> This project is currently in **experimental** stage and intended for **personal use only**. The API is subject to change, and production use is not recommended.
 
 A NestJS module that provides Puppeteer-based browser automation with configurable options and connection pooling.
 
@@ -26,10 +31,10 @@ npm install git+https://github.com/hanivanrizky/nestjs-browser-action.git puppet
 yarn add git+https://github.com/hanivanrizky/nestjs-browser-action.git puppeteer
 
 # Install from specific release tag
-npm install git+https://github.com/hanivanrizky/nestjs-browser-action.git#v1.0.0 puppeteer
+npm install git+https://github.com/hanivanrizky/nestjs-browser-action.git#v0.0.1-experimental puppeteer
 
 # Install from specific branch
-npm install git+https://github.com/hanivanrizky/nestjs-browser-action.git#develop puppeteer
+npm install git+https://github.com/hanivanrizky/nestjs-browser-action.git#main puppeteer
 
 # Install from specific commit
 npm install git+https://github.com/hanivanrizky/nestjs-browser-action.git#a1b2c3d puppeteer
@@ -38,11 +43,8 @@ npm install git+https://github.com/hanivanrizky/nestjs-browser-action.git#a1b2c3
 npm install git+ssh://git@github.com:hanivanrizky/nestjs-browser-action.git puppeteer
 ```
 
-**Note:** When installing from GitHub, the package will be installed as `nestjs-browser-action` instead of `@hanivanrizky/nestjs-browser-action`. Adjust your imports accordingly:
+**Note:** The package will be installed as `@hanivanrizky/nestjs-browser-action` when installed from GitHub, same as the npm package name. Use the same import statement:
 
-```typescript
-import { BrowserActionModule } from 'nestjs-browser-action';
-```
 
 ## Quick Start
 
@@ -241,16 +243,16 @@ await this.pageService.closePage();
 
 ### BrowserActionOptions
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| launchOptions | LaunchOptions | { headless: true } | Puppeteer launch options |
-| contextOptions | BrowserContextOptions | { viewport: { width: 1920, height: 1080 } } | Browser context options |
-| pool.min | number | 2 | Minimum pool size |
-| pool.max | number | 10 | Maximum pool size |
-| pool.idleTimeoutMs | number | 30000 | Idle timeout in milliseconds |
-| pool.strategy | 'round-robin' \| 'least-recently-used' | 'round-robin' | Pool selection strategy |
-| multiContext | boolean | false | Enable multi-context support |
-| logLevel | 'log' \| 'error' \| 'warn' \| 'debug' \| 'verbose' | 'log' | Logging verbosity level |
+| Option             | Type                                               | Default                                     | Description                  |
+| ------------------ | -------------------------------------------------- | ------------------------------------------- | ---------------------------- |
+| launchOptions      | LaunchOptions                                      | { headless: true }                          | Puppeteer launch options     |
+| contextOptions     | BrowserContextOptions                              | { viewport: { width: 1920, height: 1080 } } | Browser context options      |
+| pool.min           | number                                             | 2                                           | Minimum pool size            |
+| pool.max           | number                                             | 10                                          | Maximum pool size            |
+| pool.idleTimeoutMs | number                                             | 30000                                       | Idle timeout in milliseconds |
+| pool.strategy      | 'round-robin' \| 'least-recently-used'             | 'round-robin'                               | Pool selection strategy      |
+| multiContext       | boolean                                            | false                                       | Enable multi-context support |
+| logLevel           | 'log' \| 'error' \| 'warn' \| 'debug' \| 'verbose' | 'log'                                       | Logging verbosity level      |
 
 ## API
 
