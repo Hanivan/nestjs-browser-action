@@ -243,7 +243,21 @@ export class ActionHelpersService {
       }
 
       case 'evaluate': {
-        const evalResult = await page.evaluate(value);
+        // Handle arrow functions: '() => expr' becomes (() => expr)()
+        // Handle raw expressions: 'expr' becomes expr
+        let evalCode: string;
+        if (value.includes('=>')) {
+          // It's an arrow function, wrap and execute it
+          evalCode = `(${value})()`;
+        } else {
+          // It's a raw expression or already has return
+          evalCode = value;
+        }
+
+        this.log(`Evaluating: ${evalCode}`, 'debug');
+        const evalResult = await page.evaluate(evalCode);
+        this.log(`Result: ${JSON.stringify(evalResult)}`, 'debug');
+
         if (action.id) {
           context[action.id] = evalResult;
         }
