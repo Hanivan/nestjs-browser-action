@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Page, ScreenshotOptions, PDFOptions } from 'puppeteer';
+import type { Page, ScreenshotOptions, PDFOptions } from 'puppeteer';
 import { PageService } from '../services/page-service';
+import type { LogLevel } from '@nestjs/common';
 
 @Injectable()
 export class ActionHelpersService {
@@ -8,12 +9,41 @@ export class ActionHelpersService {
 
   constructor(private readonly pageService: PageService) {}
 
+  private shouldLog(level: LogLevel): boolean {
+    const currentLevel = this.pageService.getLogLevel();
+    const levels: LogLevel[] = ['log', 'error', 'warn', 'debug', 'verbose'];
+    const currentLevelIndex = levels.indexOf(currentLevel);
+    const requestedLevelIndex = levels.indexOf(level);
+    return requestedLevelIndex <= currentLevelIndex;
+  }
+
+  private log(message: string, level: LogLevel = 'log'): void {
+    if (this.shouldLog(level)) {
+      switch (level) {
+        case 'error':
+          this.logger.error(message);
+          break;
+        case 'warn':
+          this.logger.warn(message);
+          break;
+        case 'debug':
+          this.logger.debug(message);
+          break;
+        case 'verbose':
+          this.logger.verbose(message);
+          break;
+        default:
+          this.logger.log(message);
+      }
+    }
+  }
+
   async takeScreenshot(
     url: string,
     path: string,
     options?: ScreenshotOptions,
   ): Promise<Buffer> {
-    this.logger.debug(`Taking screenshot of ${url}`);
+    this.log(`Taking screenshot of ${url}`, 'debug');
     const page = await this.pageService.navigateTo(url);
     const result = await page.screenshot({ path, ...options });
     await this.pageService.closePage();
@@ -25,18 +55,18 @@ export class ActionHelpersService {
     path: string,
     options?: PDFOptions,
   ): Promise<Buffer> {
-    this.logger.debug(`Generating PDF for ${url}`);
+    this.log(`Generating PDF for ${url}`, 'debug');
     const page = await this.pageService.navigateTo(url);
     const pdf = await page.pdf({ path, ...options });
     await this.pageService.closePage();
-    return pdf;
+    return Buffer.from(pdf);
   }
 
   async scrape<T extends Record<string, string>>(
     url: string,
     selectors: T,
   ): Promise<Partial<Record<keyof T, string>>> {
-    this.logger.debug(`Scraping ${url}`);
+    this.log(`Scraping ${url}`, 'debug');
     const page = await this.pageService.navigateTo(url);
 
     const result: Partial<Record<keyof T, string>> = {};
@@ -46,7 +76,7 @@ export class ActionHelpersService {
         const value = await page.$eval(selector, (el) => el.textContent);
         (result as Record<string, string>)[key] = value;
       } catch {
-        this.logger.warn(`Failed to scrape ${selector}`);
+        this.log(`Failed to scrape ${selector}`, 'warn');
         // Property remains undefined (optional in Partial type)
       }
     }
@@ -60,7 +90,7 @@ export class ActionHelpersService {
     selector: string,
     timeout?: number,
   ): Promise<Page> {
-    this.logger.debug(`Waiting for ${selector} on ${url}`);
+    this.log(`Waiting for ${selector} on ${url}`, 'debug');
     const page = await this.pageService.navigateTo(url);
     await page.waitForSelector(selector, { timeout });
     return page;
@@ -70,7 +100,7 @@ export class ActionHelpersService {
     url: string,
     script: string | (() => any),
   ): Promise<T> {
-    this.logger.debug(`Evaluating script on ${url}`);
+    this.log(`Evaluating script on ${url}`, 'debug');
     const page = await this.pageService.navigateTo(url);
     const result = await page.evaluate(script as string);
     await this.pageService.closePage();

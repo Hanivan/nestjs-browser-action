@@ -1,6 +1,6 @@
 {
   "name": "@hanivanrizky/nestjs-browser-action",
-  "version": "0.0.1",
+  "version": "0.0.1-experimental",
   "description": "Puppeteer-based browser automation module for NestJS",
   "author": "",
   "license": "MIT",
@@ -28,7 +28,7 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "puppeteer": "^22.0.0"
+    "puppeteer": "^24.38.0"
   },
   "peerDependencies": {
     "@nestjs/common": "^11.0.0",

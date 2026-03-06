@@ -3,9 +3,13 @@ import {
   OnModuleInit,
   OnModuleDestroy,
   Logger,
+  Inject,
 } from '@nestjs/common';
-import { Browser, LaunchOptions } from 'puppeteer';
+import type { Browser, LaunchOptions } from 'puppeteer';
 import * as puppeteer from 'puppeteer';
+import { BROWSER_ACTION_OPTIONS } from '../constants/browser-action.constants';
+import type { BrowserActionOptions } from '../interfaces/browser-action-options';
+import type { LogLevel } from '@nestjs/common';
 
 @Injectable()
 export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
@@ -17,18 +21,22 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
   private minSize: number = 2;
   private maxSize: number = 10;
   private currentIndex: number = 0;
+  private logLevel: LogLevel = 'log';
 
-  async onModuleInit(
-    launchOptions?: LaunchOptions,
-    min?: number,
-    max?: number,
-  ) {
-    this.launchOptions = launchOptions || ({} as LaunchOptions);
-    this.minSize = min || 2;
-    this.maxSize = max || 10;
+  constructor(
+    @Inject(BROWSER_ACTION_OPTIONS)
+    private readonly options: BrowserActionOptions,
+  ) {}
 
-    this.logger.log(
+  async onModuleInit() {
+    this.launchOptions = this.options.launchOptions || {};
+    this.minSize = this.options.pool?.min || 2;
+    this.maxSize = this.options.pool?.max || 10;
+    this.logLevel = this.options.logLevel || 'log';
+
+    this.log(
       `Initializing browser pool (min: ${this.minSize}, max: ${this.maxSize})`,
+      'log',
     );
 
     for (let i = 0; i < this.minSize; i++) {
@@ -37,9 +45,42 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
       this.available.add(browser);
     }
 
-    this.logger.log(
+    this.log(
       `Browser pool initialized with ${this.pool.length} browsers`,
+      'log',
     );
+  }
+
+  private shouldLog(level: LogLevel): boolean {
+    const levels: LogLevel[] = ['log', 'error', 'warn', 'debug', 'verbose'];
+    const currentLevelIndex = levels.indexOf(this.logLevel);
+    const requestedLevelIndex = levels.indexOf(level);
+    return requestedLevelIndex <= currentLevelIndex;
+  }
+
+  private log(message: string, level: LogLevel = 'log'): void {
+    if (this.shouldLog(level)) {
+      switch (level) {
+        case 'error':
+          this.logger.error(message);
+          break;
+        case 'warn':
+          this.logger.warn(message);
+          break;
+        case 'debug':
+          this.logger.debug(message);
+          break;
+        case 'verbose':
+          this.logger.verbose(message);
+          break;
+        default:
+          this.logger.log(message);
+      }
+    }
+  }
+
+  getLogLevel(): LogLevel {
+    return this.logLevel;
   }
 
   private async createBrowser(): Promise<Browser> {
