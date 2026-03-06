@@ -17,3 +17,10 @@ export const DEFAULT_CONTEXT_OPTIONS = {
     height: 1080,
   },
 };
+
+// Workflow action defaults
+export const DEFAULT_ACTION_TIMEOUT = 30000;
+export const DEFAULT_NAVIGATION_TIMEOUT = 30000;
+export const DEFAULT_SCROLL_DELAY_MS = 100;
+export const DEFAULT_SCREENSHOT_FILENAME = 'screenshot';
+export const DEFAULT_ERROR_SCREENSHOT_FILENAME = 'error';

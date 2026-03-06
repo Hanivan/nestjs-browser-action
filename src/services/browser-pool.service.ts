@@ -6,7 +6,10 @@ import {
 } from '@nestjs/common';
 import type { Browser, LaunchOptions } from 'puppeteer';
 import * as puppeteer from 'puppeteer';
-import { BROWSER_ACTION_OPTIONS } from '../constants/browser-action.constants';
+import {
+  BROWSER_ACTION_OPTIONS,
+  DEFAULT_POOL_OPTIONS,
+} from '../constants/browser-action.constants';
 import type { BrowserActionOptions } from '../interfaces/browser-action-options';
 import type { LogLevel } from '@nestjs/common';
 import { LoggerWithLevel } from '../helpers/logger.util';
@@ -18,8 +21,8 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
   private available: Set<Browser> = new Set();
   private inUse: Set<Browser> = new Set();
   private launchOptions: LaunchOptions = {};
-  private minSize: number = 2;
-  private maxSize: number = 10;
+  private minSize: number = DEFAULT_POOL_OPTIONS.min;
+  private maxSize: number = DEFAULT_POOL_OPTIONS.max;
   private currentIndex: number = 0;
 
   constructor(
@@ -34,8 +37,8 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     this.launchOptions = this.options.launchOptions || {};
-    this.minSize = this.options.pool?.min || 2;
-    this.maxSize = this.options.pool?.max || 10;
+    this.minSize = this.options.pool?.min || DEFAULT_POOL_OPTIONS.min;
+    this.maxSize = this.options.pool?.max || DEFAULT_POOL_OPTIONS.max;
 
     this.logger.log(
       `Initializing browser pool (min: ${this.minSize}, max: ${this.maxSize})`,

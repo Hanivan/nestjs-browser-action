@@ -14,6 +14,13 @@ import type {
   VariableContext,
 } from '../interfaces/workflow-options';
 import { LoggerWithLevel } from './logger.util';
+import {
+  DEFAULT_ACTION_TIMEOUT,
+  DEFAULT_NAVIGATION_TIMEOUT,
+  DEFAULT_SCROLL_DELAY_MS,
+  DEFAULT_SCREENSHOT_FILENAME,
+  DEFAULT_ERROR_SCREENSHOT_FILENAME,
+} from '../constants/browser-action.constants';
 
 @Injectable()
 export class ActionHelpersService {
@@ -127,7 +134,8 @@ export class ActionHelpersService {
 
           if (errorConfig.screenshot) {
             const screenshotPath =
-              errorConfig.screenshotPath || `error-${Date.now()}.png`;
+              errorConfig.screenshotPath ||
+              `${DEFAULT_ERROR_SCREENSHOT_FILENAME}-${Date.now()}.png`;
             await page.screenshot({ path: screenshotPath });
             result.screenshots?.push(screenshotPath);
           }
@@ -215,7 +223,7 @@ export class ActionHelpersService {
 
       case 'screenshot': {
         const screenshotPath = String(
-          action.value || `screenshot-${Date.now()}.png`,
+          action.value || `${DEFAULT_SCREENSHOT_FILENAME}-${Date.now()}.png`,
         );
         await page.screenshot({ path: screenshotPath });
         break;
@@ -336,7 +344,7 @@ export class ActionHelpersService {
     target: ActionTarget,
     options?: WorkflowAction['options'],
   ): Promise<void> {
-    const timeout = options?.timeout || 30000;
+    const timeout = options?.timeout || DEFAULT_ACTION_TIMEOUT;
 
     if (target.type === 'css') {
       await page.waitForSelector(target.value, { timeout });
@@ -377,7 +385,7 @@ export class ActionHelpersService {
 
     if (options?.waitForNavigation) {
       await page.waitForNavigation({
-        timeout: options.navigationTimeout || 30000,
+        timeout: options.navigationTimeout || DEFAULT_NAVIGATION_TIMEOUT,
       });
     }
   }
@@ -453,7 +461,7 @@ export class ActionHelpersService {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' }),
       {},
     );
-    await this.wait(100);
+    await this.wait(DEFAULT_SCROLL_DELAY_MS / 1000);
   }
 
   private async extractData(page: Page, target: ActionTarget): Promise<string> {
