@@ -7,6 +7,7 @@ import { BrowserPoolService } from './services/browser-pool.service';
 import { BrowserManagerService } from './services/browser-manager.service';
 import { PageService } from './services/page-service';
 import { ActionHelpersService } from './helpers/action-helpers.service';
+import { CookieService } from './services/cookie.service';
 import { BROWSER_ACTION_OPTIONS } from './constants';
 
 @Global()
@@ -39,8 +40,14 @@ export class BrowserActionModule {
         BrowserManagerService,
         PageService,
         ActionHelpersService,
+        CookieService,
       ],
-      exports: [BrowserManagerService, PageService, ActionHelpersService],
+      exports: [
+        BrowserManagerService,
+        PageService,
+        ActionHelpersService,
+        CookieService,
+      ],
     };
   }
 
@@ -62,8 +69,14 @@ export class BrowserActionModule {
         BrowserManagerService,
         PageService,
         ActionHelpersService,
+        CookieService,
       ],
-      exports: [BrowserManagerService, PageService, ActionHelpersService],
+      exports: [
+        BrowserManagerService,
+        PageService,
+        ActionHelpersService,
+        CookieService,
+      ],
     };
   }
 

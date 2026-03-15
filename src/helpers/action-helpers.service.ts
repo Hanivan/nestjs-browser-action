@@ -6,6 +6,7 @@ import type {
   ElementHandle,
 } from 'puppeteer';
 import { PageService } from '../services/page-service';
+import { CookieService } from '../services/cookie.service';
 import type {
   WorkflowDefinition,
   WorkflowResult,
@@ -26,7 +27,10 @@ import {
 export class ActionHelpersService {
   private readonly logger: LoggerWithLevel;
 
-  constructor(private readonly pageService: PageService) {
+  constructor(
+    private readonly pageService: PageService,
+    private readonly cookieService: CookieService,
+  ) {
     this.logger = new LoggerWithLevel(
       ActionHelpersService.name,
       this.pageService.getLogLevel(),
@@ -247,6 +251,49 @@ export class ActionHelpersService {
 
         if (action.id) {
           context[action.id] = evalResult;
+        }
+        break;
+      }
+
+      case 'saveCookies': {
+        const sessionName = String(value);
+        const overwrite = action.options?.overwrite ?? false;
+
+        // Extract metadata if provided
+        const metadata: Record<string, unknown> = {};
+        if (action.options?.metadata) {
+          Object.assign(metadata, action.options.metadata);
+        }
+
+        await this.cookieService.saveCookies(page, sessionName, {
+          overwrite,
+          metadata,
+        });
+        break;
+      }
+
+      case 'loadCookies': {
+        const sessionName = String(value);
+        const throwIfNotExists =
+          action.onError !== 'skip' && action.onError !== 'continue';
+
+        await this.cookieService.loadCookies(page, sessionName, {
+          throwIfNotExists,
+        });
+        break;
+      }
+
+      case 'clearCookies': {
+        const sessionName = String(value);
+        await this.cookieService.deleteCookies(sessionName);
+        break;
+      }
+
+      case 'listCookies': {
+        const sessions = await this.cookieService.listCookies();
+
+        if (action.id) {
+          context[action.id] = sessions;
         }
         break;
       }

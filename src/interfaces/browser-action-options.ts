@@ -8,4 +8,13 @@ export interface BrowserActionOptions {
   pool?: PoolOptions;
   multiContext?: boolean;
   logLevel?: LogLevel;
+
+  // Cookie persistence options
+  cookies?: {
+    enabled?: boolean;
+    cookiesDir?: string;
+    autoSave?: boolean;
+    autoLoad?: boolean;
+    defaultSessionName?: string;
+  };
 }

@@ -117,6 +117,75 @@ export class MyService {
 }
 ```
 
+### Injecting CookieService
+
+```typescript
+import { Injectable } from '@nestjs/common';
+import { CookieService } from '@hanivanrizky/nestjs-browser-action';
+
+@Injectable()
+export class MyService {
+  constructor(
+    private readonly cookieService: CookieService,
+  ) {}
+
+  async loginAndSave() {
+    const page = await this.pageService.navigateTo('https://example.com/login');
+    // ... perform login ...
+    await this.cookieService.saveCookies(page, 'user-session', {
+      metadata: {
+        username: 'user@example.com',
+        loginMethod: 'email',
+      },
+    });
+  }
+
+  async reuseSession() {
+    const page = await this.pageService.navigateTo('https://example.com');
+    await this.cookieService.loadCookies(page, 'user-session');
+    // Already logged in!
+  }
+}
+```
+
+### Cookie Workflow Actions
+
+```typescript
+const workflow: WorkflowDefinition = {
+  version: '1.0',
+  actions: [
+    // Load existing session or skip if not found
+    {
+      action: 'loadCookies',
+      value: 'user-session',
+      onError: 'skip',
+    },
+    // Check if logged in
+    {
+      action: 'waitFor',
+      target: { type: 'css', value: '.user-profile' },
+      options: { timeout: 5000 },
+      condition: { ifExists: { type: 'css', value: '.user-profile' } },
+      onError: 'skip',
+    },
+    // If not logged in, perform login
+    {
+      action: 'navigate',
+      value: 'https://example.com/login',
+      condition: { unlessExists: { type: 'css', value: '.user-profile' } },
+    },
+    // ... login actions ...
+    // Save session after login
+    {
+      action: 'saveCookies',
+      value: 'user-session',
+      options: { overwrite: true },
+      condition: { unlessExists: { type: 'css', value: '.user-profile' } },
+    },
+  ],
+};
+```
+
 ### Taking Screenshots
 
 ```typescript
@@ -212,6 +281,8 @@ console.log(result.success); // true if workflow completed successfully
 - `extract` - Extract text from element
 - `screenshot` - Take screenshot
 - `evaluate` - Execute JavaScript
+- `saveCookies` - Save cookies to file
+- `loadCookies` - Load cookies from file
 
 **Features:**
 - Variable interpolation with `${variableName}`
@@ -253,6 +324,11 @@ await this.pageService.closePage();
 | pool.strategy      | 'round-robin' \| 'least-recently-used'             | 'round-robin'                               | Pool selection strategy      |
 | multiContext       | boolean                                            | false                                       | Enable multi-context support |
 | logLevel           | 'log' \| 'error' \| 'warn' \| 'debug' \| 'verbose' | 'log'                                       | Logging verbosity level      |
+| cookies.enabled    | boolean                                            | true                                        | Enable cookie persistence    |
+| cookies.cookiesDir | string                                             | './cookies'                                 | Directory for cookie files   |
+| cookies.autoSave   | boolean                                            | false                                       | Auto-save cookies after workflows |
+| cookies.autoLoad   | boolean                                            | false                                       | Auto-load cookies before workflows |
+| cookies.defaultSessionName | string                                      | 'default'                                   | Default session name         |
 
 ## API
 
@@ -277,6 +353,14 @@ await this.pageService.closePage();
 - `scrapeWithActions(url, workflow, variables?)`: Execute workflow-based automation
 - `waitForSelector(url, selector, timeout?)`: Wait for selector
 - `evaluate(url, script)`: Execute JavaScript in page
+
+#### CookieService
+- `saveCookies(page, sessionName, options?)`: Save cookies to file
+- `loadCookies(page, sessionName, options?)`: Load cookies from file
+- `deleteCookies(sessionName)`: Delete a session
+- `clearAllCookies()`: Delete all sessions
+- `listCookies()`: List all sessions
+- `hasSession(sessionName)`: Check if session exists
 
 ## Type Safety
 

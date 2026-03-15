@@ -5,6 +5,7 @@ export * from './browser-action.module';
 export * from './services/browser-pool.service';
 export * from './services/browser-manager.service';
 export * from './services/page-service';
+export * from './services/cookie.service';
 
 // Helpers
 export * from './helpers/action-helpers.service';

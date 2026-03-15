@@ -25,7 +25,11 @@ export type ActionType =
   | 'scroll' // Scroll to element
   | 'extract' // Extract data
   | 'screenshot' // Take screenshot
-  | 'evaluate'; // Run JavaScript
+  | 'evaluate' // Run JavaScript
+  | 'saveCookies' // Save cookies to file
+  | 'loadCookies' // Load cookies from file
+  | 'clearCookies' // Clear all cookies
+  | 'listCookies'; // List all cookies
 
 /**
  * Condition for conditional action execution
@@ -51,6 +55,8 @@ export interface ActionOptions {
   retryDelay?: number; // Delay between retries (ms)
   waitForNavigation?: boolean; // Wait for navigation after action
   navigationTimeout?: number; // Timeout for navigation wait
+  overwrite?: boolean; // Overwrite existing file (for saveCookies action)
+  metadata?: Record<string, unknown>; // Additional metadata (for saveCookies action)
 }
 
 /**

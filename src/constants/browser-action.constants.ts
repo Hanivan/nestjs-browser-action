@@ -24,3 +24,10 @@ export const DEFAULT_NAVIGATION_TIMEOUT = 30000;
 export const DEFAULT_SCROLL_DELAY_MS = 100;
 export const DEFAULT_SCREENSHOT_FILENAME = 'screenshot';
 export const DEFAULT_ERROR_SCREENSHOT_FILENAME = 'error';
+export const DEFAULT_COOKIE_OPTIONS = {
+  enabled: true,
+  cookiesDir: './cookies',
+  autoSave: false,
+  autoLoad: false,
+  defaultSessionName: 'default',
+} as const;
