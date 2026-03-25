@@ -13,6 +13,24 @@
   "publishConfig": {
     "access": "public"
   },
+  "keywords": [
+    "nestjs",
+    "browser",
+    "automation",
+    "puppeteer",
+    "scraping",
+    "web-scraping",
+    "workflow",
+    "data-extraction",
+    "connection-pool",
+    "cookie-management",
+    "data-cleansing",
+    "shadow-dom",
+    "xpath",
+    "css-selector",
+    "typescript",
+    "headless-browser"
+  ],
   "scripts": {
     "build": "nest build",
     "prepublishOnly": "npm run build",
