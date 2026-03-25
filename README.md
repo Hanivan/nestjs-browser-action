@@ -3,16 +3,25 @@
 [![npm version](https://badge.fury.io/js/%40hanivanrizky%2Fnestjs-browser-action.svg)](https://www.npmjs.com/package/@hanivanrizky/nestjs-browser-action)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-
 > **⚠️ Status: Experimental**
 >
 > This project is currently in **experimental** stage and intended for **personal use only**. The API is subject to change, and production use is not recommended.
 
-A NestJS module that provides Puppeteer-based browser automation with configurable options and connection pooling.
+A NestJS module that provides Puppeteer-based browser automation with configurable options, connection pooling, and data cleansing capabilities.
+
+## Features
+
+- (・_・) **Browser Automation**: Declarative workflow-based browser automation
+- (☆^O^☆) **Data Scraping**: Single and multi-element scraping with CSS/XPath selectors
+- (>_>) **Connection Pooling**: Efficient browser instance management
+- (♡˙︶˙♡) **Cookie Persistence**: Save/load browser sessions for authentication
+- (｡•̀ᴗ-)✧ **Data Cleansing**: 14 built-in transformation pipes
+- (°_°)! **Shadow DOM**: Support for web components
+- (^_^) **Type-Safe**: Full TypeScript support with generics
 
 ## Installation
 
-### From npm (Recommended)
+### From npm
 
 ```bash
 npm install @hanivanrizky/nestjs-browser-action puppeteer
@@ -20,35 +29,17 @@ npm install @hanivanrizky/nestjs-browser-action puppeteer
 yarn add @hanivanrizky/nestjs-browser-action puppeteer
 ```
 
-### From GitHub Repository
-
-If you want to install directly from GitHub without publishing to npm:
+### From GitHub
 
 ```bash
-# Install from main branch
 npm install git+https://github.com/hanivanrizky/nestjs-browser-action.git puppeteer
 # or
 yarn add git+https://github.com/hanivanrizky/nestjs-browser-action.git puppeteer
-
-# Install from specific release tag
-npm install git+https://github.com/hanivanrizky/nestjs-browser-action.git#v0.0.1-experimental puppeteer
-
-# Install from specific branch
-npm install git+https://github.com/hanivanrizky/nestjs-browser-action.git#main puppeteer
-
-# Install from specific commit
-npm install git+https://github.com/hanivanrizky/nestjs-browser-action.git#a1b2c3d puppeteer
-
-# Install using SSH (requires SSH key setup)
-npm install git+ssh://git@github.com:hanivanrizky/nestjs-browser-action.git puppeteer
 ```
-
-**Note:** The package will be installed as `@hanivanrizky/nestjs-browser-action` when installed from GitHub, same as the npm package name. Use the same import statement:
-
 
 ## Quick Start
 
-### Synchronous Configuration
+### 1. Configure Module
 
 ```typescript
 import { Module } from '@nestjs/common';
@@ -57,411 +48,194 @@ import { BrowserActionModule } from '@hanivanrizky/nestjs-browser-action';
 @Module({
   imports: [
     BrowserActionModule.forRoot({
-      launchOptions: { headless: true },
-      contextOptions: { viewport: { width: 1920, height: 1080 } },
       pool: { min: 2, max: 10 },
+      cookies: { enabled: true },
     }),
   ],
 })
 export class AppModule {}
 ```
 
-### Asynchronous Configuration
-
-```typescript
-import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { BrowserActionModule } from '@hanivanrizky/nestjs-browser-action';
-
-@Module({
-  imports: [
-    BrowserActionModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (config: ConfigService) => ({
-        launchOptions: {
-          headless: config.get('HEADLESS'),
-          args: config.get('PUPPETEER_ARGS'),
-        },
-        pool: {
-          min: config.get('POOL_MIN'),
-          max: config.get('POOL_MAX'),
-        },
-      }),
-      inject: [ConfigService],
-    }),
-  ],
-})
-export class AppModule {}
-```
-
-## Usage
-
-### Injecting Services
+### 2. Inject Service
 
 ```typescript
 import { Injectable } from '@nestjs/common';
-import { BrowserManagerService, PageService, ActionHelpersService } from '@hanivanrizky/nestjs-browser-action';
+import { ActionHelpersService } from '@hanivanrizky/nestjs-browser-action';
 
 @Injectable()
 export class MyService {
   constructor(
-    private readonly browserManager: BrowserManagerService,
-    private readonly pageService: PageService,
     private readonly actionHelpers: ActionHelpersService,
   ) {}
 
-  async myMethod() {
-    const status = this.browserManager.getPoolStatus();
-    console.log(`Pool: ${status.available}/${status.size} available`);
+  async scrapeData() {
+    const result = await this.actionHelpers.scrape(
+      'https://example.com',
+      {
+        title: 'h1',
+        description: 'meta[name="description"]@content',
+      }
+    );
+
+    console.log(result.title);       // "Example Domain"
+    console.log(result.description); // "This domain is for use in..."
   }
 }
 ```
 
-### Injecting CookieService
+## Documentation
 
-```typescript
-import { Injectable } from '@nestjs/common';
-import { CookieService } from '@hanivanrizky/nestjs-browser-action';
+### (^_^) Method Documentation
 
-@Injectable()
-export class MyService {
-  constructor(
-    private readonly cookieService: CookieService,
-  ) {}
+| Method | Description |
+|--------|-------------|
+| [`scrape()`](./docs/methods/scrape.md) | Extract single elements |
+| [`scrapeAll()`](./docs/methods/scrape-all.md) | Extract multiple elements |
+| [`scrapeWithActions()`](./docs/methods/workflow.md) | Workflow-based automation |
+| [`scrapeAllWithWorkflow()`](./docs/methods/workflow.md) | Workflow with multi-element |
+| [`takeScreenshot()`](./docs/methods/screenshots.md) | Capture screenshots |
+| [`generatePDF()`](./docs/methods/screenshots.md) | Generate PDFs |
+| [Browser & Page Control](./docs/methods/browser-control.md) | Low-level control |
 
-  async loginAndSave() {
-    const page = await this.pageService.navigateTo('https://example.com/login');
-    // ... perform login ...
-    await this.cookieService.saveCookies(page, 'user-session', {
-      metadata: {
-        username: 'user@example.com',
-        loginMethod: 'email',
-      },
-    });
-  }
+### (☆^O^☆) Feature Guides
 
-  async reuseSession() {
-    const page = await this.pageService.navigateTo('https://example.com');
-    await this.cookieService.loadCookies(page, 'user-session');
-    // Already logged in!
-  }
-}
-```
+| Feature | Description |
+|---------|-------------|
+| [Cookie Management](./docs/features/cookies.md) | Session persistence |
+| [Pipe System](./docs/features/pipes.md) | Data transformation |
+| [Workflow Actions](./docs/workflow-actions.md) | All action types reference |
 
-### Cookie Workflow Actions
+### (^_^) API Reference
 
-```typescript
-const workflow: WorkflowDefinition = {
-  version: '1.0',
-  actions: [
-    // Load existing session or skip if not found
-    {
-      action: 'loadCookies',
-      value: 'user-session',
-      onError: 'skip',
-    },
-    // Check if logged in
-    {
-      action: 'waitFor',
-      target: { type: 'css', value: '.user-profile' },
-      options: { timeout: 5000 },
-      condition: { ifExists: { type: 'css', value: '.user-profile' } },
-      onError: 'skip',
-    },
-    // If not logged in, perform login
-    {
-      action: 'navigate',
-      value: 'https://example.com/login',
-      condition: { unlessExists: { type: 'css', value: '.user-profile' } },
-    },
-    // ... login actions ...
-    // Save session after login
-    {
-      action: 'saveCookies',
-      value: 'user-session',
-      options: { overwrite: true },
-      condition: { unlessExists: { type: 'css', value: '.user-profile' } },
-    },
-  ],
-};
-```
+- [API Reference](./docs/api-reference.md) - Complete API documentation
+- [Configuration](./docs/api-reference.md#configuration) - All options
+- [Types](./docs/api-reference.md#types) - TypeScript interfaces
 
-### Taking Screenshots
+## Quick Examples
 
-```typescript
-await this.actionHelpers.takeScreenshot(
-  'https://example.com',
-  './screenshot.png',
-  { fullPage: true }
-);
-```
-
-### Generating PDFs
-
-```typescript
-const pdf = await this.actionHelpers.generatePDF(
-  'https://example.com',
-  './page.pdf',
-  { format: 'A4' }
-);
-```
-
-### Web Scraping
+### Simple Scraping
 
 ```typescript
 const data = await this.actionHelpers.scrape('https://example.com', {
   title: 'h1',
-  description: 'meta[name="description"]@content',
-  links: 'a@href',
+  price: '.price',
 });
 ```
 
 ### Multi-Element Scraping
 
-#### scrapeAll()
-
-Extract all elements matching CSS/XPath selectors:
-
 ```typescript
-const result = await service.scrapeAll('https://example.com', {
+const data = await this.actionHelpers.scrapeAll('https://example.com', {
   titles: '.card h2',
   links: '.card a',
-}, {
-  pipes: {
-    titles: [
-      { type: CleansingType.TRIM },
-      { type: CleansingType.TO_LOWER_CASE },
-    ],
-  },
 });
-// Returns: { titles: ['title1', 'title2', ...], links: ['/path1', '/path2', ...] }
 ```
 
-#### scrapeAllWithWorkflow()
-
-Execute workflows with multi-element extraction:
+### Workflow Automation
 
 ```typescript
 const workflow = {
-  version: '1.0',
+  version: '1.0' as const,
   actions: [
-    {
-      id: 'allTitles',
-      action: 'extract',
-      target: { type: 'css', value: '.card h2' },
-      options: { multiple: true },
-    },
+    { action: 'navigate' as const, value: 'https://example.com' },
+    { id: 'title', action: 'extract' as const, target: { type: 'css' as const, value: 'h1' } },
+    { action: 'click' as const, target: { type: 'css' as const, value: '#button' } },
   ],
 };
 
-const result = await service.scrapeAllWithWorkflow(url, workflow);
+const result = await this.actionHelpers.scrapeWithActions(workflow);
 ```
 
-**XPath Auto-Detection:**
-- XPath selectors (start with `//` or `(`) use `page.evaluate()`
-- CSS selectors use `page.$$eval()`
-- No need to specify selector type manually
-
-### Workflow-Based Automation
-
-Automate complex browser interactions with declarative workflows:
+### With Data Cleansing
 
 ```typescript
-import type { WorkflowDefinition } from '@hanivanrizky/nestjs-browser-action';
+import { CleansingType } from '@hanivanrizky/nestjs-browser-action';
 
-const workflow: WorkflowDefinition = {
-  version: '1.0',
-  actions: [
-    {
-      action: 'navigate',
-      value: '${baseUrl}',
-    },
-    {
-      action: 'waitFor',
-      target: { type: 'css', value: '#search-input' },
-      options: { timeout: 10000 },
-    },
-    {
-      action: 'type',
-      target: { type: 'css', value: '#search-input' },
-      value: '${searchQuery}',
-      options: { delay: 50, scrollTo: true },
-    },
-    {
-      action: 'click',
-      target: { type: 'css', value: 'button[type="submit"]' },
-      options: { scrollTo: true, waitForNavigation: true },
-    },
-    {
-      id: 'firstResult',
-      action: 'extract',
-      target: { type: 'css', value: '.search-result:first-child h3' },
-    },
-  ],
-  onError: {
-    screenshot: true,
-    screenshotPath: './error-screenshot.png',
-    continue: false,
+const data = await this.actionHelpers.scrape('https://example.com', {
+  price: '.price',
+}, {
+  pipes: {
+    price: [
+      { type: CleansingType.REMOVE_CURRENCY_SYMBOL },
+      { type: CleansingType.TO_NUMBER },
+    ],
   },
-};
-
-const result = await this.actionHelpers.scrapeWithActions<{
-  firstResult: string;
-}>('https://example.com', workflow, {
-  baseUrl: 'https://example.com/search',
-  searchQuery: 'NestJS browser automation',
 });
-
-console.log(result.data.firstResult);
-console.log(result.success); // true if workflow completed successfully
 ```
 
-**Supported Action Types:**
-- `navigate` - Navigate to URL
-- `wait` - Wait for specified time (in seconds)
-- `waitFor` - Wait for element to appear
-- `click` - Click on element
-- `type` - Type text into input
-- `select` - Select dropdown option
-- `scroll` - Scroll to element
-- `extract` - Extract text from element
-- `screenshot` - Take screenshot
-- `evaluate` - Execute JavaScript
-- `saveCookies` - Save cookies to file
-- `loadCookies` - Load cookies from file
-
-**Features:**
-- Variable interpolation with `${variableName}`
-- Conditional execution (ifExists/unlessExists)
-- XPath and CSS selectors
-- Shadow DOM support
-- Error handling with screenshots
-- Retry logic
-- Type-safe results
-
-For detailed documentation, see [SCRAPE_WITH_ACTIONS.md](./SCRAPE_WITH_ACTIONS.md)
-
-### Custom Browser Control
+### Cookie Persistence
 
 ```typescript
-// Create page and navigate
-const page = await this.pageService.createPage();
-await this.pageService.navigateTo('https://example.com');
-
-// Do custom operations
-await page.click('#button');
-await page.waitForSelector('.result');
-
-// Cleanup
-await this.pageService.closePage();
+const workflow = {
+  version: '1.0' as const,
+  actions: [
+    { action: 'loadCookies' as const, value: 'user-session', onError: 'skip' as const },
+    { action: 'navigate' as const, value: 'https://example.com/dashboard' },
+    { action: 'saveCookies' as const, value: 'user-session', options: { overwrite: true } },
+  ],
+};
 ```
+
+## Services
+
+| Service | Description |
+|---------|-------------|
+| **ActionHelpersService** | High-level automation methods (scrape, screenshot, PDF, workflows) |
+| **BrowserManagerService** | Browser pool management |
+| **PageService** | Page lifecycle and navigation |
+| **CookieService** | Cookie persistence |
+| **CleansingService** | Data cleansing with pipes |
 
 ## Configuration
 
-### BrowserActionOptions
+### Basic Configuration
 
-| Option             | Type                                               | Default                                     | Description                  |
-| ------------------ | -------------------------------------------------- | ------------------------------------------- | ---------------------------- |
-| launchOptions      | LaunchOptions                                      | { headless: true }                          | Puppeteer launch options     |
-| contextOptions     | BrowserContextOptions                              | { viewport: { width: 1920, height: 1080 } } | Browser context options      |
-| pool.min           | number                                             | 2                                           | Minimum pool size            |
-| pool.max           | number                                             | 10                                          | Maximum pool size            |
-| pool.idleTimeoutMs | number                                             | 30000                                       | Idle timeout in milliseconds |
-| pool.strategy      | 'round-robin' \| 'least-recently-used'             | 'round-robin'                               | Pool selection strategy      |
-| multiContext       | boolean                                            | false                                       | Enable multi-context support |
-| logLevel           | 'log' \| 'error' \| 'warn' \| 'debug' \| 'verbose' | 'log'                                       | Logging verbosity level      |
-| cookies.enabled    | boolean                                            | true                                        | Enable cookie persistence    |
-| cookies.cookiesDir | string                                             | './cookies'                                 | Directory for cookie files   |
-| cookies.autoSave   | boolean                                            | false                                       | Auto-save cookies after workflows |
-| cookies.autoLoad   | boolean                                            | false                                       | Auto-load cookies before workflows |
-| cookies.defaultSessionName | string                                      | 'default'                                   | Default session name         |
+```typescript
+BrowserActionModule.forRoot({
+  pool: {
+    min: 2,
+    max: 10,
+    idleTimeoutMs: 30000,
+    strategy: 'round-robin',
+  },
+  cookies: {
+    enabled: true,
+    cookiesDir: './cookies',
+  },
+  logLevel: 'log',
+})
+```
 
-## API
+### All Options
 
-### Services
-
-#### BrowserManagerService
-- `getBrowser()`: Acquire a browser from the pool
-- `releaseBrowser(browser)`: Release a browser back to the pool
-- `getPoolStatus()`: Get current pool statistics
-
-#### PageService
-- `createPage()`: Create a new page
-- `navigateTo(url, options?)`: Navigate to URL
-- `closePage()`: Close current page
-- `getCurrentPage()`: Get current page instance
-- `getCurrentBrowser()`: Get current browser instance
-
-#### ActionHelpersService
-- `takeScreenshot(url, path, options?)`: Take screenshot of URL
-- `generatePDF(url, path, options?)`: Generate PDF of URL
-- `scrape(url, selectors)`: Scrape data from URL
-- `scrapeWithActions(url, workflow, variables?)`: Execute workflow-based automation
-- `waitForSelector(url, selector, timeout?)`: Wait for selector
-- `evaluate(url, script)`: Execute JavaScript in page
-
-#### CookieService
-- `saveCookies(page, sessionName, options?)`: Save cookies to file
-- `loadCookies(page, sessionName, options?)`: Load cookies from file
-- `deleteCookies(sessionName)`: Delete a session
-- `clearAllCookies()`: Delete all sessions
-- `listCookies()`: List all sessions
-- `hasSession(sessionName)`: Check if session exists
+See [Configuration Reference](./docs/api-reference.md#configuration) for complete options.
 
 ## Type Safety
 
-This module provides full TypeScript support with proper type inference:
-
-### scrape() Type Inference
+Full TypeScript support with generics:
 
 ```typescript
-const data = await actionHelpers.scrape(url, {
+// Type-safe selectors
+interface ProductSelectors {
+  title: string;
+  price: number;
+}
+
+const result = await this.actionHelpers.scrape<ProductSelectors>(url, {
   title: 'h1',
-  author: '.author',
+  price: '.price',
 });
-// Type: { title?: string; author?: string }
-```
 
-### evaluate() Generic Type
-
-```typescript
-// Returns Promise<unknown>
-const result = await actionHelpers.evaluate(url, 'return 1 + 1');
-
-// Returns Promise<number>
-const num = await actionHelpers.evaluate<number>(url, 'return 42');
-```
-
-### Options Autocomplete
-
-```typescript
-await actionHelpers.takeScreenshot(url, 'file.png', {
-  fullPage: true,     // Full autocomplete
-  type: 'png',        // Type-safe options
-  quality: 90,
-});
+// Type-safe workflow results
+const workflow = await this.actionHelpers.scrapeWithActions<{
+  title: string;
+  price: number;
+}>(url, workflow);
 ```
 
 ## Development
 
-### Git Hooks
-
-This project uses Husky for Git hooks:
-
-- **Pre-commit**: Runs ESLint to check code quality
-- **Pre-push**:
-  - Builds the project (must pass)
-  - Runs unit tests (can be skipped)
-
-### Skipping Tests
-
-To skip tests when pushing:
-
-```bash
-SKIP_TESTS=true git push
-```
-
-### Running Scripts
+### Scripts
 
 ```bash
 # Build
@@ -477,10 +251,27 @@ yarn lint
 yarn format
 ```
 
+### Git Hooks
+
+- **Pre-commit**: Runs ESLint
+- **Pre-push**: Runs build and tests
+
 ## License
 
 MIT
 
 ## Support
 
-For issues and questions, please use the [GitHub Issues](https://github.com/yourusername/nestjs-browser-action/issues).
+For issues and questions, please use [GitHub Issues](https://github.com/hanivanrizky/nestjs-browser-action/issues).
+
+## Examples
+
+Check out the test project for complete examples: [test-browser-action](https://github.com/hanivanrizky/test-browser-action)
+
+---
+
+**Documentation:**
+- [Methods](./docs/methods) - Method-specific guides
+- [Features](./docs/features) - Feature guides
+- [API Reference](./docs/api-reference.md) - Complete API
+- [Workflow Actions](./docs/workflow-actions.md) - Action reference
