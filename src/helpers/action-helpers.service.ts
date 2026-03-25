@@ -8,13 +8,21 @@ import type {
 import { PageService } from '../services/page-service';
 import { CookieService } from '../services/cookie.service';
 import { CleansingService } from '../services/cleansing.service';
+import { CleansingPipe } from '../pipes/cleansing-pipe';
 import type {
   WorkflowDefinition,
-  WorkflowResult,
   WorkflowAction,
   ActionTarget,
   VariableContext,
 } from '../interfaces/workflow-options';
+import {
+  SelectorMap,
+  ScraperOptions,
+  ScrapeResult,
+  ScrapeAllResult,
+  WorkflowResultTyped,
+  PipeConfig,
+} from '../interfaces/types';
 import { LoggerWithLevel } from './logger.util';
 import {
   DEFAULT_ACTION_TIMEOUT,
@@ -27,6 +35,7 @@ import {
 @Injectable()
 export class ActionHelpersService {
   private readonly logger: LoggerWithLevel;
+  private readonly pipeCache = new Map<string, CleansingPipe[]>();
 
   constructor(
     private readonly pageService: PageService,
@@ -63,37 +72,168 @@ export class ActionHelpersService {
     return Buffer.from(pdf);
   }
 
-  async scrape<T extends Record<string, string>>(
+  async scrape<T extends SelectorMap>(
     url: string,
     selectors: T,
-    options?: { pipes?: Record<string, any[]> },
-  ): Promise<Partial<Record<keyof T, unknown>>> {
+    options?: ScraperOptions,
+  ): Promise<ScrapeResult> {
     this.logger.log(`Scraping ${url}`, 'debug');
     const page = await this.pageService.navigateTo(url);
 
-    const result: Partial<Record<keyof T, unknown>> = {};
+    const result: ScrapeResult = {};
 
     for (const [key, selector] of Object.entries(selectors)) {
       try {
         const value = await page.$eval(selector, (el) => el.textContent);
 
         if (options?.pipes?.[key]) {
-          const pipeInstances = this.cleansingService.loadPipes(
-            options.pipes[key],
-          );
-          (result as Record<string, unknown>)[key] =
-            this.cleansingService.cleanse(value, pipeInstances);
+          const pipeInstances = this.getCachedPipeInstances(options.pipes[key]);
+          result[key] = this.cleansingService.cleanse(value, pipeInstances);
         } else {
-          (result as Record<string, unknown>)[key] = value;
+          result[key] = value;
         }
       } catch {
         this.logger.log(`Failed to scrape ${selector}`, 'warn');
-        // Property remains undefined (optional in Partial type)
       }
     }
 
     await this.pageService.closePage();
     return result;
+  }
+
+  async scrapeAll<T extends SelectorMap>(
+    url: string,
+    selectors: T,
+    options?: ScraperOptions,
+  ): Promise<ScrapeAllResult> {
+    this.logger.log(`Scraping all elements from ${url}`, 'debug');
+    const page = await this.pageService.navigateTo(url);
+
+    const result: ScrapeAllResult = {};
+
+    for (const [key, selector] of Object.entries(selectors)) {
+      this.validateSelector(key, selector);
+
+      try {
+        const trimmedSelector = selector.trim();
+        const isXPath =
+          trimmedSelector.startsWith('//') || trimmedSelector.startsWith('(');
+        let values: string[];
+
+        if (isXPath) {
+          values = await page.evaluate((xpathSelector) => {
+            const results = document.evaluate(
+              xpathSelector,
+              document,
+              null,
+              XPathResult.UNORDERED_NODE_ITERATOR_TYPE,
+              null,
+            );
+            const vals: string[] = [];
+            let node: Node | null;
+            while ((node = results.iterateNext())) {
+              vals.push(node?.textContent?.trim() || '');
+            }
+            return vals;
+          }, selector);
+        } else {
+          values = await page.$$eval(selector, (elements) =>
+            elements.map((el) => el.textContent?.trim() || ''),
+          );
+        }
+
+        if (options?.pipes?.[key]) {
+          const pipeInstances = this.getCachedPipeInstances(options.pipes[key]);
+          (result as ScrapeResult)[key] = values.map((value) =>
+            this.cleansingService.cleanse(value, pipeInstances),
+          );
+        } else {
+          (result as ScrapeResult)[key] = values;
+        }
+      } catch {
+        this.logger.log(`Failed to scrape ${selector}`, 'warn');
+      }
+    }
+
+    await this.pageService.closePage();
+    return result;
+  }
+
+  private async extractAllData(
+    page: Page,
+    target: ActionTarget,
+  ): Promise<string[]> {
+    // Handle Shadow DOM
+    if (target.shadowHost) {
+      return await this.extractAllFromShadowRoot(page, target);
+    }
+
+    // Branch by selector type
+    if (target.type === 'css') {
+      return await page.$$eval(target.value, (elements) =>
+        elements.map((el) => el.textContent?.trim() || ''),
+      );
+    }
+
+    // XPath selector
+    return await page.evaluate((selector) => {
+      const results = document.evaluate(
+        selector,
+        document,
+        null,
+        XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+        null,
+      );
+      const values: string[] = [];
+      for (let i = 0; i < results.snapshotLength; i++) {
+        const node = results.snapshotItem(i);
+        values.push(node?.textContent?.trim() || '');
+      }
+      return values;
+    }, target.value);
+  }
+
+  private async extractAllFromShadowRoot(
+    page: Page,
+    target: ActionTarget,
+  ): Promise<string[]> {
+    const hosts = await page.$$(target.shadowHost!);
+
+    const allResults: string[][] = await Promise.all(
+      hosts.map(async (host) => {
+        return await host.evaluate(
+          (el, selector, targetType) => {
+            const shadowRoot = el.shadowRoot;
+            if (!shadowRoot) return [];
+
+            if (targetType === 'css') {
+              const elements = shadowRoot.querySelectorAll(selector);
+              return Array.from(elements).map(
+                (e) => e.textContent?.trim() || '',
+              );
+            }
+
+            const results = document.evaluate(
+              selector,
+              shadowRoot,
+              null,
+              XPathResult.UNORDERED_NODE_ITERATOR_TYPE,
+              null,
+            );
+            const values: string[] = [];
+            let node: Node | null;
+            while ((node = results.iterateNext())) {
+              values.push(node?.textContent?.trim() || '');
+            }
+            return values;
+          },
+          target.value,
+          target.type,
+        );
+      }),
+    );
+
+    return allResults.flat();
   }
 
   async waitForSelector(
@@ -118,14 +258,14 @@ export class ActionHelpersService {
     return result as T;
   }
 
-  async scrapeWithActions<T extends Record<string, any> = Record<string, any>>(
+  async scrapeWithActions<T = Record<string, unknown>>(
     url: string,
     workflow: WorkflowDefinition,
     variables?: VariableContext,
-  ): Promise<WorkflowResult & { data: T }> {
+  ): Promise<WorkflowResultTyped<T>> {
     this.logger.log(`Starting workflow execution for ${url}`, 'debug');
     const page = await this.pageService.navigateTo(url);
-    const result: WorkflowResult & { data: T } = {
+    const result: WorkflowResultTyped<T> = {
       success: false,
       data: {} as T,
       errors: [],
@@ -176,6 +316,16 @@ export class ActionHelpersService {
     }
 
     return result;
+  }
+
+  async scrapeAllWithWorkflow<T = Record<string, unknown>>(
+    url: string,
+    workflow: WorkflowDefinition,
+    variables?: VariableContext,
+  ): Promise<WorkflowResultTyped<T>> {
+    // Reuse existing scrapeWithActions infrastructure
+    // The only difference is the name - it already supports multi-element via options.multiple
+    return await this.scrapeWithActions<T>(url, workflow, variables);
   }
 
   private async executeAction(
@@ -230,9 +380,20 @@ export class ActionHelpersService {
         break;
 
       case 'extract': {
-        const extractedValue = await this.extractData(page, action.target!);
-        if (action.id) {
-          context[action.id] = extractedValue;
+        const extractOptions = action.options || {};
+
+        if (extractOptions.multiple) {
+          // Extract all elements
+          const allValues = await this.extractAllData(page, action.target!);
+          if (action.id) {
+            context[action.id] = allValues;
+          }
+        } else {
+          // Extract single element (existing behavior)
+          const extractedValue = await this.extractData(page, action.target!);
+          if (action.id) {
+            context[action.id] = extractedValue;
+          }
         }
         break;
       }
@@ -268,7 +429,7 @@ export class ActionHelpersService {
       }
 
       case 'cleanse': {
-        const pipes = action.options?.pipes || [];
+        const pipes = (action.options?.pipes || []) as PipeConfig[];
 
         if (pipes.length === 0) {
           throw new Error('cleanse action requires at least one pipe');
@@ -548,6 +709,20 @@ export class ActionHelpersService {
       {},
     );
     await this.wait(DEFAULT_SCROLL_DELAY_MS / 1000);
+  }
+
+  private getCachedPipeInstances(config: PipeConfig[]): CleansingPipe[] {
+    const cacheKey = JSON.stringify(config);
+    if (!this.pipeCache.has(cacheKey)) {
+      this.pipeCache.set(cacheKey, this.cleansingService.loadPipes(config));
+    }
+    return this.pipeCache.get(cacheKey)!;
+  }
+
+  private validateSelector(key: string, selector: string): void {
+    if (!selector || selector.trim() === '') {
+      throw new Error(`Selector for '${key}' cannot be empty`);
+    }
   }
 
   private async extractData(page: Page, target: ActionTarget): Promise<string> {

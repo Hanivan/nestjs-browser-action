@@ -1,10 +1,11 @@
 import { CleansingProfile } from '../enums/cleansing-profile.enum';
+import type { PipeConfig } from './types';
 
 /**
  * Options for single-field cleansing
  */
 export interface CleansingOptions {
-  pipes?: any[];
+  pipes?: PipeConfig[];
   profile?: CleansingProfile;
 }
 
@@ -13,8 +14,8 @@ export interface CleansingOptions {
  * Executes fallbackPipes if primaryPipes result is empty/null/undefined
  */
 export interface CleansingWithAltOptions {
-  primaryPipes: any[];
-  fallbackPipes: any[];
+  primaryPipes: PipeConfig[];
+  fallbackPipes: PipeConfig[];
   fallbackOn?: 'empty' | 'null' | 'undefined' | 'all';
 }
 
@@ -22,5 +23,5 @@ export interface CleansingWithAltOptions {
  * Options for scrape() method with per-field cleansing
  */
 export interface ScrapeCleansingOptions {
-  pipes?: Record<string, any[]>;
+  pipes?: Record<string, PipeConfig[]>;
 }

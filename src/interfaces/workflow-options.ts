@@ -59,6 +59,7 @@ export interface ActionOptions {
   overwrite?: boolean; // Overwrite existing file (for saveCookies action)
   metadata?: Record<string, unknown>; // Additional metadata (for saveCookies action)
   pipes?: any[]; // Pipes for cleanse action
+  multiple?: boolean; // Extract all matching elements as array
 }
 
 /**
@@ -97,7 +98,7 @@ export interface WorkflowDefinition {
  */
 export interface WorkflowResult {
   success: boolean;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   errors: string[];
   screenshots?: string[];
 }
@@ -105,4 +106,4 @@ export interface WorkflowResult {
 /**
  * Variable interpolation context
  */
-export type VariableContext = Record<string, any>;
+export type VariableContext = Record<string, unknown>;

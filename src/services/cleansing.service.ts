@@ -16,6 +16,7 @@ import { AltFlagPipe } from '../pipes/alt-flag.pipe';
 import { CLEANSING_PROFILES } from '../pipes/profiles';
 import { CleansingProfile } from '../enums/cleansing-profile.enum';
 import { CleansingType } from '../enums/cleansing-type.enum';
+import type { PipeConfig } from '../interfaces/types';
 
 @Injectable()
 export class CleansingService {
@@ -53,16 +54,14 @@ export class CleansingService {
     return this.cleanse(data, this.loadPipesSync(profilePipes)) as T;
   }
 
-  loadPipes(config: any[]): CleansingPipe[] {
+  loadPipes(config: PipeConfig[]): CleansingPipe[] {
     const pipes: CleansingPipe[] = [];
 
     for (const pipeConfig of config) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      const PipeClass = this.PIPE_TYPE_MAP[pipeConfig.type as CleansingType];
+      const PipeClass = this.PIPE_TYPE_MAP[pipeConfig.type];
 
       if (!PipeClass) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        throw new Error(`Unknown pipe type: ${pipeConfig.type as string}`);
+        throw new Error(`Unknown pipe type: ${pipeConfig.type}`);
       }
 
       // Only pass params if they exist, not the entire config
@@ -77,12 +76,11 @@ export class CleansingService {
     return pipes;
   }
 
-  private loadPipesSync(config: any[]): CleansingPipe[] {
+  private loadPipesSync(config: PipeConfig[]): CleansingPipe[] {
     const pipes: CleansingPipe[] = [];
 
     for (const pipeConfig of config) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      const PipeClass = this.PIPE_TYPE_MAP[pipeConfig.type as CleansingType];
+      const PipeClass = this.PIPE_TYPE_MAP[pipeConfig.type];
       if (PipeClass) {
         pipes.push(new PipeClass());
       }

@@ -216,6 +216,52 @@ const data = await this.actionHelpers.scrape('https://example.com', {
 });
 ```
 
+### Multi-Element Scraping
+
+#### scrapeAll()
+
+Extract all elements matching CSS/XPath selectors:
+
+```typescript
+const result = await service.scrapeAll('https://example.com', {
+  titles: '.card h2',
+  links: '.card a',
+}, {
+  pipes: {
+    titles: [
+      { type: CleansingType.TRIM },
+      { type: CleansingType.TO_LOWER_CASE },
+    ],
+  },
+});
+// Returns: { titles: ['title1', 'title2', ...], links: ['/path1', '/path2', ...] }
+```
+
+#### scrapeAllWithWorkflow()
+
+Execute workflows with multi-element extraction:
+
+```typescript
+const workflow = {
+  version: '1.0',
+  actions: [
+    {
+      id: 'allTitles',
+      action: 'extract',
+      target: { type: 'css', value: '.card h2' },
+      options: { multiple: true },
+    },
+  ],
+};
+
+const result = await service.scrapeAllWithWorkflow(url, workflow);
+```
+
+**XPath Auto-Detection:**
+- XPath selectors (start with `//` or `(`) use `page.evaluate()`
+- CSS selectors use `page.$$eval()`
+- No need to specify selector type manually
+
 ### Workflow-Based Automation
 
 Automate complex browser interactions with declarative workflows:
