@@ -40,9 +40,9 @@ export class CleansingService {
     pipes: CleansingPipe<TInput, TOutput>[],
   ): TOutput {
     return pipes.reduce(
-      (result, pipe) => pipe.exec(result as TInput),
-      data as unknown as TOutput,
-    );
+      (result: unknown, pipe) => pipe.exec(result as TInput),
+      data as unknown,
+    ) as TOutput;
   }
 
   cleanseWithProfile<T = unknown>(
