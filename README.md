@@ -32,9 +32,11 @@ yarn add @hanivanrizky/nestjs-browser-action puppeteer
 ### From GitHub
 
 ```bash
-npm install git+https://github.com/hanivanrizky/nestjs-browser-action.git puppeteer
+npm install https://github.com/Hanivan/nestjs-browser-action.git puppeteer
 # or
-yarn add git+https://github.com/hanivanrizky/nestjs-browser-action.git puppeteer
+yarn add https://github.com/Hanivan/nestjs-browser-action.git puppeteer
+# or using SSH
+yarn add git@github.com:Hanivan/nestjs-browser-action.git puppeteer
 ```
 
 ## Quick Start
@@ -262,11 +264,11 @@ MIT
 
 ## Support
 
-For issues and questions, please use [GitHub Issues](https://github.com/hanivanrizky/nestjs-browser-action/issues).
+For issues and questions, please use [GitHub Issues](https://github.com/Hanivan/nestjs-browser-action/issues).
 
 ## Examples
 
-Check out the test project for complete examples: [test-browser-action](https://github.com/hanivanrizky/test-browser-action)
+Check out the test project for complete examples: [test-browser-action](https://github.com/Hanivan/test-browser-action)
 
 ---
 
