@@ -12,7 +12,8 @@
     "publish": true,
     "skipChecks": false,
     "allowBranch": ["main", "master"],
-    "versionArgs": ["--workspaces-update=false"]
+    "versionArgs": ["--workspaces-update=false"],
+    "publishArgs": ["--access", "public"]
   },
   "github": {
     "release": true,
