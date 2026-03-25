@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ActionHelpersService } from './action-helpers.service';
 import { PageService } from '../services/page-service';
 import { CookieService } from '../services/cookie.service';
+import { CleansingService } from '../services/cleansing.service';
 import { WorkflowDefinition } from '../interfaces/workflow-options';
 
 describe('ActionHelpersService', () => {
@@ -46,6 +47,10 @@ describe('ActionHelpersService', () => {
         {
           provide: CookieService,
           useValue: mockCookieService,
+        },
+        {
+          provide: CleansingService,
+          useValue: {},
         },
       ],
     }).compile();

@@ -26,6 +26,7 @@ export type ActionType =
   | 'extract' // Extract data
   | 'screenshot' // Take screenshot
   | 'evaluate' // Run JavaScript
+  | 'cleanse' // Cleanse extracted data
   | 'saveCookies' // Save cookies to file
   | 'loadCookies' // Load cookies from file
   | 'clearCookies' // Clear all cookies
@@ -57,6 +58,7 @@ export interface ActionOptions {
   navigationTimeout?: number; // Timeout for navigation wait
   overwrite?: boolean; // Overwrite existing file (for saveCookies action)
   metadata?: Record<string, unknown>; // Additional metadata (for saveCookies action)
+  pipes?: any[]; // Pipes for cleanse action
 }
 
 /**

@@ -7,6 +7,7 @@ import type {
 } from 'puppeteer';
 import { PageService } from '../services/page-service';
 import { CookieService } from '../services/cookie.service';
+import { CleansingService } from '../services/cleansing.service';
 import type {
   WorkflowDefinition,
   WorkflowResult,
@@ -30,6 +31,7 @@ export class ActionHelpersService {
   constructor(
     private readonly pageService: PageService,
     private readonly cookieService: CookieService,
+    private readonly cleansingService: CleansingService,
   ) {
     this.logger = new LoggerWithLevel(
       ActionHelpersService.name,
@@ -64,16 +66,26 @@ export class ActionHelpersService {
   async scrape<T extends Record<string, string>>(
     url: string,
     selectors: T,
-  ): Promise<Partial<Record<keyof T, string>>> {
+    options?: { pipes?: Record<string, any[]> },
+  ): Promise<Partial<Record<keyof T, unknown>>> {
     this.logger.log(`Scraping ${url}`, 'debug');
     const page = await this.pageService.navigateTo(url);
 
-    const result: Partial<Record<keyof T, string>> = {};
+    const result: Partial<Record<keyof T, unknown>> = {};
 
     for (const [key, selector] of Object.entries(selectors)) {
       try {
         const value = await page.$eval(selector, (el) => el.textContent);
-        (result as Record<string, string>)[key] = value;
+
+        if (options?.pipes?.[key]) {
+          const pipeInstances = this.cleansingService.loadPipes(
+            options.pipes[key],
+          );
+          (result as Record<string, unknown>)[key] =
+            this.cleansingService.cleanse(value, pipeInstances);
+        } else {
+          (result as Record<string, unknown>)[key] = value;
+        }
       } catch {
         this.logger.log(`Failed to scrape ${selector}`, 'warn');
         // Property remains undefined (optional in Partial type)
@@ -251,6 +263,33 @@ export class ActionHelpersService {
 
         if (action.id) {
           context[action.id] = evalResult;
+        }
+        break;
+      }
+
+      case 'cleanse': {
+        const pipes = action.options?.pipes || [];
+
+        if (pipes.length === 0) {
+          throw new Error('cleanse action requires at least one pipe');
+        }
+
+        const currentValue = this.resolveValue(
+          String(action.value || ''),
+          context,
+        );
+        const pipeInstances = this.cleansingService.loadPipes(pipes);
+        const cleanedValue = this.cleansingService.cleanse(
+          currentValue,
+          pipeInstances,
+        );
+
+        if (action.id) {
+          context[action.id] = cleanedValue;
+          this.logger.log(
+            `Cleansed value for '${action.id}': ${JSON.stringify(cleanedValue)}`,
+            'debug',
+          );
         }
         break;
       }
@@ -522,6 +561,49 @@ export class ActionHelpersService {
 
   private wait(seconds: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+  }
+
+  private resolveValue(value: string, context: VariableContext): string {
+    if (value.startsWith('${') && value.endsWith('}')) {
+      const path = value.slice(2, -1);
+      // If the path is a simple variable (no ${} in it), look it up directly
+      if (!path.includes('${')) {
+        const keys: string[] = path.split('.');
+        let result: unknown = context;
+
+        for (const key of keys) {
+          // Handle array access like packages[0]
+          const arrayMatch = key.match(/^(\w+)\[(\d+)\]$/);
+          if (arrayMatch) {
+            const [, arrayKey, indexStr] = arrayMatch;
+            if (!result || typeof result !== 'object') {
+              return value;
+            }
+            const arrayValue = (result as Record<string, unknown>)[arrayKey];
+            const index = parseInt(indexStr, 10);
+            result = Array.isArray(arrayValue) ? arrayValue[index] : undefined;
+          } else {
+            if (!result || typeof result !== 'object') {
+              return value;
+            }
+            result = (result as Record<string, unknown>)[key];
+          }
+
+          if (result === undefined) {
+            return value;
+          }
+        }
+
+        if (result === null || typeof result === 'object') {
+          return value;
+        }
+
+        return result as string;
+      }
+      // For complex paths with nested ${}, use interpolateValue
+      return this.interpolateValue(path, context);
+    }
+    return value;
   }
 
   private interpolateValue(value: string, context: VariableContext): string {

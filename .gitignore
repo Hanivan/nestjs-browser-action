@@ -47,6 +47,7 @@ lerna-debug.log*
 .temp
 .tmp
 docs/plans
+docs/superpowers
 
 # Runtime data
 pids
