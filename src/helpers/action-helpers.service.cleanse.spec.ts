@@ -65,7 +65,7 @@ describe('ActionHelpersService - Cleanse Action', () => {
         },
       };
 
-      (cleansingService.loadPipes as jest.Mock).mockResolvedValueOnce([
+      (cleansingService.loadPipes as jest.Mock).mockReturnValueOnce([
         { type: 'remove-currency-symbol' },
         { type: 'trim' },
         { type: 'to-number' },
@@ -98,7 +98,7 @@ describe('ActionHelpersService - Cleanse Action', () => {
         },
       };
 
-      (cleansingService.loadPipes as jest.Mock).mockResolvedValueOnce([
+      (cleansingService.loadPipes as jest.Mock).mockReturnValueOnce([
         { type: 'trim' },
       ]);
       (cleansingService.cleanse as jest.Mock).mockReturnValueOnce('clean text');
@@ -133,7 +133,7 @@ describe('ActionHelpersService - Cleanse Action', () => {
         },
       };
 
-      (cleansingService.loadPipes as jest.Mock).mockResolvedValueOnce([
+      (cleansingService.loadPipes as jest.Mock).mockReturnValueOnce([
         { type: 'remove-currency-symbol' },
         { type: 'trim' },
         { type: 'to-number' },
@@ -208,7 +208,7 @@ describe('ActionHelpersService - Cleanse Action', () => {
         },
       };
 
-      (cleansingService.loadPipes as jest.Mock).mockResolvedValueOnce([
+      (cleansingService.loadPipes as jest.Mock).mockReturnValueOnce([
         { type: 'trim' },
         { type: 'normalize-whitespace' },
         { type: 'remove-special-chars', params: { keep: [' '] } },
@@ -301,7 +301,7 @@ describe('ActionHelpersService - Cleanse Action', () => {
         { exec: jest.fn((val: string) => val.replace('$', '')) }, // remove-currency-symbol: '$29.99' -> '29.99'
         { exec: jest.fn((val: string) => Number(val)) }, // to-number: '29.99' -> 29.99
       ];
-      (cleansingService.loadPipes as jest.Mock).mockResolvedValue(
+      (cleansingService.loadPipes as jest.Mock).mockReturnValue(
         mockPipeInstances,
       );
       (cleansingService.cleanse as jest.Mock).mockImplementation(
@@ -362,12 +362,12 @@ describe('ActionHelpersService - Cleanse Action', () => {
 
       // Mock pipe loading
       (cleansingService.loadPipes as jest.Mock)
-        .mockResolvedValueOnce([
+        .mockReturnValueOnce([
           { type: 'remove-currency-symbol' },
           { type: 'trim' },
           { type: 'to-number' },
         ])
-        .mockResolvedValueOnce([
+        .mockReturnValueOnce([
           { type: 'trim' },
           { type: 'remove-excess-whitespace' },
         ]);
@@ -421,7 +421,7 @@ describe('ActionHelpersService - Cleanse Action', () => {
       (pageService.closePage as jest.Mock).mockResolvedValue(undefined);
 
       // Mock only price pipe loading
-      (cleansingService.loadPipes as jest.Mock).mockResolvedValueOnce([
+      (cleansingService.loadPipes as jest.Mock).mockReturnValueOnce([
         { type: 'remove-currency-symbol' },
         { type: 'to-number' },
       ]);
@@ -470,7 +470,7 @@ describe('ActionHelpersService - Cleanse Action', () => {
       (pageService.navigateTo as jest.Mock).mockResolvedValue(mockPage);
       (pageService.closePage as jest.Mock).mockResolvedValue(undefined);
 
-      (cleansingService.loadPipes as jest.Mock).mockResolvedValueOnce([
+      (cleansingService.loadPipes as jest.Mock).mockReturnValueOnce([
         { type: 'trim' },
       ]);
       (cleansingService.cleanse as jest.Mock).mockReturnValueOnce('29.99');
@@ -528,7 +528,7 @@ describe('ActionHelpersService - Cleanse Action', () => {
         { exec: jest.fn((val: string) => val.trim()) },
         { exec: jest.fn((val: string) => parseFloat(val)) },
       ];
-      cleansingService.loadPipes.mockResolvedValue(mockPipeInstances);
+      cleansingService.loadPipes.mockReturnValue(mockPipeInstances);
       cleansingService.cleanse.mockImplementation((value, pipes) => {
         return pipes.reduce(
           (result: any, pipe: any) => pipe.exec(result),
@@ -625,7 +625,7 @@ describe('ActionHelpersService - Cleanse Action', () => {
       const mockPipeInstances = [
         { exec: jest.fn((val: string) => val.trim()) },
       ];
-      cleansingService.loadPipes.mockResolvedValue(mockPipeInstances);
+      cleansingService.loadPipes.mockReturnValue(mockPipeInstances);
       cleansingService.cleanse.mockImplementation((value, pipes) => {
         return pipes.reduce(
           (result: any, pipe: any) => pipe.exec(result),

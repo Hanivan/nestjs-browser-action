@@ -32,7 +32,7 @@ describe('ActionHelpersService - Integration Tests', () => {
           provide: CleansingService,
           useValue: {
             cleanse: jest.fn(),
-            loadPipes: jest.fn().mockResolvedValue([]),
+            loadPipes: jest.fn().mockReturnValue([]),
           },
         },
       ],
@@ -80,7 +80,7 @@ describe('ActionHelpersService - Integration Tests', () => {
         { exec: jest.fn((val: string) => parseFloat(val)) }, // TO_NUMBER
       ];
 
-      (cleansingService.loadPipes as jest.Mock).mockResolvedValue(
+      (cleansingService.loadPipes as jest.Mock).mockReturnValue(
         mockPipeInstances,
       );
       (cleansingService.cleanse as jest.Mock).mockImplementation(
@@ -145,7 +145,7 @@ describe('ActionHelpersService - Integration Tests', () => {
 
       // Mock cleansing service
       const mockTrimPipe = { exec: jest.fn((val: string) => val.trim()) };
-      (cleansingService.loadPipes as jest.Mock).mockResolvedValue([
+      (cleansingService.loadPipes as jest.Mock).mockReturnValue([
         mockTrimPipe,
       ]);
       (cleansingService.cleanse as jest.Mock).mockImplementation(
@@ -195,7 +195,7 @@ describe('ActionHelpersService - Integration Tests', () => {
         { exec: jest.fn((val: string) => val.replace(/\s+/g, ' ')) },
         { exec: jest.fn((val: string) => val.toLowerCase()) },
       ];
-      (cleansingService.loadPipes as jest.Mock).mockResolvedValue(mockPipes);
+      (cleansingService.loadPipes as jest.Mock).mockReturnValue(mockPipes);
       (cleansingService.cleanse as jest.Mock).mockImplementation(
         (value, pipes) => {
           return pipes.reduce(
