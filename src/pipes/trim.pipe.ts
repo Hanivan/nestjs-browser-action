@@ -5,7 +5,7 @@ import { CleansingType } from '../enums/cleansing-type.enum';
 /**
  * Trim whitespace from strings
  */
-export class TrimPipe extends CleansingPipe<string, string> {
+export class TrimPipe extends CleansingPipe<unknown, unknown> {
   type = CleansingType.TRIM;
 
   @IsOptional()
@@ -16,7 +16,7 @@ export class TrimPipe extends CleansingPipe<string, string> {
   @IsBoolean()
   trimEnd?: boolean;
 
-  exec(value: string): string {
+  exec(value: unknown): unknown {
     if (typeof value !== 'string') {
       return value;
     }

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CleansingService } from './cleansing.service';
 import { CleansingProfile } from '../enums/cleansing-profile.enum';
 import { CleansingType } from '../enums/cleansing-type.enum';
+import { CleansingPipe } from '../pipes/cleansing-pipe';
 
 describe('CleansingService', () => {
   let service: CleansingService;
@@ -21,7 +22,7 @@ describe('CleansingService', () => {
   describe('cleanse', () => {
     it('should execute pipes in sequence', () => {
       const input = '  hello WORLD  ';
-      const pipes = [
+      const pipes: CleansingPipe[] = [
         new (require('../pipes/trim.pipe').TrimPipe)(),
         new (require('../pipes/to-lower-case.pipe').ToLowerCasePipe)(),
       ];
@@ -40,7 +41,10 @@ describe('CleansingService', () => {
     it('should throw error for invalid profile name', () => {
       const input = 'test';
       expect(() => {
-        service.cleanseWithProfile(input, 'invalid-profile' as any);
+        service.cleanseWithProfile(
+          input,
+          'invalid-profile' as CleansingProfile,
+        );
       }).toThrow();
     });
   });

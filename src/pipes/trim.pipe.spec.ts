@@ -20,9 +20,9 @@ describe('TrimPipe', () => {
 
   it('should return non-string values unchanged', () => {
     const pipe = new TrimPipe();
-    expect(pipe.exec(123 as any)).toBe(123);
-    expect(pipe.exec(null as any)).toBe(null);
-    expect(pipe.exec(undefined as any)).toBe(undefined);
+    expect(pipe.exec(123)).toBe(123);
+    expect(pipe.exec(null)).toBe(null);
+    expect(pipe.exec(undefined)).toBe(undefined);
   });
 
   it('should have type "trim"', () => {

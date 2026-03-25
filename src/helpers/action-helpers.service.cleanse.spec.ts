@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import type { Page } from 'puppeteer';
 import { ActionHelpersService } from './action-helpers.service';
 import { PageService } from '../services/page-service';
 import { CookieService } from '../services/cookie.service';
@@ -9,6 +10,9 @@ import {
   VariableContext,
 } from '../interfaces/workflow-options';
 import { CleansingType } from '../enums/cleansing-type.enum';
+
+// Mock Page type for testing
+type MockPage = Partial<Page>;
 
 describe('ActionHelpersService - Cleanse Action', () => {
   let service: ActionHelpersService;
@@ -50,7 +54,7 @@ describe('ActionHelpersService - Cleanse Action', () => {
 
   describe('executeAction - cleanse', () => {
     it('should cleanse a value with simple pipe configuration', async () => {
-      const mockPage = {} as any;
+      const mockPage = {} as MockPage;
       const context: VariableContext = {};
       const action: WorkflowAction = {
         action: 'cleanse',
@@ -87,7 +91,7 @@ describe('ActionHelpersService - Cleanse Action', () => {
     });
 
     it('should cleanse a value with single pipe', async () => {
-      const mockPage = {} as any;
+      const mockPage = {} as MockPage;
       const context: VariableContext = {};
       const action: WorkflowAction = {
         action: 'cleanse',
@@ -116,7 +120,7 @@ describe('ActionHelpersService - Cleanse Action', () => {
     });
 
     it('should cleanse a value from context variable', async () => {
-      const mockPage = {} as any;
+      const mockPage = {} as MockPage;
       const context: VariableContext = {
         rawPrice: '$ 29.99',
       };
@@ -155,7 +159,7 @@ describe('ActionHelpersService - Cleanse Action', () => {
     });
 
     it('should handle cleanse action without id', async () => {
-      const mockPage = {} as any;
+      const mockPage = {} as MockPage;
       const context: VariableContext = {};
       const action: WorkflowAction = {
         action: 'cleanse',
@@ -172,7 +176,7 @@ describe('ActionHelpersService - Cleanse Action', () => {
     });
 
     it('should throw error if no pipes provided', async () => {
-      const mockPage = {} as any;
+      const mockPage = {} as MockPage;
       const context: VariableContext = {};
       const action: WorkflowAction = {
         action: 'cleanse',
@@ -187,7 +191,7 @@ describe('ActionHelpersService - Cleanse Action', () => {
     });
 
     it('should work with complex pipe configurations', async () => {
-      const mockPage = {} as any;
+      const mockPage = {} as MockPage;
       const context: VariableContext = {
         rawText: '  Hello   WORLD!  $123.45  ',
       };
@@ -234,7 +238,7 @@ describe('ActionHelpersService - Cleanse Action', () => {
     });
 
     it('should handle condition check before cleanse', async () => {
-      const mockPage = {} as any;
+      const mockPage = {} as MockPage;
       const context: VariableContext = {};
       const action: WorkflowAction = {
         action: 'cleanse',

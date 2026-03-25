@@ -145,9 +145,7 @@ describe('ActionHelpersService - Integration Tests', () => {
 
       // Mock cleansing service
       const mockTrimPipe = { exec: jest.fn((val: string) => val.trim()) };
-      (cleansingService.loadPipes as jest.Mock).mockReturnValue([
-        mockTrimPipe,
-      ]);
+      (cleansingService.loadPipes as jest.Mock).mockReturnValue([mockTrimPipe]);
       (cleansingService.cleanse as jest.Mock).mockImplementation(
         (value, pipes) => {
           return pipes.reduce(
