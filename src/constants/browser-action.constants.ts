@@ -11,6 +11,20 @@ export const DEFAULT_LAUNCH_OPTIONS = {
   headless: true,
 };
 
+export const DEFAULT_REMOTE_OPTIONS = {
+  retryMax: 3,
+  retryDelay: 1000,
+} as const;
+
+export const AVAILABILITY_CHECK_INTERVAL_MS = 100;
+
+export const ERROR_MESSAGES = {
+  REMOTE_BOTH_PROVIDED:
+    'Exactly one of browserURL or browserWSEndpoint must be provided, not both',
+  REMOTE_NONE_PROVIDED:
+    'Exactly one of browserURL or browserWSEndpoint must be provided',
+} as const;
+
 export const DEFAULT_CONTEXT_OPTIONS = {
   viewport: {
     width: 1920,

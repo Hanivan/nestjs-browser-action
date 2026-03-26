@@ -7,12 +7,19 @@ import {
 import type { Browser, LaunchOptions } from 'puppeteer';
 import * as puppeteer from 'puppeteer';
 import {
+  AVAILABILITY_CHECK_INTERVAL_MS,
   BROWSER_ACTION_OPTIONS,
   DEFAULT_POOL_OPTIONS,
+  DEFAULT_REMOTE_OPTIONS,
+  ERROR_MESSAGES,
 } from '../constants/browser-action.constants';
-import type { BrowserActionOptions } from '../interfaces/browser-action-options';
+import type {
+  BrowserActionOptions,
+  RemoteOptions,
+} from '../interfaces/browser-action-options';
 import type { LogLevel } from '@nestjs/common';
 import { LoggerWithLevel } from '../helpers/logger.util';
+import { delay } from '../helpers/delay.util';
 
 @Injectable()
 export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
@@ -20,6 +27,7 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
   private pool: Browser[] = [];
   private available: Set<Browser> = new Set();
   private inUse: Set<Browser> = new Set();
+  private disconnectListeners = new Map<Browser, () => void>();
   private launchOptions: LaunchOptions = {};
   private minSize: number = DEFAULT_POOL_OPTIONS.min;
   private maxSize: number = DEFAULT_POOL_OPTIONS.max;
@@ -40,15 +48,22 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
     this.minSize = this.options.pool?.min || DEFAULT_POOL_OPTIONS.min;
     this.maxSize = this.options.pool?.max || DEFAULT_POOL_OPTIONS.max;
 
+    // Validate remote options
+    this.validateRemoteOptions(this.options.remote);
+
     this.logger.log(
       `Initializing browser pool (min: ${this.minSize}, max: ${this.maxSize})`,
     );
 
-    for (let i = 0; i < this.minSize; i++) {
-      const browser = await this.createBrowser();
+    // Create browsers in parallel for faster initialization
+    const browsers = await Promise.all(
+      Array.from({ length: this.minSize }, () => this.createBrowser()),
+    );
+
+    browsers.forEach((browser) => {
       this.pool.push(browser);
       this.available.add(browser);
-    }
+    });
 
     this.logger.log(
       `Browser pool initialized with ${this.pool.length} browsers`,
@@ -59,17 +74,88 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
     return this.logger.getLogLevel();
   }
 
-  private async createBrowser(): Promise<Browser> {
-    try {
-      const browser = await puppeteer.launch(this.launchOptions);
-      browser.on('disconnected', () => {
-        this.logger.log('Browser disconnected', 'warn');
-      });
-      return browser;
-    } catch (error) {
-      this.logger.log('Failed to launch browser', 'error');
-      throw error;
+  private validateRemoteOptions(remote?: RemoteOptions): void {
+    if (!remote) return;
+
+    const hasURL = !!remote.browserURL;
+    const hasWSEndpoint = !!remote.browserWSEndpoint;
+
+    if (hasURL && hasWSEndpoint) {
+      throw new Error(ERROR_MESSAGES.REMOTE_BOTH_PROVIDED);
     }
+
+    if (!hasURL && !hasWSEndpoint) {
+      throw new Error(ERROR_MESSAGES.REMOTE_NONE_PROVIDED);
+    }
+  }
+
+  private async createBrowser(): Promise<Browser> {
+    if (this.options.remote) {
+      return await this.connectWithRetry(this.options.remote);
+    }
+
+    const browser = await puppeteer.launch(this.launchOptions);
+    const disconnectHandler = () => {
+      this.logger.log('Browser disconnected', 'warn');
+    };
+    browser.on('disconnected', disconnectHandler);
+    this.disconnectListeners.set(browser, disconnectHandler);
+    return browser;
+  }
+
+  private async connectWithRetry(
+    remoteOptions: RemoteOptions,
+  ): Promise<Browser> {
+    const {
+      browserURL,
+      browserWSEndpoint,
+      retryMax = DEFAULT_REMOTE_OPTIONS.retryMax,
+      retryDelay = DEFAULT_REMOTE_OPTIONS.retryDelay,
+    } = remoteOptions;
+
+    const connectOptions: { browserURL?: string; browserWSEndpoint?: string } =
+      {};
+    if (browserURL) {
+      connectOptions.browserURL = browserURL;
+    } else if (browserWSEndpoint) {
+      connectOptions.browserWSEndpoint = browserWSEndpoint;
+    }
+
+    let lastError: Error | undefined;
+
+    for (let attempt = 1; attempt <= retryMax; attempt++) {
+      try {
+        this.logger.log(
+          `Connecting to remote Chrome (attempt ${attempt}/${retryMax})`,
+          'debug',
+        );
+
+        const browser = await puppeteer.connect(connectOptions);
+
+        const disconnectHandler = () => {
+          this.logger.log('Remote Chrome disconnected', 'warn');
+        };
+        browser.on('disconnected', disconnectHandler);
+        this.disconnectListeners.set(browser, disconnectHandler);
+
+        this.logger.log('Successfully connected to remote Chrome', 'debug');
+        return browser;
+      } catch (error) {
+        lastError = error as Error;
+        this.logger.log(
+          `Connection attempt ${attempt}/${retryMax} failed: ${lastError.message}`,
+          'warn',
+        );
+
+        if (attempt < retryMax) {
+          await delay(retryDelay);
+        }
+      }
+    }
+
+    throw new Error(
+      `Failed to connect to remote Chrome after ${retryMax} attempts: ${lastError?.message}`,
+    );
   }
 
   async acquire(): Promise<Browser> {
@@ -104,7 +190,7 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
           clearInterval(checkInterval);
           resolve();
         }
-      }, 100);
+      }, AVAILABILITY_CHECK_INTERVAL_MS);
     });
   }
 
@@ -128,6 +214,13 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
     await Promise.all(
       this.pool.map(async (browser) => {
         try {
+          // Remove disconnect event listener to prevent memory leaks
+          const handler = this.disconnectListeners.get(browser);
+          if (handler) {
+            browser.off('disconnected', handler);
+            this.disconnectListeners.delete(browser);
+          }
+
           if (browser.isConnected()) {
             await browser.close();
           }
@@ -139,5 +232,6 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
     this.pool = [];
     this.available.clear();
     this.inUse.clear();
+    this.disconnectListeners.clear();
   }
 }

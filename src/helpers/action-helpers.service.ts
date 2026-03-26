@@ -24,6 +24,7 @@ import {
   PipeConfig,
 } from '../interfaces/types';
 import { LoggerWithLevel } from './logger.util';
+import { delay } from './delay.util';
 import {
   DEFAULT_ACTION_TIMEOUT,
   DEFAULT_NAVIGATION_TIMEOUT,
@@ -356,7 +357,7 @@ export class ActionHelpersService {
         break;
 
       case 'wait':
-        await this.wait(Number(action.value) || 0);
+        await delay((Number(action.value) || 0) * 1000);
         break;
 
       case 'waitFor':
@@ -708,7 +709,7 @@ export class ActionHelpersService {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' }),
       {},
     );
-    await this.wait(DEFAULT_SCROLL_DELAY_MS / 1000);
+    await delay(DEFAULT_SCROLL_DELAY_MS);
   }
 
   private getCachedPipeInstances(config: PipeConfig[]): CleansingPipe[] {
@@ -732,10 +733,6 @@ export class ActionHelpersService {
     }
 
     return element.evaluate((el: Element) => el.textContent?.trim() || '', {});
-  }
-
-  private wait(seconds: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, seconds * 1000));
   }
 
   private resolveValue(value: string, context: VariableContext): string {

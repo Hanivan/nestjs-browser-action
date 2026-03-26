@@ -10,6 +10,7 @@ export * from './services/cleansing.service';
 
 // Helpers
 export * from './helpers/action-helpers.service';
+export * from './helpers/delay.util';
 
 // Pipes
 export * from './pipes';
