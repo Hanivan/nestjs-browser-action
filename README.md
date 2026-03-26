@@ -18,6 +18,7 @@ A NestJS module that provides Puppeteer-based browser automation with configurab
 - (｡•̀ᴗ-)✧ **Data Cleansing**: 14 built-in transformation pipes
 - (°_°)! **Shadow DOM**: Support for web components
 - (^_^) **Type-Safe**: Full TypeScript support with generics
+- (^^) **Remote Chrome**: Connect to remote Chrome instances via CDP (browserURL/browserWSEndpoint)
 
 ## Installation
 
@@ -177,6 +178,35 @@ const workflow = {
   ],
 };
 ```
+
+### Remote Chrome Connection
+
+Connect to remote Chrome instances via Chrome DevTools Protocol (CDP):
+
+```typescript
+BrowserActionModule.forRoot({
+  remote: {
+    browserURL: 'http://localhost:9222',  // Or use browserWSEndpoint
+    retryMax: 3,                          // Connection retry attempts
+    retryDelay: 1000,                     // Delay between retries (ms)
+  },
+  pool: { min: 2, max: 5 },
+})
+```
+
+**Using browserWSEndpoint:**
+
+```typescript
+BrowserActionModule.forRoot({
+  remote: {
+    browserWSEndpoint: 'ws://localhost:9222/devtools/page/abc123',
+  },
+})
+```
+
+**Remote-first priority:** When both `remote` and `launchOptions` are provided, remote connection takes precedence.
+
+**See:** [Remote Chrome Configuration](./docs/api-reference.md#remote-chrome-configuration) for details.
 
 ## Services
 

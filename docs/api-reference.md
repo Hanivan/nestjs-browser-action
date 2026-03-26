@@ -219,6 +219,14 @@ interface BrowserActionOptions {
   // Logging
   logLevel?: 'log' | 'error' | 'warn' | 'debug' | 'verbose';
 
+  // Remote Chrome CDP connection
+  remote?: {
+    browserURL?: string;       // CDP browser URL (e.g., 'http://localhost:9222')
+    browserWSEndpoint?: string; // CDP WebSocket endpoint (e.g., 'ws://localhost:9222/devtools/page/abc123')
+    retryMax?: number;         // Max connection retry attempts (default: 3)
+    retryDelay?: number;       // Delay between retries in ms (default: 1000)
+  };
+
   // Cookie persistence
   cookies?: {
     enabled?: boolean;          // Enable cookie persistence (default: true)
@@ -228,6 +236,40 @@ interface BrowserActionOptions {
     defaultSessionName?: string; // Default session name (default: 'default')
   };
 }
+```
+
+#### Remote Chrome Configuration
+
+Connect to remote Chrome instances using Chrome DevTools Protocol (CDP). Provide exactly one of:
+
+- **browserURL**: CDP browser URL (e.g., `http://localhost:9222`). Connects to any available tab.
+- **browserWSEndpoint**: Direct WebSocket endpoint to a specific tab (e.g., `ws://localhost:9222/devtools/page/abc123`).
+
+**Remote-First Priority:** When both `remote` and `launchOptions` are provided, remote connection takes precedence.
+
+**Retry Logic:** Configure connection retry behavior with `retryMax` (default: 3) and `retryDelay` (default: 1000ms).
+
+**Example:**
+
+```typescript
+BrowserActionModule.forRoot({
+  remote: {
+    browserURL: 'http://localhost:9222',
+    retryMax: 5,
+    retryDelay: 2000,
+  },
+  pool: { min: 2, max: 5 },
+})
+```
+
+**Starting Chrome with Remote Debugging:**
+
+```bash
+chrome --remote-debugging-port=9222
+# Or
+google-chrome --remote-debugging-port=9222
+# Or
+chromium --remote-debugging-port=9222
 ```
 
 ## Interfaces
@@ -420,6 +462,33 @@ interface PoolOptions {
   strategy?: 'round-robin' | 'least-recently-used';
 }
 ```
+
+### RemoteOptions
+
+```typescript
+interface RemoteOptions {
+  browserURL?: string;       // CDP browser URL
+  browserWSEndpoint?: string; // CDP WebSocket endpoint
+  retryMax?: number;         // Max retry attempts (default: 3)
+  retryDelay?: number;       // Delay between retries in ms (default: 1000)
+}
+```
+
+Remote Chrome connection options via Chrome DevTools Protocol (CDP). Exactly one of `browserURL` or `browserWSEndpoint` must be provided.
+
+### CookieOptions
+
+```typescript
+interface CookieOptions {
+  enabled?: boolean;          // Enable cookie persistence (default: true)
+  cookiesDir?: string;        // Cookie directory (default: './cookies')
+  autoSave?: boolean;         // Auto-save after workflows
+  autoLoad?: boolean;         // Auto-load before workflows
+  defaultSessionName?: string; // Default session name (default: 'default')
+}
+```
+
+Cookie persistence configuration options.
 
 ## Enums
 
