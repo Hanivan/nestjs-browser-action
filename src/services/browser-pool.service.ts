@@ -65,6 +65,11 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
     }
 
     this.logger.log(
+      'Call app.enableShutdownHooks() in main.ts to ensure graceful browser cleanup on Ctrl+C',
+      'warn',
+    );
+
+    this.logger.log(
       `Initializing browser pool (min: ${this.minSize}, max: ${this.maxSize})`,
     );
 
@@ -223,11 +228,16 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
-    this.logger.log('Closing all browsers in pool');
+    const isRemote = !!this.options.remote;
+    this.logger.log(
+      isRemote
+        ? 'Disconnecting all remote CDP browsers'
+        : 'Closing all local browsers',
+    );
+
     await Promise.all(
       this.pool.map(async (browser) => {
         try {
-          // Remove disconnect event listener to prevent memory leaks
           const handler = this.disconnectListeners.get(browser);
           if (handler) {
             browser.off('disconnected', handler);
@@ -235,16 +245,24 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
           }
 
           if (browser.isConnected()) {
-            await browser.close();
+            if (isRemote) {
+              // CDP: disconnect only — do not kill the remote Chrome process
+              browser.disconnect();
+            } else {
+              // Local: close the browser and all its pages
+              await browser.close();
+            }
           }
         } catch {
-          this.logger.log('Error closing browser', 'error');
+          this.logger.log('Error during browser cleanup', 'error');
         }
       }),
     );
+
     this.pool = [];
     this.available.clear();
     this.inUse.clear();
     this.disconnectListeners.clear();
+    this.logger.log('Browser pool shut down');
   }
 }

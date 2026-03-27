@@ -62,4 +62,16 @@ export class LoggerWithLevel {
         this.logger.log(message);
     }
   }
+
+  warn(message: string): void {
+    this.log(message, 'warn');
+  }
+
+  error(message: string): void {
+    this.log(message, 'error');
+  }
+
+  debug(message: string): void {
+    this.log(message, 'debug');
+  }
 }
