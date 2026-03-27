@@ -555,7 +555,9 @@ Cleanse extracted data using pipes.
 - `id` (string): Context key to store result
 - `options.pipes` (PipeConfig[]): Pipes to apply
 
-**Example:**
+When `value` resolves to an **array** (e.g. from `multiple: true` extraction), the pipes are applied to each item individually and the result is also an array.
+
+**Example — single value:**
 ```typescript
 const workflow = {
   version: '1.0' as const,
@@ -568,7 +570,7 @@ const workflow = {
     {
       id: 'title',
       action: 'cleanse' as const,
-      value: '${rawTitle}',  // Variable reference
+      value: '${rawTitle}',
       options: {
         pipes: [
           { type: CleansingType.TRIM },
@@ -578,6 +580,33 @@ const workflow = {
     },
   ],
 };
+```
+
+**Example — array value (from `multiple: true`):**
+```typescript
+const workflow = {
+  version: '1.0' as const,
+  actions: [
+    {
+      id: 'rawCategories',
+      action: 'extract' as const,
+      target: { type: 'css' as const, value: '.category' },
+      options: { multiple: true },
+    },
+    {
+      id: 'categories',
+      action: 'cleanse' as const,
+      value: '${rawCategories}',  // array → pipes applied to each item
+      options: {
+        pipes: [
+          { type: CleansingType.TRIM },
+          { type: CleansingType.NORMALIZE_WHITESPACE },
+        ],
+      },
+    },
+  ],
+};
+// result.data.categories → ['Electronics', 'Home & Garden', 'Sports']
 ```
 
 ---

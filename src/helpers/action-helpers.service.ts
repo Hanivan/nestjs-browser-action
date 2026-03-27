@@ -499,15 +499,15 @@ export class ActionHelpersService {
           throw new Error('cleanse action requires at least one pipe');
         }
 
-        const currentValue = this.resolveValue(
-          String(action.value || ''),
-          context,
-        );
+        const valueKey = String(action.value || '');
         const pipeInstances = this.getCachedPipeInstances(pipes);
-        const cleanedValue = this.cleansingService.cleanse(
-          currentValue,
-          pipeInstances,
-        );
+        const rawValue = this.resolveRawValue(valueKey, context);
+
+        const cleanedValue = Array.isArray(rawValue)
+          ? rawValue.map((item) =>
+              this.cleansingService.cleanse(String(item), pipeInstances),
+            )
+          : this.cleansingService.cleanse(String(rawValue), pipeInstances);
 
         if (action.id) {
           context[action.id] = cleanedValue;
@@ -877,6 +877,16 @@ export class ActionHelpersService {
         el.dispatchEvent(new Event('change', { bubbles: true }));
       }
     });
+  }
+
+  private resolveRawValue(value: string, context: VariableContext): unknown {
+    if (value.startsWith('${') && value.endsWith('}')) {
+      const path = value.slice(2, -1);
+      if (!path.includes('${') && !path.includes('.') && !path.includes('[')) {
+        return context[path] ?? value;
+      }
+    }
+    return this.resolveValue(value, context);
   }
 
   private resolveValue(value: string, context: VariableContext): string {

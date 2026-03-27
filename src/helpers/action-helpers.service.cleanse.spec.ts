@@ -237,6 +237,42 @@ describe('ActionHelpersService - Cleanse Action', () => {
       );
     });
 
+    it('should cleanse an array context variable by mapping pipes over each item', async () => {
+      const mockPage = {} as MockPage;
+      const context: VariableContext = {
+        rawCategories: ['  Electronics  ', '  Home & Garden  ', '  Sports  '],
+      };
+      const action: WorkflowAction = {
+        action: 'cleanse',
+        id: 'categories',
+        value: '${rawCategories}',
+        options: {
+          pipes: [{ type: CleansingType.TRIM }],
+        },
+      };
+
+      (cleansingService.loadPipes as jest.Mock).mockReturnValueOnce([
+        { type: 'trim' },
+      ]);
+      (cleansingService.cleanse as jest.Mock)
+        .mockReturnValueOnce('Electronics')
+        .mockReturnValueOnce('Home & Garden')
+        .mockReturnValueOnce('Sports');
+
+      await service['executeAction'](mockPage, action, context);
+
+      expect(context.categories).toEqual([
+        'Electronics',
+        'Home & Garden',
+        'Sports',
+      ]);
+      expect(cleansingService.cleanse).toHaveBeenCalledTimes(3);
+      expect(cleansingService.cleanse).toHaveBeenCalledWith(
+        '  Electronics  ',
+        expect.any(Array),
+      );
+    });
+
     it('should handle condition check before cleanse', async () => {
       const mockPage = {} as MockPage;
       const context: VariableContext = {};
