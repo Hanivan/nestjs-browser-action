@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.3.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.2.4...v0.3.0) (2026-03-27)
+
+
+### Features
+
+* Add new interaction actions and enhance extraction capabilities ([860622b](https://github.com/Hanivan/nestjs-browser-action/commit/860622b5b9b97575c1a85f3549c74cb833fcd683))
+
 ## [0.2.4](https://github.com/Hanivan/nestjs-browser-action/compare/v0.2.3...v0.2.4) (2026-03-27)
 
 ## [0.2.3](https://github.com/Hanivan/nestjs-browser-action/compare/v0.2.2...v0.2.3) (2026-03-27)
