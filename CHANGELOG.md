@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/Hanivan/nestjs-browser-action/compare/v0.3.0...v0.3.1) (2026-03-27)
+
+
+### Bug Fixes
+
+* Update ActionTarget interface and enhance shadow DOM extraction in ActionHelpersService ([3ae81a5](https://github.com/Hanivan/nestjs-browser-action/commit/3ae81a56bd6a051a4be9adeea3121f22eeb37228))
+
 # [0.3.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.2.4...v0.3.0) (2026-03-27)
 
 
