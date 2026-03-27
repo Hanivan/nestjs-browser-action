@@ -25,19 +25,19 @@ A NestJS module that provides Puppeteer-based browser automation with configurab
 ### From npm
 
 ```bash
-npm install @hanivanrizky/nestjs-browser-action puppeteer
+npm install @hanivanrizky/nestjs-browser-action
 # or
-yarn add @hanivanrizky/nestjs-browser-action puppeteer
+yarn add @hanivanrizky/nestjs-browser-action
 ```
 
 ### From GitHub
 
 ```bash
-npm install https://github.com/Hanivan/nestjs-browser-action.git puppeteer
+npm install https://github.com/Hanivan/nestjs-browser-action.git
 # or
-yarn add https://github.com/Hanivan/nestjs-browser-action.git puppeteer
+yarn add https://github.com/Hanivan/nestjs-browser-action.git
 # or using SSH
-yarn add git@github.com:Hanivan/nestjs-browser-action.git puppeteer
+yarn add git@github.com:Hanivan/nestjs-browser-action.git
 ```
 
 ## Quick Start
