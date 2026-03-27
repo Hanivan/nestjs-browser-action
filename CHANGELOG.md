@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.2.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.1.1...v0.2.0) (2026-03-27)
+
+
+### Features
+
+* Introduce delay utility and enhance browser pool service with remote connection options ([bfa43e5](https://github.com/Hanivan/nestjs-browser-action/commit/bfa43e537ba829599b349e0f9e33a57e0da622a9))
+
 ## [0.1.1](https://github.com/Hanivan/nestjs-browser-action/compare/v0.1.0...v0.1.1) (2026-03-25)
 
 # 0.1.0 (2026-03-25)
