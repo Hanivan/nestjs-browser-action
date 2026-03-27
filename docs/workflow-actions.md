@@ -705,7 +705,7 @@ Defines the target element for actions that need one.
 ```typescript
 interface ActionTarget {
   type: 'css' | 'xpath';     // Selector type
-  value: string;               // Selector expression
+  value?: string;              // Selector expression (omit to extract the shadow root itself)
   shadowHost?: string;         // Shadow DOM host element (for Shadow DOM)
 }
 ```
@@ -721,10 +721,16 @@ interface ActionTarget {
 { type: 'xpath' as const, value: '//h2[@class="title"]' }
 { type: 'xpath' as const, value: '(//a)[1]' }
 
-// Shadow DOM
+// Shadow DOM — inner element
 {
   type: 'css' as const,
   value: '.inner-content',
+  shadowHost: 'my-web-component',
+}
+
+// Shadow DOM — extract the shadow root itself (no inner selector)
+{
+  type: 'css' as const,
   shadowHost: 'my-web-component',
 }
 ```
@@ -861,6 +867,7 @@ For `extract`, `waitFor`, and click actions, use XPath:
 Access elements inside Shadow DOM:
 
 ```typescript
+// Extract an element inside the shadow root
 {
   action: 'extract' as const,
   target: {
@@ -869,7 +876,20 @@ Access elements inside Shadow DOM:
     shadowHost: 'my-web-component',
   },
 }
+
+// Extract the entire shadow root HTML (omit value)
+{
+  action: 'extract' as const,
+  id: 'shadowHtml',
+  target: {
+    type: 'css' as const,
+    shadowHost: 'my-web-component',
+  },
+  options: { as: 'html' },  // returns shadowRoot.innerHTML
+}
 ```
+
+> **Note:** `as: 'outerHtml'` on a shadow root returns `innerHTML` — shadow roots are document fragments and have no outer HTML.
 
 ## Complete Workflow Example
 
