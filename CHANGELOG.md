@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.4.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.3.5...v0.4.0) (2026-03-27)
+
+
+### Features
+
+* Enhance input handling in ActionHelpersService ([ef5b607](https://github.com/Hanivan/nestjs-browser-action/commit/ef5b607bfc5ba0de03a6643d4435e774a83fa20e))
+
 ## [0.3.5](https://github.com/Hanivan/nestjs-browser-action/compare/v0.3.4...v0.3.5) (2026-03-27)
 
 ## [0.3.4](https://github.com/Hanivan/nestjs-browser-action/compare/v0.3.3...v0.3.4) (2026-03-27)
