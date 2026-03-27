@@ -739,6 +739,10 @@ export class ActionHelpersService {
     await elem.click();
     const delay = options?.delay || 0;
     await elem.type(value, { delay });
+    await elem.evaluate((el) => {
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+      el.dispatchEvent(new Event('blur', { bubbles: true }));
+    });
   }
 
   private async selectOption(
