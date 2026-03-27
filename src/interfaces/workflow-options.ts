@@ -19,7 +19,7 @@ export interface ActionTarget {
  */
 export type ActionType =
   | 'navigate' // Go to URL
-  | 'wait' // Delay in seconds
+  | 'wait' // Delay in milliseconds
   | 'waitFor' // Wait for selector
   | 'click' // Click element
   | 'type' // Type text

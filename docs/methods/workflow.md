@@ -94,7 +94,7 @@ interface WorkflowAction {
 | Action | Description | Example |
 |--------|-------------|---------|
 | `navigate` | Navigate to URL | `{ action: 'navigate', value: 'https://example.com' }` |
-| `wait` | Wait for specified time (seconds) | `{ action: 'wait', value: 2 }` |
+| `wait` | Wait for specified time (ms) | `{ action: 'wait', value: 2000 }` |
 | `waitFor` | Wait for element to appear | `{ action: 'waitFor', target: { type: 'css', value: '#button' } }` |
 | `click` | Click on element | `{ action: 'click', target: { type: 'css', value: '#submit' } }` |
 | `type` | Type text into input | `{ action: 'type', target: { type: 'css', value: '#input' }, value: 'text' }` |

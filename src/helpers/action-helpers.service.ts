@@ -350,7 +350,7 @@ export class ActionHelpersService {
         break;
 
       case 'wait':
-        await delay((Number(action.value) || 0) * 1000);
+        await delay(Number(action.value) || 0);
         break;
 
       case 'waitFor':

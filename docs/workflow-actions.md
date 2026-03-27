@@ -66,23 +66,23 @@ Navigate to a URL.
 
 ### wait
 
-Wait for specified time in seconds.
+Wait for specified time in milliseconds.
 
 ```typescript
 {
   action: 'wait',
-  value: 2,  // Wait for 2 seconds
+  value: 2000,  // Wait for 2 seconds
 }
 ```
 
 **Parameters:**
-- `value` (number): Seconds to wait
+- `value` (number): Milliseconds to wait
 
 **Example:**
 ```typescript
 {
   action: 'wait' as const,
-  value: 5,  // Wait 5 seconds
+  value: 5000,  // Wait 5 seconds
 }
 ```
 
