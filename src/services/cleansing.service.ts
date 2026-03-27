@@ -64,11 +64,18 @@ export class CleansingService {
         throw new Error(`Unknown pipe type: ${pipeConfig.type}`);
       }
 
-      // Only pass params if they exist, not the entire config
-      const pipeParams =
-        (pipeConfig as { params?: Record<string, unknown> }).params || {};
+      const { primaryPipes, fallbackPipes, ...rest } = pipeConfig;
       const pipeInstance = new PipeClass();
-      Object.assign(pipeInstance, { customConfig: pipeParams });
+      Object.assign(pipeInstance, rest);
+
+      if (primaryPipes) {
+        (pipeInstance as AltFlagPipe).primaryPipes =
+          this.loadPipes(primaryPipes);
+      }
+      if (fallbackPipes) {
+        (pipeInstance as AltFlagPipe).fallbackPipes =
+          this.loadPipes(fallbackPipes);
+      }
 
       pipes.push(pipeInstance as CleansingPipe);
     }

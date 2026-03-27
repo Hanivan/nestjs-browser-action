@@ -528,6 +528,85 @@ describe('ActionHelpersService - Cleanse Action', () => {
     });
   });
 
+  describe('regex replace pipe — real CleansingService (no mocks)', () => {
+    let realCleansingService: CleansingService;
+
+    beforeEach(() => {
+      realCleansingService = new CleansingService();
+    });
+
+    it('should strip bracket markers from price string', () => {
+      const input = '[penghapusan dimulai]  JP¥46.196  [penghapusan selesai]';
+      const pipes = realCleansingService.loadPipes([
+        {
+          type: CleansingType.REGEX_REPLACE,
+          pattern: '\\[penghapusan dimulai\\]\\s*',
+          replacement: '',
+        },
+        {
+          type: CleansingType.REGEX_REPLACE,
+          pattern: '\\s*\\[penghapusan selesai\\]',
+          replacement: '',
+        },
+        { type: CleansingType.TRIM },
+        { type: CleansingType.NORMALIZE_WHITESPACE },
+      ]);
+
+      const result = realCleansingService.cleanse(input, pipes);
+
+      expect(result).toBe('JP¥46.196');
+    });
+
+    it('should handle array of price strings with bracket markers', () => {
+      const inputs = [
+        '[penghapusan dimulai]  JP¥46.196  [penghapusan selesai]',
+        '[penghapusan dimulai]  JP¥12.000  [penghapusan selesai]',
+      ];
+      const pipes = realCleansingService.loadPipes([
+        {
+          type: CleansingType.REGEX_REPLACE,
+          pattern: '\\[penghapusan dimulai\\]\\s*',
+          replacement: '',
+        },
+        {
+          type: CleansingType.REGEX_REPLACE,
+          pattern: '\\s*\\[penghapusan selesai\\]',
+          replacement: '',
+        },
+        { type: CleansingType.TRIM },
+        { type: CleansingType.NORMALIZE_WHITESPACE },
+      ]);
+
+      const results = inputs.map((item) =>
+        realCleansingService.cleanse(item, pipes),
+      );
+
+      expect(results).toEqual(['JP¥46.196', 'JP¥12.000']);
+    });
+
+    it('should leave string unchanged when no markers present', () => {
+      const input = 'JP¥46.196';
+      const pipes = realCleansingService.loadPipes([
+        {
+          type: CleansingType.REGEX_REPLACE,
+          pattern: '\\[penghapusan dimulai\\]\\s*',
+          replacement: '',
+        },
+        {
+          type: CleansingType.REGEX_REPLACE,
+          pattern: '\\s*\\[penghapusan selesai\\]',
+          replacement: '',
+        },
+        { type: CleansingType.TRIM },
+        { type: CleansingType.NORMALIZE_WHITESPACE },
+      ]);
+
+      const result = realCleansingService.cleanse(input, pipes);
+
+      expect(result).toBe('JP¥46.196');
+    });
+  });
+
   describe('scrapeWithActions with cleanse action', () => {
     it('should execute cleanse workflow action', async () => {
       const workflow = {
