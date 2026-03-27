@@ -51,6 +51,15 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
     // Validate remote options
     this.validateRemoteOptions(this.options.remote);
 
+    const remote = this.options.remote;
+    if (remote?.browserURL) {
+      this.logger.log(`Browser mode: Remote CDP (browserURL: ${remote.browserURL})`);
+    } else if (remote?.browserWSEndpoint) {
+      this.logger.log(`Browser mode: Remote CDP (WebSocket: ${remote.browserWSEndpoint})`);
+    } else {
+      this.logger.log('Browser mode: Local Puppeteer');
+    }
+
     this.logger.log(
       `Initializing browser pool (min: ${this.minSize}, max: ${this.maxSize})`,
     );
