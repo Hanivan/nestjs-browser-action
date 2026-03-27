@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.7.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.6.0...v0.7.0) (2026-03-27)
+
+
+### Features
+
+* Introduce debug log truncation in ActionHelpersService ([5b566a3](https://github.com/Hanivan/nestjs-browser-action/commit/5b566a39648928d2f51d3da82b085af0e88752f0))
+
 # [0.6.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.5.0...v0.6.0) (2026-03-27)
 
 
