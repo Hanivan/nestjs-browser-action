@@ -101,6 +101,11 @@ export interface WorkflowDefinition {
   version: string;
   actions: WorkflowAction[];
   onError?: WorkflowErrorConfig;
+  /**
+   * Override the global debugLogMaxLength for this workflow only.
+   * Set to 0 to disable truncation for this workflow.
+   */
+  debugLogMaxLength?: number;
 }
 
 /**

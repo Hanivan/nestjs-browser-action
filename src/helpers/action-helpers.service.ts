@@ -1,4 +1,4 @@
-import { Injectable, Scope } from '@nestjs/common';
+import { Injectable, Scope, Optional, Inject } from '@nestjs/common';
 import type {
   Page,
   ScreenshotOptions,
@@ -25,11 +25,15 @@ import {
   WorkflowResultTyped,
   PipeConfig,
 } from '../interfaces/types';
+import type { BrowserActionOptions } from '../interfaces/browser-action-options';
 import { LoggerWithLevel } from './logger.util';
 import { delay } from './delay.util';
 import { isXPathSelector } from './dom.util';
+import { truncateLog } from './truncate-log.util';
 import {
+  BROWSER_ACTION_OPTIONS,
   DEFAULT_ACTION_TIMEOUT,
+  DEFAULT_DEBUG_LOG_MAX_LENGTH,
   DEFAULT_NAVIGATION_TIMEOUT,
   DEFAULT_SCROLL_DELAY_MS,
   DEFAULT_SCREENSHOT_FILENAME,
@@ -40,16 +44,22 @@ import {
 export class ActionHelpersService {
   private readonly logger: LoggerWithLevel;
   private readonly pipeCache = new Map<string, CleansingPipe[]>();
+  private activeDebugLogMaxLength: number;
 
   constructor(
     private readonly pageService: PageService,
     private readonly cookieService: CookieService,
     private readonly cleansingService: CleansingService,
+    @Optional()
+    @Inject(BROWSER_ACTION_OPTIONS)
+    private readonly moduleOptions?: BrowserActionOptions,
   ) {
     this.logger = new LoggerWithLevel(
       ActionHelpersService.name,
       this.pageService.getLogLevel(),
     );
+    this.activeDebugLogMaxLength =
+      moduleOptions?.debugLogMaxLength ?? DEFAULT_DEBUG_LOG_MAX_LENGTH;
   }
 
   async takeScreenshot(
@@ -57,7 +67,9 @@ export class ActionHelpersService {
     path: string,
     options?: ScreenshotOptions,
   ): Promise<Buffer> {
-    this.logger.debug(`Taking screenshot of ${url}`);
+    this.logger.debug(
+      truncateLog(this.activeDebugLogMaxLength, `Taking screenshot of ${url}`),
+    );
     const page = await this.pageService.navigateTo(url);
     const result = await page.screenshot({ path, ...options });
     await this.pageService.closePage();
@@ -69,7 +81,9 @@ export class ActionHelpersService {
     path: string,
     options?: PDFOptions,
   ): Promise<Buffer> {
-    this.logger.debug(`Generating PDF for ${url}`);
+    this.logger.debug(
+      truncateLog(this.activeDebugLogMaxLength, `Generating PDF for ${url}`),
+    );
     const page = await this.pageService.navigateTo(url);
     const pdf = await page.pdf({ path, ...options });
     await this.pageService.closePage();
@@ -81,7 +95,9 @@ export class ActionHelpersService {
     selectors: T,
     options?: ScraperOptions,
   ): Promise<ScrapeResult> {
-    this.logger.debug(`Scraping ${url}`);
+    this.logger.debug(
+      truncateLog(this.activeDebugLogMaxLength, `Scraping ${url}`),
+    );
     const page = await this.pageService.navigateTo(url);
 
     const result: ScrapeResult = {};
@@ -110,7 +126,12 @@ export class ActionHelpersService {
     selectors: T,
     options?: ScraperOptions,
   ): Promise<ScrapeAllResult> {
-    this.logger.debug(`Scraping all elements from ${url}`);
+    this.logger.debug(
+      truncateLog(
+        this.activeDebugLogMaxLength,
+        `Scraping all elements from ${url}`,
+      ),
+    );
     const page = await this.pageService.navigateTo(url);
 
     const result: ScrapeAllResult = {};
@@ -301,7 +322,12 @@ export class ActionHelpersService {
     selector: string,
     timeout?: number,
   ): Promise<Page> {
-    this.logger.debug(`Waiting for ${selector} on ${url}`);
+    this.logger.debug(
+      truncateLog(
+        this.activeDebugLogMaxLength,
+        `Waiting for ${selector} on ${url}`,
+      ),
+    );
     const page = await this.pageService.navigateTo(url);
     await page.waitForSelector(selector, { timeout });
     return page;
@@ -311,7 +337,9 @@ export class ActionHelpersService {
     url: string,
     script: string | (() => any),
   ): Promise<T> {
-    this.logger.debug(`Evaluating script on ${url}`);
+    this.logger.debug(
+      truncateLog(this.activeDebugLogMaxLength, `Evaluating script on ${url}`),
+    );
     const page = await this.pageService.navigateTo(url);
     const result = await page.evaluate(script as string);
     await this.pageService.closePage();
@@ -323,7 +351,16 @@ export class ActionHelpersService {
     workflow: WorkflowDefinition,
     variables?: VariableContext,
   ): Promise<WorkflowResultTyped<T>> {
-    this.logger.debug(`Starting workflow execution for ${url}`);
+    this.activeDebugLogMaxLength =
+      workflow.debugLogMaxLength ??
+      this.moduleOptions?.debugLogMaxLength ??
+      DEFAULT_DEBUG_LOG_MAX_LENGTH;
+    this.logger.debug(
+      truncateLog(
+        this.activeDebugLogMaxLength,
+        `Starting workflow execution for ${url}`,
+      ),
+    );
     const page = await this.pageService.navigateTo(url);
     const result: WorkflowResultTyped<T> = {
       success: false,
@@ -400,7 +437,12 @@ export class ActionHelpersService {
         action.condition,
       );
       if (!shouldExecute) {
-        this.logger.debug(`Skipping action due to condition: ${action.action}`);
+        this.logger.debug(
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `Skipping action due to condition: ${action.action}`,
+          ),
+        );
         return;
       }
     }
@@ -410,50 +452,77 @@ export class ActionHelpersService {
     const actionLabel = action.id
       ? `[${action.action}] id="${action.id}"`
       : `[${action.action}]`;
-    this.logger.debug(`Executing action: ${actionLabel}`);
+    this.logger.debug(
+      truncateLog(
+        this.activeDebugLogMaxLength,
+        `Executing action: ${actionLabel}`,
+      ),
+    );
 
     switch (action.action) {
       case 'navigate':
-        this.logger.debug(`  navigate → ${value}`);
+        this.logger.debug(
+          truncateLog(this.activeDebugLogMaxLength, `  navigate → ${value}`),
+        );
         await page.goto(value);
         break;
 
       case 'wait':
-        this.logger.debug(`  wait ${Number(action.value) || 0}ms`);
+        this.logger.debug(
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `  wait ${Number(action.value) || 0}ms`,
+          ),
+        );
         await delay(Number(action.value) || 0);
         break;
 
       case 'waitFor':
         this.logger.debug(
-          `  waitFor target: ${this.describeTarget(action.target!)}`,
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `  waitFor target: ${this.describeTarget(action.target!)}`,
+          ),
         );
         await this.waitForTarget(page, action.target!, action.options);
         break;
 
       case 'click':
         this.logger.debug(
-          `  click target: ${this.describeTarget(action.target!)}`,
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `  click target: ${this.describeTarget(action.target!)}`,
+          ),
         );
         await this.clickElement(page, action.target!, action.options);
         break;
 
       case 'type':
         this.logger.debug(
-          `  type target: ${this.describeTarget(action.target!)} value: "${value}"`,
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `  type target: ${this.describeTarget(action.target!)} value: "${value}"`,
+          ),
         );
         await this.typeText(page, action.target!, value, action.options);
         break;
 
       case 'select':
         this.logger.debug(
-          `  select target: ${this.describeTarget(action.target!)} value: "${value}"`,
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `  select target: ${this.describeTarget(action.target!)} value: "${value}"`,
+          ),
         );
         await this.selectOption(page, action.target!, value, action.options);
         break;
 
       case 'scroll':
         this.logger.debug(
-          `  scroll target: ${this.describeTarget(action.target!)}`,
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `  scroll target: ${this.describeTarget(action.target!)}`,
+          ),
         );
         await this.scrollToElement(page, action.target!);
         break;
@@ -464,13 +533,21 @@ export class ActionHelpersService {
         const extractAttr = extractOptions.attribute;
 
         if (!action.target) {
-          this.logger.debug(`  extract full page HTML`);
+          this.logger.debug(
+            truncateLog(
+              this.activeDebugLogMaxLength,
+              `  extract full page HTML`,
+            ),
+          );
           if (action.id) context[action.id] = await page.content();
           break;
         }
 
         this.logger.debug(
-          `  extract target: ${this.describeTarget(action.target)} as="${extractAs}"${extractAttr ? ` attr="${extractAttr}"` : ''}${extractOptions.multiple ? ' multiple=true' : ''}`,
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `  extract target: ${this.describeTarget(action.target)} as="${extractAs}"${extractAttr ? ` attr="${extractAttr}"` : ''}${extractOptions.multiple ? ' multiple=true' : ''}`,
+          ),
         );
 
         if (extractOptions.multiple) {
@@ -483,7 +560,10 @@ export class ActionHelpersService {
           if (action.id) {
             context[action.id] = allValues;
             this.logger.debug(
-              `  extracted ${Array.isArray(allValues) ? allValues.length : 1} item(s) → id="${action.id}"`,
+              truncateLog(
+                this.activeDebugLogMaxLength,
+                `  extracted ${Array.isArray(allValues) ? allValues.length : 1} item(s) → id="${action.id}"`,
+              ),
             );
           }
         } else {
@@ -496,7 +576,10 @@ export class ActionHelpersService {
           if (action.id) {
             context[action.id] = extractedValue;
             this.logger.debug(
-              `  extracted → id="${action.id}": ${JSON.stringify(extractedValue)}`,
+              truncateLog(
+                this.activeDebugLogMaxLength,
+                `  extracted → id="${action.id}": ${JSON.stringify(extractedValue)}`,
+              ),
             );
           }
         }
@@ -507,7 +590,12 @@ export class ActionHelpersService {
         const screenshotPath = String(
           action.value || `${DEFAULT_SCREENSHOT_FILENAME}-${Date.now()}.png`,
         );
-        this.logger.debug(`  screenshot → ${screenshotPath}`);
+        this.logger.debug(
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `  screenshot → ${screenshotPath}`,
+          ),
+        );
         await page.screenshot({ path: screenshotPath });
         break;
       }
@@ -520,9 +608,16 @@ export class ActionHelpersService {
           evalCode = value;
         }
 
-        this.logger.debug(`Evaluating: ${evalCode}`);
+        this.logger.debug(
+          truncateLog(this.activeDebugLogMaxLength, `Evaluating: ${evalCode}`),
+        );
         const evalResult = await page.evaluate(evalCode);
-        this.logger.debug(`Result: ${JSON.stringify(evalResult)}`);
+        this.logger.debug(
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `Result: ${JSON.stringify(evalResult)}`,
+          ),
+        );
 
         if (action.id) {
           context[action.id] = evalResult;
@@ -541,7 +636,10 @@ export class ActionHelpersService {
         const pipeInstances = this.getCachedPipeInstances(pipes);
         const rawValue = this.resolveRawValue(valueKey, context);
         this.logger.debug(
-          `  cleanse raw: ${JSON.stringify(rawValue)} pipes: [${pipes.map((p) => p.type).join(', ')}]`,
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `  cleanse raw: ${JSON.stringify(rawValue)} pipes: [${pipes.map((p) => p.type).join(', ')}]`,
+          ),
         );
 
         const cleanedValue = Array.isArray(rawValue)
@@ -553,7 +651,10 @@ export class ActionHelpersService {
         if (action.id) {
           context[action.id] = cleanedValue;
           this.logger.debug(
-            `Cleansed value for '${action.id}': ${JSON.stringify(cleanedValue)}`,
+            truncateLog(
+              this.activeDebugLogMaxLength,
+              `Cleansed value for '${action.id}': ${JSON.stringify(cleanedValue)}`,
+            ),
           );
         }
         break;
@@ -563,7 +664,10 @@ export class ActionHelpersService {
         const sessionName = String(value);
         const overwrite = action.options?.overwrite ?? false;
         this.logger.debug(
-          `  saveCookies session="${sessionName}" overwrite=${overwrite}`,
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `  saveCookies session="${sessionName}" overwrite=${overwrite}`,
+          ),
         );
 
         // Extract metadata if provided
@@ -583,7 +687,12 @@ export class ActionHelpersService {
         const sessionName = String(value);
         const throwIfNotExists =
           action.onError !== 'skip' && action.onError !== 'continue';
-        this.logger.debug(`  loadCookies session="${sessionName}"`);
+        this.logger.debug(
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `  loadCookies session="${sessionName}"`,
+          ),
+        );
 
         await this.cookieService.loadCookies(page, sessionName, {
           throwIfNotExists,
@@ -593,13 +702,20 @@ export class ActionHelpersService {
 
       case 'clearCookies': {
         const sessionName = String(value);
-        this.logger.debug(`  clearCookies session="${sessionName}"`);
+        this.logger.debug(
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `  clearCookies session="${sessionName}"`,
+          ),
+        );
         await this.cookieService.deleteCookies(sessionName);
         break;
       }
 
       case 'listCookies': {
-        this.logger.debug(`  listCookies`);
+        this.logger.debug(
+          truncateLog(this.activeDebugLogMaxLength, `  listCookies`),
+        );
         const sessions = await this.cookieService.listCookies();
 
         if (action.id) {
@@ -610,7 +726,10 @@ export class ActionHelpersService {
 
       case 'hover':
         this.logger.debug(
-          `  hover target: ${this.describeTarget(action.target!)}`,
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `  hover target: ${this.describeTarget(action.target!)}`,
+          ),
         );
         await this.hoverElement(page, action.target!, action.options);
         break;
@@ -619,20 +738,31 @@ export class ActionHelpersService {
         if (!value) {
           throw new Error('keyPress action requires a key value');
         }
-        this.logger.debug(`  keyPress key="${value}"`);
+        this.logger.debug(
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `  keyPress key="${value}"`,
+          ),
+        );
         await page.keyboard.press(value as KeyInput);
         break;
 
       case 'clear':
         this.logger.debug(
-          `  clear target: ${this.describeTarget(action.target!)}`,
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `  clear target: ${this.describeTarget(action.target!)}`,
+          ),
         );
         await this.clearElement(page, action.target!);
         break;
 
       case 'waitForNetwork':
         this.logger.debug(
-          `  waitForNetwork timeout=${action.options?.timeout ?? DEFAULT_ACTION_TIMEOUT}ms`,
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `  waitForNetwork timeout=${action.options?.timeout ?? DEFAULT_ACTION_TIMEOUT}ms`,
+          ),
         );
         await page.waitForNetworkIdle({
           timeout: action.options?.timeout ?? DEFAULT_ACTION_TIMEOUT,
@@ -641,7 +771,10 @@ export class ActionHelpersService {
 
       case 'reload':
         this.logger.debug(
-          `  reload waitUntil="${action.options?.waitUntil ?? 'load'}"`,
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `  reload waitUntil="${action.options?.waitUntil ?? 'load'}"`,
+          ),
         );
         await page.reload({
           waitUntil: action.options?.waitUntil ?? 'load',
@@ -688,11 +821,21 @@ export class ActionHelpersService {
     page: Page,
     target: ActionTarget,
   ): Promise<ElementHandle<Node> | null> {
-    this.logger.debug(`  findElement: ${this.describeTarget(target)}`);
+    this.logger.debug(
+      truncateLog(
+        this.activeDebugLogMaxLength,
+        `  findElement: ${this.describeTarget(target)}`,
+      ),
+    );
 
     if (target.shadowHost) {
       const el = await this.findElementInShadowRoot(page, target);
-      this.logger.debug(`  findElement result: ${el ? 'found' : 'NOT FOUND'}`);
+      this.logger.debug(
+        truncateLog(
+          this.activeDebugLogMaxLength,
+          `  findElement result: ${el ? 'found' : 'NOT FOUND'}`,
+        ),
+      );
       return el;
     }
 
@@ -700,7 +843,12 @@ export class ActionHelpersService {
       const el = await (page.$(
         target.value!,
       ) as Promise<ElementHandle<Node> | null>);
-      this.logger.debug(`  findElement result: ${el ? 'found' : 'NOT FOUND'}`);
+      this.logger.debug(
+        truncateLog(
+          this.activeDebugLogMaxLength,
+          `  findElement result: ${el ? 'found' : 'NOT FOUND'}`,
+        ),
+      );
       return el;
     }
 
@@ -716,7 +864,12 @@ export class ActionHelpersService {
         return result.singleNodeValue;
       }, target.value!)
       .then((handle) => handle.asElement());
-    this.logger.debug(`  findElement result: ${el ? 'found' : 'NOT FOUND'}`);
+    this.logger.debug(
+      truncateLog(
+        this.activeDebugLogMaxLength,
+        `  findElement result: ${el ? 'found' : 'NOT FOUND'}`,
+      ),
+    );
     return el;
   }
 

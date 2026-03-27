@@ -50,6 +50,13 @@ export interface BrowserActionOptions {
   multiContext?: boolean;
   logLevel?: LogLevel;
 
+  /**
+   * Maximum character length for debug log messages before truncation.
+   * Useful for keeping logs readable when extracting large HTML or long values.
+   * @default 250
+   */
+  debugLogMaxLength?: number;
+
   // Remote CDP connection options
   remote?: RemoteOptions;
 

@@ -34,6 +34,7 @@ export const DEFAULT_CONTEXT_OPTIONS = {
 
 // Workflow action defaults
 export const DEFAULT_ACTION_TIMEOUT = 30000;
+export const DEFAULT_DEBUG_LOG_MAX_LENGTH = 250;
 export const DEFAULT_NAVIGATION_TIMEOUT = 30000;
 export const DEFAULT_SCROLL_DELAY_MS = 100;
 export const DEFAULT_SCREENSHOT_FILENAME = 'screenshot';
