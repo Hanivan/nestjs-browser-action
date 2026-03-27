@@ -4,12 +4,30 @@
   "description": "Puppeteer-based browser automation module for NestJS",
   "author": "Hanivan Rizky S <hanivan20@gmail.com> (https://www.hanivan.my.id)",
   "license": "MIT",
-  "private": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
   "files": [
     "dist"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hanivan/nestjs-browser-action.git"
+  },
+  "homepage": "https://github.com/Hanivan/nestjs-browser-action#readme",
+  "bugs": {
+    "url": "https://github.com/Hanivan/nestjs-browser-action/issues"
+  },
+  "engines": {
+    "node": ">=18.13.0"
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -35,10 +53,6 @@
     "build": "nest build",
     "prepublishOnly": "npm run build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "nest start",
-    "start:dev": "nest start --watch",
-    "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
