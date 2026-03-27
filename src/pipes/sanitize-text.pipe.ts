@@ -10,21 +10,52 @@ export class SanitizeTextPipe extends CleansingPipe<string, string> {
   type = CleansingType.SANITIZE_TEXT;
 
   private static readonly TAG_PAIR_REGEXES: RegExp[] = [
-    'script', 'iframe', 'object', 'embed', 'applet',
-    'form', 'input', 'button', 'select', 'textarea',
-    'meta', 'link', 'style',
+    'script',
+    'iframe',
+    'object',
+    'embed',
+    'applet',
+    'form',
+    'input',
+    'button',
+    'select',
+    'textarea',
+    'meta',
+    'link',
+    'style',
   ].map((tag) => new RegExp(`<${tag}[^>]*>.*?<\\/${tag}>`, 'gi'));
 
   private static readonly TAG_SELF_CLOSING_REGEXES: RegExp[] = [
-    'script', 'iframe', 'object', 'embed', 'applet',
-    'form', 'input', 'button', 'select', 'textarea',
-    'meta', 'link', 'style',
+    'script',
+    'iframe',
+    'object',
+    'embed',
+    'applet',
+    'form',
+    'input',
+    'button',
+    'select',
+    'textarea',
+    'meta',
+    'link',
+    'style',
   ].map((tag) => new RegExp(`<${tag}[^>]*\\s*\\/?>`, 'gi'));
 
   private static readonly EVENT_HANDLER_REGEXES: RegExp[] = [
-    'onclick', 'onerror', 'onload', 'onmouseover', 'onmouseout',
-    'onfocus', 'onblur', 'onchange', 'onsubmit', 'onreset',
-    'onselect', 'onkeydown', 'onkeyup', 'onkeypress',
+    'onclick',
+    'onerror',
+    'onload',
+    'onmouseover',
+    'onmouseout',
+    'onfocus',
+    'onblur',
+    'onchange',
+    'onsubmit',
+    'onreset',
+    'onselect',
+    'onkeydown',
+    'onkeyup',
+    'onkeypress',
   ].map((h) => new RegExp(`${h}=\\S*`, 'gi'));
 
   @IsOptional()

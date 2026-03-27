@@ -101,7 +101,6 @@ describe('CleansingService', () => {
     });
   });
 
-
   describe('PIPE_TYPE_MAP', () => {
     it('should have all 13 pipe types mapped', () => {
       const expectedTypes = [

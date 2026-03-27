@@ -9,8 +9,7 @@ export class RemoveCurrencySymbolPipe extends CleansingPipe<string, string> {
   type = CleansingType.REMOVE_CURRENCY_SYMBOL;
 
   // $€£¥₩₹₽₴₺₼₾៛₭₮₲₱₡¢₵
-  private static readonly CURRENCY_REGEX =
-    /[$€£¥₩₹₽₴₺₼₾៛₭₮₲₱₡¢₵]/g;
+  private static readonly CURRENCY_REGEX = /[$€£¥₩₹₽₴₺₼₾៛₭₮₲₱₡¢₵]/g;
 
   @IsOptional()
   preserveDecimals?: boolean;

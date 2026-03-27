@@ -420,7 +420,7 @@ export class ActionHelpersService {
       }
 
       case 'cleanse': {
-        const pipes = (action.options?.pipes || []) as PipeConfig[];
+        const pipes = action.options?.pipes || [];
 
         if (pipes.length === 0) {
           throw new Error('cleanse action requires at least one pipe');
