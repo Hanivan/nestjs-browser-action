@@ -55,7 +55,7 @@ describe('ActionHelpersService', () => {
       ],
     }).compile();
 
-    service = module.get<ActionHelpersService>(ActionHelpersService);
+    service = await module.resolve<ActionHelpersService>(ActionHelpersService);
   });
 
   it('should be defined', () => {
@@ -240,6 +240,237 @@ describe('ActionHelpersService', () => {
       await service.scrapeWithActions('https://example.com', workflow);
 
       expect(mockCookieService.loadCookies).toHaveBeenCalled();
+    });
+  });
+
+  describe('Interaction workflow actions', () => {
+    let mockElement: any;
+
+    beforeEach(() => {
+      mockElement = {
+        hover: jest.fn().mockResolvedValue(undefined),
+        evaluate: jest.fn().mockResolvedValue(undefined),
+        click: jest.fn().mockResolvedValue(undefined),
+      };
+      mockPage.$ = jest.fn().mockResolvedValue(mockElement);
+      mockPage.keyboard = { press: jest.fn().mockResolvedValue(undefined) };
+      mockPage.waitForNetworkIdle = jest.fn().mockResolvedValue(undefined);
+      mockPage.reload = jest.fn().mockResolvedValue(undefined);
+    });
+
+    it('should execute hover action', async () => {
+      const workflow: WorkflowDefinition = {
+        version: '1.0',
+        actions: [{ action: 'hover', target: { type: 'css', value: '#menu' } }],
+      };
+
+      await service.scrapeWithActions('https://example.com', workflow);
+
+      expect(mockPage.$).toHaveBeenCalledWith('#menu');
+      expect(mockElement.hover).toHaveBeenCalled();
+    });
+
+    it('should throw on hover when element not found', async () => {
+      mockPage.$.mockResolvedValue(null);
+
+      const workflow: WorkflowDefinition = {
+        version: '1.0',
+        actions: [
+          {
+            action: 'hover',
+            target: { type: 'css', value: '#missing' },
+          },
+        ],
+      };
+
+      const result = await service.scrapeWithActions(
+        'https://example.com',
+        workflow,
+      );
+      expect(result.errors).toHaveLength(1);
+    });
+
+    it('should execute keyPress action', async () => {
+      const workflow: WorkflowDefinition = {
+        version: '1.0',
+        actions: [{ action: 'keyPress', value: 'Enter' }],
+      };
+
+      await service.scrapeWithActions('https://example.com', workflow);
+
+      expect(mockPage.keyboard.press).toHaveBeenCalledWith('Enter');
+    });
+
+    it('should execute clear action', async () => {
+      const workflow: WorkflowDefinition = {
+        version: '1.0',
+        actions: [
+          { action: 'clear', target: { type: 'css', value: '#email' } },
+        ],
+      };
+
+      await service.scrapeWithActions('https://example.com', workflow);
+
+      expect(mockPage.$).toHaveBeenCalledWith('#email');
+      expect(mockElement.evaluate).toHaveBeenCalled();
+    });
+
+    it('should execute waitForNetwork action', async () => {
+      const workflow: WorkflowDefinition = {
+        version: '1.0',
+        actions: [{ action: 'waitForNetwork' }],
+      };
+
+      await service.scrapeWithActions('https://example.com', workflow);
+
+      expect(mockPage.waitForNetworkIdle).toHaveBeenCalledWith(
+        expect.objectContaining({ timeout: expect.any(Number) }),
+      );
+    });
+
+    it('should execute waitForNetwork with custom timeout', async () => {
+      const workflow: WorkflowDefinition = {
+        version: '1.0',
+        actions: [{ action: 'waitForNetwork', options: { timeout: 5000 } }],
+      };
+
+      await service.scrapeWithActions('https://example.com', workflow);
+
+      expect(mockPage.waitForNetworkIdle).toHaveBeenCalledWith({
+        timeout: 5000,
+      });
+    });
+
+    it('should execute reload action', async () => {
+      const workflow: WorkflowDefinition = {
+        version: '1.0',
+        actions: [{ action: 'reload' }],
+      };
+
+      await service.scrapeWithActions('https://example.com', workflow);
+
+      expect(mockPage.reload).toHaveBeenCalledWith(
+        expect.objectContaining({ waitUntil: 'load' }),
+      );
+    });
+
+    it('should execute reload with custom waitUntil', async () => {
+      const workflow: WorkflowDefinition = {
+        version: '1.0',
+        actions: [{ action: 'reload', options: { waitUntil: 'networkidle0' } }],
+      };
+
+      await service.scrapeWithActions('https://example.com', workflow);
+
+      expect(mockPage.reload).toHaveBeenCalledWith(
+        expect.objectContaining({ waitUntil: 'networkidle0' }),
+      );
+    });
+  });
+
+  describe('extract with as option', () => {
+    beforeEach(() => {
+      mockPage.$$eval = jest.fn();
+      mockPage.$ = jest.fn();
+    });
+
+    it('should extract entire page HTML when no target', async () => {
+      mockPage.content = jest
+        .fn()
+        .mockResolvedValue('<html><body>page</body></html>');
+
+      const workflow: WorkflowDefinition = {
+        version: '1.0',
+        actions: [{ id: 'pageHtml', action: 'extract' }],
+      };
+
+      const result = await service.scrapeWithActions(
+        'https://example.com',
+        workflow,
+      );
+
+      expect(mockPage.content).toHaveBeenCalled();
+      expect(result.data.pageHtml).toBe('<html><body>page</body></html>');
+    });
+
+    it('should extract innerHTML when as: html', async () => {
+      const mockElement = {
+        evaluate: jest.fn().mockResolvedValue('<b>hello</b>'),
+      };
+      mockPage.$.mockResolvedValue(mockElement);
+
+      const workflow: WorkflowDefinition = {
+        version: '1.0',
+        actions: [
+          {
+            id: 'content',
+            action: 'extract',
+            target: { type: 'css', value: '.article' },
+            options: { as: 'html' },
+          },
+        ],
+      };
+
+      const result = await service.scrapeWithActions(
+        'https://example.com',
+        workflow,
+      );
+
+      expect(result.data.content).toBe('<b>hello</b>');
+    });
+
+    it('should extract outerHTML when as: outerHtml', async () => {
+      const mockElement = {
+        evaluate: jest
+          .fn()
+          .mockResolvedValue('<div class="card"><b>hi</b></div>'),
+      };
+      mockPage.$.mockResolvedValue(mockElement);
+
+      const workflow: WorkflowDefinition = {
+        version: '1.0',
+        actions: [
+          {
+            id: 'card',
+            action: 'extract',
+            target: { type: 'css', value: '.card' },
+            options: { as: 'outerHtml' },
+          },
+        ],
+      };
+
+      const result = await service.scrapeWithActions(
+        'https://example.com',
+        workflow,
+      );
+
+      expect(result.data.card).toBe('<div class="card"><b>hi</b></div>');
+    });
+
+    it('should extract attribute when as: attribute', async () => {
+      const mockElement = {
+        evaluate: jest.fn().mockResolvedValue('https://example.com/page'),
+      };
+      mockPage.$.mockResolvedValue(mockElement);
+
+      const workflow: WorkflowDefinition = {
+        version: '1.0',
+        actions: [
+          {
+            id: 'href',
+            action: 'extract',
+            target: { type: 'css', value: 'a.link' },
+            options: { as: 'attribute', attribute: 'href' },
+          },
+        ],
+      };
+
+      const result = await service.scrapeWithActions(
+        'https://example.com',
+        workflow,
+      );
+
+      expect(result.data.href).toBe('https://example.com/page');
     });
   });
 });

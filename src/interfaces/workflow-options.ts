@@ -32,7 +32,12 @@ export type ActionType =
   | 'saveCookies' // Save cookies to file
   | 'loadCookies' // Load cookies from file
   | 'clearCookies' // Clear all cookies
-  | 'listCookies'; // List all cookies
+  | 'listCookies' // List all cookies
+  | 'hover' // Hover over element
+  | 'keyPress' // Press keyboard key(s)
+  | 'clear' // Clear input field value
+  | 'waitForNetwork' // Wait for network idle
+  | 'reload'; // Reload the page
 
 /**
  * Condition for conditional action execution
@@ -62,6 +67,9 @@ export interface ActionOptions {
   metadata?: Record<string, unknown>; // Additional metadata (for saveCookies action)
   pipes?: PipeConfig[]; // Pipes for cleanse action
   multiple?: boolean; // Extract all matching elements as array
+  as?: 'text' | 'html' | 'outerHtml' | 'attribute'; // Extract mode (default: 'text')
+  attribute?: string; // Attribute name when as: 'attribute'
+  waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2'; // For reload
 }
 
 /**

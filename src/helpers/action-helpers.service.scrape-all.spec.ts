@@ -35,8 +35,8 @@ describe('ActionHelpersService - scrapeAll', () => {
       ],
     }).compile();
 
-    service = module.get<ActionHelpersService>(ActionHelpersService);
-    pageService = module.get<PageService>(PageService);
+    service = await module.resolve<ActionHelpersService>(ActionHelpersService);
+    pageService = await module.resolve<PageService>(PageService);
     cleansingService = module.get<CleansingService>(CleansingService);
   });
 
@@ -266,8 +266,8 @@ describe('scrapeAllWithWorkflow', () => {
       ],
     }).compile();
 
-    service = module.get<ActionHelpersService>(ActionHelpersService);
-    pageService = module.get<PageService>(PageService);
+    service = await module.resolve<ActionHelpersService>(ActionHelpersService);
+    pageService = await module.resolve<PageService>(PageService);
     cleansingService = module.get<CleansingService>(CleansingService);
     cookieService = module.get<CookieService>(CookieService);
   });

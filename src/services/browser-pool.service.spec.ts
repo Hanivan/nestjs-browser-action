@@ -30,7 +30,7 @@ describe('BrowserPoolService', () => {
       const mockBrowser = {
         close: jest.fn().mockResolvedValue(undefined),
         newPage: jest.fn(),
-        isConnected: jest.fn().mockReturnValue(true),
+        connected: true,
         on: jest.fn(),
         off: jest.fn(),
       } as unknown as Browser;
@@ -185,7 +185,7 @@ describe('BrowserPoolService', () => {
     it('should connect on first attempt', async () => {
       const mockBrowser = {
         close: jest.fn().mockResolvedValue(undefined),
-        isConnected: jest.fn().mockReturnValue(true),
+        connected: true,
         on: jest.fn(),
       } as unknown as Browser;
       (puppeteer.connect as jest.Mock).mockResolvedValue(mockBrowser);
@@ -225,7 +225,7 @@ describe('BrowserPoolService', () => {
         }
         const mockBrowser = {
           close: jest.fn().mockResolvedValue(undefined),
-          isConnected: jest.fn().mockReturnValue(true),
+          connected: true,
           on: jest.fn(),
         } as unknown as Browser;
         return mockBrowser;
@@ -293,7 +293,7 @@ describe('BrowserPoolService', () => {
     it('should use remote connection when both remote and launchOptions are provided', async () => {
       const mockBrowser = {
         close: jest.fn().mockResolvedValue(undefined),
-        isConnected: jest.fn().mockReturnValue(true),
+        connected: true,
         on: jest.fn(),
       } as unknown as Browser;
 
@@ -331,7 +331,7 @@ describe('BrowserPoolService', () => {
     it('should connect using browserWSEndpoint when provided', async () => {
       const mockBrowser = {
         close: jest.fn().mockResolvedValue(undefined),
-        isConnected: jest.fn().mockReturnValue(true),
+        connected: true,
         on: jest.fn(),
       } as unknown as Browser;
 

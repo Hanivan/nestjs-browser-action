@@ -241,10 +241,10 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
             this.disconnectListeners.delete(browser);
           }
 
-          if (browser.isConnected()) {
+          if (browser.connected) {
             if (isRemote) {
               // CDP: disconnect only — do not kill the remote Chrome process
-              browser.disconnect();
+              await browser.disconnect();
             } else {
               // Local: close the browser and all its pages
               await browser.close();

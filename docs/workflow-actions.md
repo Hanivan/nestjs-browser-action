@@ -7,13 +7,18 @@ Complete reference of all workflow action types and their configurations.
 | Action | Description | Category |
 |--------|-------------|----------|
 | `navigate` | Navigate to URL | Browser |
-| `wait` | Wait for specified time (seconds) | Browser |
+| `wait` | Wait for specified time (ms) | Browser |
 | `waitFor` | Wait for element to appear | Browser |
+| `reload` | Reload the current page | Browser |
+| `waitForNetwork` | Wait for network to be idle | Browser |
 | `click` | Click on element | Interaction |
 | `type` | Type text into input | Interaction |
 | `select` | Select dropdown option | Interaction |
 | `scroll` | Scroll element into view | Interaction |
-| `extract` | Extract text from element | Data |
+| `hover` | Hover over element | Interaction |
+| `keyPress` | Press keyboard key(s) | Interaction |
+| `clear` | Clear input field value | Interaction |
+| `extract` | Extract data from element or page | Data |
 | `screenshot` | Take screenshot | Data |
 | `evaluate` | Execute JavaScript | Data |
 | `cleanse` | Cleanse extracted data with pipes | Data |
@@ -241,46 +246,178 @@ Scroll to an element.
 
 ---
 
+### hover
+
+Hover over an element (triggers CSS `:hover` states, dropdowns, tooltips).
+
+```typescript
+{
+  action: 'hover',
+  target: { type: 'css', value: '#menu-item' },
+}
+```
+
+**Parameters:**
+- `target` (ActionTarget): Element to hover over
+
+**Example:**
+```typescript
+// Hover to reveal a dropdown, then click an item
+{ action: 'hover' as const, target: { type: 'css' as const, value: '#nav-products' } },
+{ action: 'click' as const, target: { type: 'css' as const, value: '#nav-products .dropdown a' } },
+```
+
+---
+
+### keyPress
+
+Press a keyboard key. Useful for submitting forms (Enter), closing modals (Escape), or navigating inputs (Tab).
+
+```typescript
+{
+  action: 'keyPress',
+  value: 'Enter',
+}
+```
+
+**Parameters:**
+- `value` (string): Key name — `'Enter'`, `'Escape'`, `'Tab'`, `'ArrowDown'`, `'ArrowUp'`, `'Backspace'`, etc.
+
+**Example:**
+```typescript
+{ action: 'type' as const, target: { type: 'css' as const, value: '#search' }, value: 'laptops' },
+{ action: 'keyPress' as const, value: 'Enter' },
+```
+
+---
+
+### clear
+
+Clear the value of an input or textarea field. Dispatches `input` and `change` events so React/Vue detect the change.
+
+```typescript
+{
+  action: 'clear',
+  target: { type: 'css', value: '#search-input' },
+}
+```
+
+**Parameters:**
+- `target` (ActionTarget): Input or textarea element to clear
+
+**Example:**
+```typescript
+{ action: 'clear' as const, target: { type: 'css' as const, value: '#email' } },
+{ action: 'type' as const, target: { type: 'css' as const, value: '#email' }, value: 'new@email.com' },
+```
+
+---
+
+## Browser Actions (Page-Level)
+
+### reload
+
+Reload the current page.
+
+```typescript
+{
+  action: 'reload',
+}
+```
+
+**Parameters:**
+- `options.waitUntil` (`'load'` | `'domcontentloaded'` | `'networkidle0'` | `'networkidle2'`): When to consider reload done (default: `'load'`)
+- `options.timeout` (number): Timeout in ms (default: 30000)
+
+**Example:**
+```typescript
+{ action: 'reload' as const, options: { waitUntil: 'networkidle0' } },
+```
+
+---
+
+### waitForNetwork
+
+Wait until there are no more than 0 in-flight network requests for at least 500ms. Essential for SPAs that load data via fetch/XHR.
+
+```typescript
+{
+  action: 'waitForNetwork',
+}
+```
+
+**Parameters:**
+- `options.timeout` (number): Max wait time in ms (default: 30000)
+
+**Example:**
+```typescript
+{ action: 'click' as const, target: { type: 'css' as const, value: '#load-more' } },
+{ action: 'waitForNetwork' as const },
+{ action: 'extract' as const, id: 'items', target: { type: 'css' as const, value: '.item' }, options: { multiple: true } },
+```
+
+---
+
 ## Data Actions
 
 ### extract
 
-Extract text content from element(s).
+Extract data from element(s) or the entire page.
 
 ```typescript
-// Single element
+// Text content (default)
 {
   action: 'extract',
   target: { type: 'css', value: 'h1' },
   id: 'title',
 }
 
-// All elements
+// innerHTML of an element
+{
+  action: 'extract',
+  target: { type: 'css', value: '.article' },
+  id: 'articleHtml',
+  options: { as: 'html' },
+}
+
+// outerHTML of an element
+{
+  action: 'extract',
+  target: { type: 'css', value: '.card' },
+  id: 'cardHtml',
+  options: { as: 'outerHtml' },
+}
+
+// Attribute value
+{
+  action: 'extract',
+  target: { type: 'css', value: 'a.link' },
+  id: 'href',
+  options: { as: 'attribute', attribute: 'href' },
+}
+
+// Entire page HTML (no target)
+{
+  action: 'extract',
+  id: 'pageHtml',
+  options: { as: 'outerHtml' },
+}
+
+// All matching elements
 {
   action: 'extract',
   target: { type: 'css', value: '.card h2' },
   id: 'allTitles',
   options: { multiple: true },
 }
-
-// With pipes
-{
-  action: 'extract',
-  target: { type: 'css', value: '.price' },
-  id: 'price',
-  options: {
-    multiple: false,
-    pipes: [
-      { type: 'to-number' },
-    ],
-  },
-}
 ```
 
 **Parameters:**
-- `target` (ActionTarget): Element selector
+- `target` (ActionTarget): Element selector — omit to extract the entire page HTML
 - `id` (string): Context key to store result
-- `options.multiple` (boolean): Extract all matching elements (default: false, first only)
+- `options.as` (`'text'` | `'html'` | `'outerHtml'` | `'attribute'`): What to extract (default: `'text'`)
+- `options.attribute` (string): Attribute name when `as: 'attribute'`
+- `options.multiple` (boolean): Extract all matching elements as array (default: false)
 - `options.pipes` (PipeConfig[]): Pipes to apply to extracted data
 
 **Examples:**
@@ -609,6 +746,9 @@ interface ActionOptions {
   metadata?: Record<string, unknown>; // Additional metadata (cookies)
   pipes?: PipeConfig[];          // Pipes for cleanse action
   multiple?: boolean;            // Extract all elements (extract action)
+  as?: 'text' | 'html' | 'outerHtml' | 'attribute'; // Extract mode (default: 'text')
+  attribute?: string;            // Attribute name when as: 'attribute'
+  waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2'; // For reload
 }
 ```
 

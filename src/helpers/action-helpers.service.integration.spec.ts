@@ -38,8 +38,8 @@ describe('ActionHelpersService - Integration Tests', () => {
       ],
     }).compile();
 
-    service = module.get<ActionHelpersService>(ActionHelpersService);
-    pageService = module.get<PageService>(PageService);
+    service = await module.resolve<ActionHelpersService>(ActionHelpersService);
+    pageService = await module.resolve<PageService>(PageService);
     cookieService = module.get<CookieService>(CookieService);
     cleansingService = module.get<CleansingService>(CleansingService);
   });

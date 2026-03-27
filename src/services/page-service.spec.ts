@@ -36,7 +36,7 @@ describe('PageService', () => {
       ],
     }).compile();
 
-    service = module.get<PageService>(PageService);
+    service = await module.resolve<PageService>(PageService);
     browserManager = module.get<BrowserManagerService>(BrowserManagerService);
   });
 

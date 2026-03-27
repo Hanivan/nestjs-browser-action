@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Scope } from '@nestjs/common';
 import type {
   Page,
   ScreenshotOptions,
   PDFOptions,
   ElementHandle,
+  KeyInput,
 } from 'puppeteer';
 import { PageService } from '../services/page-service';
 import { CookieService } from '../services/cookie.service';
@@ -13,6 +14,7 @@ import type {
   WorkflowDefinition,
   WorkflowAction,
   ActionTarget,
+  ActionOptions,
   VariableContext,
 } from '../interfaces/workflow-options';
 import {
@@ -34,7 +36,7 @@ import {
   DEFAULT_ERROR_SCREENSHOT_FILENAME,
 } from '../constants/browser-action.constants';
 
-@Injectable()
+@Injectable({ scope: Scope.TRANSIENT })
 export class ActionHelpersService {
   private readonly logger: LoggerWithLevel;
   private readonly pipeCache = new Map<string, CleansingPipe[]>();
@@ -162,52 +164,85 @@ export class ActionHelpersService {
   private async extractAllData(
     page: Page,
     target: ActionTarget,
+    as: ActionOptions['as'] = 'text',
+    attribute?: string,
   ): Promise<string[]> {
     if (target.shadowHost) {
-      return await this.extractAllFromShadowRoot(page, target);
+      return await this.extractAllFromShadowRoot(page, target, as, attribute);
     }
 
     if (target.type === 'css') {
-      return await page.$$eval(target.value, (elements) =>
-        elements.map((el) => el.textContent?.trim() || ''),
+      return await page.$$eval(
+        target.value,
+        (elements, extractAs, attr) =>
+          elements.map((el) => {
+            if (extractAs === 'html') return el.innerHTML;
+            if (extractAs === 'outerHtml') return el.outerHTML;
+            if (extractAs === 'attribute')
+              return el.getAttribute(attr || '') || '';
+            return el.textContent?.trim() || '';
+          }),
+        as,
+        attribute,
       );
     }
 
-    return await page.evaluate((selector) => {
-      const results = document.evaluate(
-        selector,
-        document,
-        null,
-        XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
-        null,
-      );
-      const values: string[] = [];
-      for (let i = 0; i < results.snapshotLength; i++) {
-        const node = results.snapshotItem(i);
-        values.push(node?.textContent?.trim() || '');
-      }
-      return values;
-    }, target.value);
+    return await page.evaluate(
+      (selector, extractAs, attr) => {
+        const results = document.evaluate(
+          selector,
+          document,
+          null,
+          XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+          null,
+        );
+        const values: string[] = [];
+        for (let i = 0; i < results.snapshotLength; i++) {
+          const node = results.snapshotItem(i);
+          if (!(node instanceof Element)) {
+            values.push(node?.textContent?.trim() || '');
+            continue;
+          }
+          if (extractAs === 'html') values.push(node.innerHTML);
+          else if (extractAs === 'outerHtml') values.push(node.outerHTML);
+          else if (extractAs === 'attribute')
+            values.push(node.getAttribute(attr || '') || '');
+          else values.push(node.textContent?.trim() || '');
+        }
+        return values;
+      },
+      target.value,
+      as,
+      attribute,
+    );
   }
 
   private async extractAllFromShadowRoot(
     page: Page,
     target: ActionTarget,
+    as: ActionOptions['as'] = 'text',
+    attribute?: string,
   ): Promise<string[]> {
     const hosts = await page.$$(target.shadowHost!);
 
     const allResults: string[][] = await Promise.all(
       hosts.map(async (host) => {
         return await host.evaluate(
-          (el, selector, targetType) => {
+          (el, selector, targetType, extractAs, attr) => {
             const shadowRoot = el.shadowRoot;
             if (!shadowRoot) return [];
 
+            const getVal = (e: Element): string => {
+              if (extractAs === 'html') return e.innerHTML;
+              if (extractAs === 'outerHtml') return e.outerHTML;
+              if (extractAs === 'attribute')
+                return e.getAttribute(attr || '') || '';
+              return e.textContent?.trim() || '';
+            };
+
             if (targetType === 'css') {
               const elements = shadowRoot.querySelectorAll(selector);
-              return Array.from(elements).map(
-                (e) => e.textContent?.trim() || '',
-              );
+              return Array.from(elements).map(getVal);
             }
 
             const results = document.evaluate(
@@ -220,12 +255,18 @@ export class ActionHelpersService {
             const values: string[] = [];
             let node: Node | null;
             while ((node = results.iterateNext())) {
-              values.push(node?.textContent?.trim() || '');
+              values.push(
+                node instanceof Element
+                  ? getVal(node)
+                  : node?.textContent?.trim() || '',
+              );
             }
             return values;
           },
           target.value,
           target.type,
+          as,
+          attribute,
         );
       }),
     );
@@ -375,17 +416,30 @@ export class ActionHelpersService {
 
       case 'extract': {
         const extractOptions = action.options || {};
+        const extractAs = extractOptions.as ?? 'text';
+        const extractAttr = extractOptions.attribute;
+
+        if (!action.target) {
+          if (action.id) context[action.id] = await page.content();
+          break;
+        }
 
         if (extractOptions.multiple) {
-          const allValues = await this.extractAllData(page, action.target!);
-          if (action.id) {
-            context[action.id] = allValues;
-          }
+          const allValues = await this.extractAllData(
+            page,
+            action.target,
+            extractAs,
+            extractAttr,
+          );
+          if (action.id) context[action.id] = allValues;
         } else {
-          const extractedValue = await this.extractData(page, action.target!);
-          if (action.id) {
-            context[action.id] = extractedValue;
-          }
+          const extractedValue = await this.extractData(
+            page,
+            action.target,
+            extractAs,
+            extractAttr,
+          );
+          if (action.id) context[action.id] = extractedValue;
         }
         break;
       }
@@ -484,6 +538,34 @@ export class ActionHelpersService {
         }
         break;
       }
+
+      case 'hover':
+        await this.hoverElement(page, action.target!, action.options);
+        break;
+
+      case 'keyPress':
+        if (!value) {
+          throw new Error('keyPress action requires a key value');
+        }
+        await page.keyboard.press(value as KeyInput);
+        break;
+
+      case 'clear':
+        await this.clearElement(page, action.target!);
+        break;
+
+      case 'waitForNetwork':
+        await page.waitForNetworkIdle({
+          timeout: action.options?.timeout ?? DEFAULT_ACTION_TIMEOUT,
+        });
+        break;
+
+      case 'reload':
+        await page.reload({
+          waitUntil: action.options?.waitUntil ?? 'load',
+          timeout: action.options?.timeout ?? DEFAULT_NAVIGATION_TIMEOUT,
+        });
+        break;
 
       default: {
         const exhaustiveCheck: never = action.action;
@@ -706,13 +788,55 @@ export class ActionHelpersService {
     }
   }
 
-  private async extractData(page: Page, target: ActionTarget): Promise<string> {
+  private async extractData(
+    page: Page,
+    target: ActionTarget,
+    as: ActionOptions['as'] = 'text',
+    attribute?: string,
+  ): Promise<string> {
     const element = await this.findElement(page, target);
     if (!element) {
       throw new Error(`Element not found: ${target.value}`);
     }
 
-    return element.evaluate((el: Element) => el.textContent?.trim() || '', {});
+    return element.evaluate(
+      (el: Element, extractAs, attr) => {
+        if (extractAs === 'html') return el.innerHTML;
+        if (extractAs === 'outerHtml') return el.outerHTML;
+        if (extractAs === 'attribute') return el.getAttribute(attr || '') || '';
+        return el.textContent?.trim() || '';
+      },
+      as,
+      attribute,
+    );
+  }
+
+  private async hoverElement(
+    page: Page,
+    target: ActionTarget,
+    options?: WorkflowAction['options'],
+  ): Promise<void> {
+    const element = await this.findElement(page, target);
+    if (!element) {
+      throw new Error(`Element not found: ${target.value}`);
+    }
+    await this.maybeScrollToElement(element, options?.scrollTo);
+    const elem = element as ElementHandle<Element>;
+    await elem.hover();
+  }
+
+  private async clearElement(page: Page, target: ActionTarget): Promise<void> {
+    const element = await this.findElement(page, target);
+    if (!element) {
+      throw new Error(`Element not found: ${target.value}`);
+    }
+    await (element as ElementHandle<Element>).evaluate((el: Element) => {
+      if ('value' in el) {
+        (el as HTMLInputElement).value = '';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
   }
 
   private resolveValue(value: string, context: VariableContext): string {

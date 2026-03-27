@@ -1,10 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Scope } from '@nestjs/common';
 import type { Browser, Page, WaitForOptions } from 'puppeteer';
 import { BrowserManagerService } from './browser-manager.service';
 import type { LogLevel } from '@nestjs/common';
 import { LoggerWithLevel } from '../helpers/logger.util';
 
-@Injectable()
+@Injectable({ scope: Scope.TRANSIENT })
 export class PageService {
   private readonly logger: LoggerWithLevel;
   private currentBrowser?: Browser;

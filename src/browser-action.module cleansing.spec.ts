@@ -10,7 +10,7 @@ describe('BrowserActionModule - Cleansing Service Registration', () => {
     }).compile();
 
     expect(module.get(CleansingService)).toBeDefined();
-    expect(module.get(ActionHelpersService)).toBeDefined();
+    expect(await module.resolve(ActionHelpersService)).toBeDefined();
   });
 
   it('should export CleansingService for use in other modules', async () => {
@@ -33,6 +33,6 @@ describe('BrowserActionModule - Cleansing Service Registration', () => {
     }).compile();
 
     expect(module.get(CleansingService)).toBeDefined();
-    expect(module.get(ActionHelpersService)).toBeDefined();
+    expect(await module.resolve(ActionHelpersService)).toBeDefined();
   });
 });

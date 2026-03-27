@@ -16,8 +16,8 @@ describe('BrowserActionModule', () => {
     }).compile();
 
     expect(module.get(BrowserManagerService)).toBeDefined();
-    expect(module.get(PageService)).toBeDefined();
-    expect(module.get(ActionHelpersService)).toBeDefined();
+    expect(await module.resolve(PageService)).toBeDefined();
+    expect(await module.resolve(ActionHelpersService)).toBeDefined();
 
     await module.close();
   });
@@ -35,8 +35,8 @@ describe('BrowserActionModule', () => {
     }).compile();
 
     expect(module.get(BrowserManagerService)).toBeDefined();
-    expect(module.get(PageService)).toBeDefined();
-    expect(module.get(ActionHelpersService)).toBeDefined();
+    expect(await module.resolve(PageService)).toBeDefined();
+    expect(await module.resolve(ActionHelpersService)).toBeDefined();
 
     await module.close();
   });
