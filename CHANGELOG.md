@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.5.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.4.0...v0.5.0) (2026-03-27)
+
+
+### Features
+
+* Add detailed logging for action execution in ActionHelpersService ([e08e6f4](https://github.com/Hanivan/nestjs-browser-action/commit/e08e6f4334c6580ea72675cd84bdcbefb8bd19e4))
+
 # [0.4.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.3.5...v0.4.0) (2026-03-27)
 
 
