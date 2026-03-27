@@ -80,25 +80,23 @@ export class CookieService {
     const sessionPath = this.getSessionPath(sessionName, cookiesDir);
     const sanitized = this.sanitizeSessionName(sessionName);
 
-    // Ensure directory exists
     await this.ensureDirectory(cookiesDir);
 
-    // Check if file exists (unless overwrite is true)
     if (!options?.overwrite) {
       try {
         await fs.access(sessionPath);
         throw new Error(
           `Session '${sessionName}' already exists. Use overwrite: true to replace.`,
         );
-      } catch {
-        // File doesn't exist, which is what we want
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          throw error;
+        }
       }
     }
 
-    // Get cookies from page
     const cookies = await page.cookies();
 
-    // Create session data
     const sessionData: CookieSessionFile<TMetadata> = {
       name: sanitized,
       cookies,
@@ -107,7 +105,6 @@ export class CookieService {
       metadata: options?.metadata,
     };
 
-    // Write to temp file first, then rename (atomic operation)
     const tempPath = `${sessionPath}.tmp`;
     try {
       await fs.writeFile(
@@ -153,40 +150,34 @@ export class CookieService {
     const cookiesDir = options?.cookiesDir || this.cookiesDir;
     const sessionPath = this.getSessionPath(sessionName, cookiesDir);
 
-    // Check if file exists
-    try {
-      await fs.access(sessionPath);
-    } catch {
-      if (options?.throwIfNotExists !== false) {
-        throw new Error(`Session '${sessionName}' not found at ${sessionPath}`);
-      }
-      // Return empty session if not exists and throwIfNotExists is false
-      return {
-        name: sessionName,
-        cookies: [],
-        savedAt: new Date(),
-      } as CookieSession<TMetadata>;
-    }
-
-    // Read and parse file
     let sessionData: CookieSessionFile<TMetadata>;
     try {
       const content = await fs.readFile(sessionPath, 'utf-8');
       sessionData = JSON.parse(content) as CookieSessionFile<TMetadata>;
     } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if (options?.throwIfNotExists !== false) {
+          throw new Error(
+            `Session '${sessionName}' not found at ${sessionPath}`,
+          );
+        }
+        return {
+          name: sessionName,
+          cookies: [],
+          savedAt: new Date(),
+        } as CookieSession<TMetadata>;
+      }
       throw new Error(
         `Failed to read session file ${sessionPath}: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
 
-    // Apply cookies to page
     try {
       await page.setCookie(...sessionData.cookies);
     } catch (error) {
       this.logger.log(`Failed to apply some cookies: ${error}`, 'warn');
     }
 
-    // Reload page to activate cookies
     if (sessionData.url) {
       try {
         await page.goto(sessionData.url, { waitUntil: 'domcontentloaded' });
@@ -213,15 +204,14 @@ export class CookieService {
 
     const sessionPath = this.getSessionPath(sessionName);
 
-    // Check if file exists
     try {
-      await fs.access(sessionPath);
-    } catch {
-      throw new Error(`Session '${sessionName}' not found at ${sessionPath}`);
+      await fs.unlink(sessionPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        throw new Error(`Session '${sessionName}' not found at ${sessionPath}`);
+      }
+      throw error;
     }
-
-    // Delete file
-    await fs.unlink(sessionPath);
 
     this.logger.log(`Deleted session: ${sessionName}`);
   }
@@ -232,10 +222,9 @@ export class CookieService {
     const files = await fs.readdir(this.cookiesDir);
     const jsonFiles = files.filter((f) => f.endsWith('.json'));
 
-    for (const file of jsonFiles) {
-      const filePath = path.join(this.cookiesDir, file);
-      await fs.unlink(filePath);
-    }
+    await Promise.all(
+      jsonFiles.map((file) => fs.unlink(path.join(this.cookiesDir, file))),
+    );
 
     this.logger.log(`Cleared ${jsonFiles.length} cookie sessions`);
   }
@@ -249,28 +238,29 @@ export class CookieService {
       const files = await fs.readdir(this.cookiesDir);
       const jsonFiles = files.filter((f) => f.endsWith('.json'));
 
-      const sessions: CookieSessionInfo<TMetadata>[] = [];
+      const results = await Promise.all(
+        jsonFiles.map(async (file) => {
+          const filePath = path.join(this.cookiesDir, file);
+          try {
+            const content = await fs.readFile(filePath, 'utf-8');
+            const data = JSON.parse(content) as CookieSessionFile<TMetadata>;
+            return {
+              name: data.name,
+              savedAt: new Date(data.savedAt),
+              cookieCount: data.cookies.length,
+              url: data.url,
+              metadata: data.metadata,
+            } as CookieSessionInfo<TMetadata>;
+          } catch {
+            this.logger.log(`Skipping invalid session file: ${file}`, 'warn');
+            return null;
+          }
+        }),
+      );
 
-      for (const file of jsonFiles) {
-        const filePath = path.join(this.cookiesDir, file);
-        try {
-          const content = await fs.readFile(filePath, 'utf-8');
-          const data = JSON.parse(content) as CookieSessionFile<TMetadata>;
-
-          sessions.push({
-            name: data.name,
-            savedAt: new Date(data.savedAt),
-            cookieCount: data.cookies.length,
-            url: data.url,
-            metadata: data.metadata,
-          });
-        } catch {
-          // Skip invalid files
-          this.logger.log(`Skipping invalid session file: ${file}`, 'warn');
-        }
-      }
-
-      return sessions;
+      return results.filter(
+        (s): s is CookieSessionInfo<TMetadata> => s !== null,
+      );
     } catch {
       // Directory doesn't exist yet
       return [];

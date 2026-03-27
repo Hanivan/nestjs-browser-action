@@ -21,6 +21,8 @@ export class RegexReplacePipe extends CleansingPipe<string, string> {
   @IsBoolean()
   replaceFirst?: boolean;
 
+  private _regex?: RegExp;
+
   exec(value: string): string {
     if (
       typeof value !== 'string' ||
@@ -31,16 +33,12 @@ export class RegexReplacePipe extends CleansingPipe<string, string> {
     }
 
     try {
-      const flags = this.replaceFirst ? 'i' : 'gi';
-      const regex = new RegExp(this.pattern, flags);
-
-      if (this.replaceFirst) {
-        return value.replace(regex, this.replacement);
-      } else {
-        return value.replace(regex, this.replacement);
+      if (!this._regex) {
+        const flags = this.replaceFirst ? 'i' : 'gi';
+        this._regex = new RegExp(this.pattern, flags);
       }
+      return value.replace(this._regex, this.replacement);
     } catch {
-      // Return original value if regex is invalid
       return value;
     }
   }

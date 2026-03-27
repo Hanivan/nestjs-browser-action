@@ -51,7 +51,7 @@ export class CleansingService {
     profileName: CleansingProfile,
   ): T {
     const profilePipes = CLEANSING_PROFILES[profileName];
-    return this.cleanse(data, this.loadPipesSync(profilePipes)) as T;
+    return this.cleanse(data, this.loadPipes(profilePipes)) as T;
   }
 
   loadPipes(config: PipeConfig[]): CleansingPipe[] {
@@ -76,16 +76,4 @@ export class CleansingService {
     return pipes;
   }
 
-  private loadPipesSync(config: PipeConfig[]): CleansingPipe[] {
-    const pipes: CleansingPipe[] = [];
-
-    for (const pipeConfig of config) {
-      const PipeClass = this.PIPE_TYPE_MAP[pipeConfig.type];
-      if (PipeClass) {
-        pipes.push(new PipeClass());
-      }
-    }
-
-    return pipes;
-  }
 }

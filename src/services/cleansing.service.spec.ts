@@ -101,22 +101,6 @@ describe('CleansingService', () => {
     });
   });
 
-  describe('loadPipesSync', () => {
-    it('should return empty array when no pipes provided', () => {
-      const result = service['loadPipesSync']([]);
-      expect(result).toEqual([]);
-    });
-
-    it('should load pipe instances synchronously', () => {
-      const pipes = [{ type: 'trim' }, { type: 'to-lower-case' }];
-      const result = service['loadPipesSync'](pipes);
-      expect(result).toHaveLength(2);
-      expect(result[0]).toBeInstanceOf(require('../pipes/trim.pipe').TrimPipe);
-      expect(result[1]).toBeInstanceOf(
-        require('../pipes/to-lower-case.pipe').ToLowerCasePipe,
-      );
-    });
-  });
 
   describe('PIPE_TYPE_MAP', () => {
     it('should have all 13 pipe types mapped', () => {

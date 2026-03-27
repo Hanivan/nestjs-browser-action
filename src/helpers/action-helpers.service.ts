@@ -25,6 +25,7 @@ import {
 } from '../interfaces/types';
 import { LoggerWithLevel } from './logger.util';
 import { delay } from './delay.util';
+import { isXPathSelector } from './dom.util';
 import {
   DEFAULT_ACTION_TIMEOUT,
   DEFAULT_NAVIGATION_TIMEOUT,
@@ -116,9 +117,7 @@ export class ActionHelpersService {
       this.validateSelector(key, selector);
 
       try {
-        const trimmedSelector = selector.trim();
-        const isXPath =
-          trimmedSelector.startsWith('//') || trimmedSelector.startsWith('(');
+        const isXPath = isXPathSelector(selector);
         let values: string[];
 
         if (isXPath) {
@@ -164,19 +163,16 @@ export class ActionHelpersService {
     page: Page,
     target: ActionTarget,
   ): Promise<string[]> {
-    // Handle Shadow DOM
     if (target.shadowHost) {
       return await this.extractAllFromShadowRoot(page, target);
     }
 
-    // Branch by selector type
     if (target.type === 'css') {
       return await page.$$eval(target.value, (elements) =>
         elements.map((el) => el.textContent?.trim() || ''),
       );
     }
 
-    // XPath selector
     return await page.evaluate((selector) => {
       const results = document.evaluate(
         selector,
@@ -384,13 +380,11 @@ export class ActionHelpersService {
         const extractOptions = action.options || {};
 
         if (extractOptions.multiple) {
-          // Extract all elements
           const allValues = await this.extractAllData(page, action.target!);
           if (action.id) {
             context[action.id] = allValues;
           }
         } else {
-          // Extract single element (existing behavior)
           const extractedValue = await this.extractData(page, action.target!);
           if (action.id) {
             context[action.id] = extractedValue;
@@ -408,14 +402,10 @@ export class ActionHelpersService {
       }
 
       case 'evaluate': {
-        // Handle arrow functions: '() => expr' becomes (() => expr)()
-        // Handle raw expressions: 'expr' becomes expr
         let evalCode: string;
         if (value.includes('=>')) {
-          // It's an arrow function, wrap and execute it
           evalCode = `(${value})()`;
         } else {
-          // It's a raw expression or already has return
           evalCode = value;
         }
 
@@ -440,7 +430,7 @@ export class ActionHelpersService {
           String(action.value || ''),
           context,
         );
-        const pipeInstances = this.cleansingService.loadPipes(pipes);
+        const pipeInstances = this.getCachedPipeInstances(pipes);
         const cleanedValue = this.cleansingService.cleanse(
           currentValue,
           pipeInstances,
@@ -529,17 +519,14 @@ export class ActionHelpersService {
     page: Page,
     target: ActionTarget,
   ): Promise<ElementHandle<Node> | null> {
-    // If shadow host is specified, find element within shadow root
     if (target.shadowHost) {
       return this.findElementInShadowRoot(page, target);
     }
 
-    // Regular element lookup
     if (target.type === 'css') {
       return page.$(target.value) as Promise<ElementHandle<Node> | null>;
     }
 
-    // XPath lookup
     return page
       .evaluateHandle((selector: string) => {
         const result = document.evaluate(
@@ -571,7 +558,6 @@ export class ActionHelpersService {
             return shadowRoot.querySelector(selector);
           }
 
-          // XPath lookup in shadow root
           const result = document.evaluate(
             selector,
             shadowRoot,
@@ -597,7 +583,6 @@ export class ActionHelpersService {
     if (target.type === 'css') {
       await page.waitForSelector(target.value, { timeout });
     } else {
-      // For XPath, use waitForFunction with document.evaluate
       await page.waitForFunction(
         (selector) => {
           const result = document.evaluate(
@@ -627,7 +612,6 @@ export class ActionHelpersService {
 
     await this.maybeScrollToElement(element, options?.scrollTo);
 
-    // Cast to ElementHandle<Element> for Puppeteer methods
     const elem = element as ElementHandle<Element>;
     await elem.click();
 

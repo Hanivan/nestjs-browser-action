@@ -3,6 +3,8 @@
  * Based on action-based scraping patterns
  */
 
+import type { PipeConfig } from './types';
+
 /**
  * Target selector for browser actions
  */
@@ -58,7 +60,7 @@ export interface ActionOptions {
   navigationTimeout?: number; // Timeout for navigation wait
   overwrite?: boolean; // Overwrite existing file (for saveCookies action)
   metadata?: Record<string, unknown>; // Additional metadata (for saveCookies action)
-  pipes?: any[]; // Pipes for cleanse action
+  pipes?: PipeConfig[]; // Pipes for cleanse action
   multiple?: boolean; // Extract all matching elements as array
 }
 

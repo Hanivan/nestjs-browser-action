@@ -8,6 +8,10 @@ import { CleansingType } from '../enums/cleansing-type.enum';
 export class RemoveCurrencySymbolPipe extends CleansingPipe<string, string> {
   type = CleansingType.REMOVE_CURRENCY_SYMBOL;
 
+  // $€£¥₩₹₽₴₺₼₾៛₭₮₲₱₡¢₵
+  private static readonly CURRENCY_REGEX =
+    /[$€£¥₩₹₽₴₺₼₾៛₭₮₲₱₡¢₵]/g;
+
   @IsOptional()
   preserveDecimals?: boolean;
 
@@ -16,35 +20,7 @@ export class RemoveCurrencySymbolPipe extends CleansingPipe<string, string> {
       return value;
     }
 
-    let result = value;
-
-    // Remove common currency symbols
-    const currencySymbols = [
-      '$', // US Dollar
-      '€', // Euro
-      '£', // British Pound
-      '¥', // Japanese Yen / Chinese Yuan
-      '₩', // Korean Won
-      '₹', // Indian Rupee
-      '₽', // Russian Ruble
-      '₴', // Ukrainian Hryvnia
-      '₺', // Turkish Lira
-      '₼', // Azerbaijani Manat
-      '₾', // Georgian Lari
-      '៛', // Cambodian Riel
-      '₭', // Lao Kip
-      '₮', // Mongolian Tugrik
-      '₲', // Paraguayan Guarani
-      '₱', // Philippine Peso
-      '₡', // Costa Rican Colón
-      '¢', // Cent
-      '₵', // Ghanaian Cedi
-    ];
-
-    // Remove each currency symbol
-    currencySymbols.forEach((symbol) => {
-      result = result.replace(new RegExp('\\' + symbol, 'g'), '');
-    });
+    let result = value.replace(RemoveCurrencySymbolPipe.CURRENCY_REGEX, '');
 
     // Clean up any resulting double spaces, but preserve leading/trailing spaces
     result = result.replace(/\s+/g, ' ');

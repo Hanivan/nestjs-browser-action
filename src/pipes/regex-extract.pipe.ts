@@ -16,29 +16,31 @@ export class RegexExtractPipe extends CleansingPipe<
   @Matches(/.*/)
   pattern?: string;
 
+  private _regex?: RegExp;
+
   exec(value: string): string | string[] | null {
     if (typeof value !== 'string' || !this.pattern) {
       return value;
     }
 
     try {
-      const regex = new RegExp(this.pattern);
+      if (!this._regex) {
+        this._regex = new RegExp(this.pattern);
+      }
+      const regex = this._regex;
 
       if (regex.global) {
-        // For global matches with capturing groups, handle differently
         const matches = value.match(regex);
         if (!matches) return null;
 
-        // Check if we have capturing groups
-        const testMatch = matches[0];
-        const groupCount =
-          new RegExp(this.pattern).exec(testMatch)?.length || 1;
+        regex.lastIndex = 0;
+        const groupCount = regex.exec(matches[0])?.length || 1;
 
         if (groupCount > 1) {
-          // Extract groups for each match
           const result = matches
             .map((match) => {
-              const groups = new RegExp(this.pattern || '').exec(match);
+              regex.lastIndex = 0;
+              const groups = regex.exec(match);
               return groups ? groups.slice(1) : null;
             })
             .filter((item): item is string[] => item !== null);

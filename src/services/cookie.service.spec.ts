@@ -146,26 +146,20 @@ describe('CookieService', () => {
       expect(data.metadata).toEqual(metadata);
     });
 
-    it('should overwrite existing session by default', async () => {
-      // First save
+    it('should throw when saving over existing session without overwrite flag', async () => {
       await service.saveCookies(
         mockPage, // eslint-disable-line @typescript-eslint/no-unsafe-argument
         'test-session',
       );
 
-      // Update the mock to return different cookies
-      mockPage.cookies.mockResolvedValueOnce([
-        { name: 'new-cookie', value: 'new-value' },
-      ]);
-
-      // Second save should overwrite by default (due to implementation bug/feature)
-      const result = await service.saveCookies(
-        mockPage, // eslint-disable-line @typescript-eslint/no-unsafe-argument
-        'test-session',
+      await expect(
+        service.saveCookies(
+          mockPage, // eslint-disable-line @typescript-eslint/no-unsafe-argument
+          'test-session',
+        ),
+      ).rejects.toThrow(
+        "Session 'test-session' already exists. Use overwrite: true to replace.",
       );
-
-      expect(result.cookies).toHaveLength(1);
-      expect(result.cookies[0].name).toBe('new-cookie');
     });
 
     it('should overwrite existing session when overwrite=true', async () => {

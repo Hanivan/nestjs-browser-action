@@ -1,6 +1,7 @@
 import { IsBoolean, IsOptional } from 'class-validator';
 import { CleansingPipe } from './cleansing-pipe';
 import { CleansingType } from '../enums/cleansing-type.enum';
+import { normalizeWhitespace } from '../helpers/string.util';
 
 /**
  * Removes line breaks from strings
@@ -19,18 +20,11 @@ export class RemoveLineBreaksPipe extends CleansingPipe<string, string> {
 
     let result = value;
 
-    // Replace different types of line breaks
     if (this.replaceWithSpace) {
-      // Replace with space
       result = result.replace(/\r\n|\n|\r|\v|\f|\u2028|\u2029/g, ' ');
+      result = normalizeWhitespace(result);
     } else {
-      // Remove completely
       result = result.replace(/\r\n|\n|\r|\v|\f|\u2028|\u2029/g, '');
-    }
-
-    // Clean up multiple spaces that might result from the replacement
-    if (this.replaceWithSpace) {
-      result = result.replace(/\s+/g, ' ').trim();
     }
 
     return result;
