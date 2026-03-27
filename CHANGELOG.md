@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.6.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.5.0...v0.6.0) (2026-03-27)
+
+
+### Features
+
+* Add regex cleansing functionality to CleansingService ([05a2d8b](https://github.com/Hanivan/nestjs-browser-action/commit/05a2d8b2bcbedd43e3ab62f5ca79ea95a010c185))
+
 # [0.5.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.4.0...v0.5.0) (2026-03-27)
 
 
