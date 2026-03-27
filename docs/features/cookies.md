@@ -36,7 +36,7 @@ class CookieService {
 
   listCookies(): Promise<CookieSessionInfo[]>;
 
-  hasSession(sessionName: string): boolean;
+  hasSession(sessionName: string): Promise<boolean>;
 }
 ```
 
@@ -200,7 +200,7 @@ const result = await this.actionHelpers.scrapeWithActions(workflow);
 #### Check if Session Exists
 
 ```typescript
-const hasSession = this.cookieService.hasSession('user-session');
+const hasSession = await this.cookieService.hasSession('user-session');
 console.log('Session exists:', hasSession);  // true/false
 ```
 
@@ -212,9 +212,9 @@ const sessions = await this.cookieService.listCookies();
 console.log('Total sessions:', sessions.length);
 
 sessions.forEach(session => {
-  console.log(`Session: ${session.sessionName}`);
+  console.log(`Session: ${session.name}`);
   console.log(`  Cookies: ${session.cookieCount}`);
-  console.log(`  Created: ${session.createdAt}`);
+  console.log(`  Saved: ${session.savedAt}`);
   if (session.metadata) {
     console.log(`  Metadata:`, session.metadata);
   }
@@ -328,7 +328,7 @@ cookies/
 
 ```json
 {
-  "sessionName": "user-session",
+  "name": "user-session",
   "cookies": [
     {
       "name": "session",
@@ -341,12 +341,11 @@ cookies/
       "sameSite": "Lax"
     }
   ],
+  "savedAt": "2024-01-01T12:00:00.000Z",
+  "url": "https://example.com",
   "metadata": {
-    "username": "user@example.com",
-    "createdAt": "2024-01-01T12:00:00.000Z"
-  },
-  "createdAt": "2024-01-01T12:00:00.000Z",
-  "updatedAt": "2024-01-01T12:00:00.000Z"
+    "username": "user@example.com"
+  }
 }
 ```
 

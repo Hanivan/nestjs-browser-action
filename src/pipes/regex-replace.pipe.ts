@@ -1,4 +1,4 @@
-import { IsBoolean, IsOptional, Matches, IsString } from 'class-validator';
+import { IsOptional, Matches, IsString } from 'class-validator';
 import { CleansingPipe } from './cleansing-pipe';
 import { CleansingType } from '../enums/cleansing-type.enum';
 
@@ -18,8 +18,8 @@ export class RegexReplacePipe extends CleansingPipe<string, string> {
   replacement?: string;
 
   @IsOptional()
-  @IsBoolean()
-  replaceFirst?: boolean;
+  @IsString()
+  flags?: string;
 
   private _regex?: RegExp;
 
@@ -34,8 +34,7 @@ export class RegexReplacePipe extends CleansingPipe<string, string> {
 
     try {
       if (!this._regex) {
-        const flags = this.replaceFirst ? 'i' : 'gi';
-        this._regex = new RegExp(this.pattern, flags);
+        this._regex = new RegExp(this.pattern, this.flags ?? 'g');
       }
       return value.replace(this._regex, this.replacement);
     } catch {

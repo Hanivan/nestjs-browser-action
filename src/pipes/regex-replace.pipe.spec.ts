@@ -29,26 +29,27 @@ describe('RegexReplacePipe', () => {
 
   it('should handle case-insensitive replacement', () => {
     const input = 'Hello WORLD world';
-    pipe.pattern = /world/gi;
+    pipe.pattern = /world/;
     pipe.replacement = 'EARTH';
+    pipe.flags = 'gi';
     const expected = 'Hello EARTH EARTH';
     expect(pipe.exec(input)).toBe(expected);
   });
 
-  it('should replace only first occurrence', () => {
+  it('should replace only first occurrence when no global flag', () => {
     const input = 'test test test';
-    pipe.pattern = /test/g;
+    pipe.pattern = /test/;
     pipe.replacement = 'example';
-    pipe.replaceFirst = true;
+    pipe.flags = '';
     const expected = 'example test test';
     expect(pipe.exec(input)).toBe(expected);
   });
 
-  it('should replace all occurrences', () => {
+  it('should replace all occurrences with global flag', () => {
     const input = 'test test test';
-    pipe.pattern = /test/g;
+    pipe.pattern = /test/;
     pipe.replacement = 'example';
-    pipe.replaceFirst = false;
+    pipe.flags = 'g';
     const expected = 'example example example';
     expect(pipe.exec(input)).toBe(expected);
   });

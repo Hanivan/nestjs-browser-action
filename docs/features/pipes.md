@@ -53,7 +53,7 @@ const workflow = {
     },
     {
       action: 'cleanse' as const,
-      id: 'title',
+      id: 'cleanTitle',
       value: '${rawTitle}',
       options: {
         pipes: [
@@ -137,13 +137,14 @@ Converts text to uppercase.
 ```
 
 #### SANITIZE_TEXT
-Removes special characters, keeping only alphanumeric, spaces, and basic punctuation.
+Removes dangerous HTML tags (script, iframe, form, etc.), event handler attributes (onclick, onerror, etc.), javascript: protocol links, and remaining HTML tags. Normalizes whitespace in the result.
 
 ```typescript
 { type: CleansingType.SANITIZE_TEXT }
 
-'Hello! @#$ World%' → 'Hello World'
-'Text\nwith\n\ttabs' → 'Textwithtabs'
+'<script>alert(1)</script>Hello World' → 'Hello World'
+'<b onclick="evil()">Text</b>' → 'Text'
+'<p>Hello   World</p>' → 'Hello World'
 ```
 
 #### REMOVE_LINE_BREAKS
@@ -199,15 +200,14 @@ Replace text matching regex pattern.
 ```typescript
 {
   type: CleansingType.REGEX_REPLACE,
-  params: {
-    pattern: '\\d+',      // Regex pattern
-    replacement: '',     // Replacement string
-    flags: 'g',          // Regex flags (optional)
-  }
+  pattern: '\\d+',   // Regex pattern
+  replacement: '',   // Replacement string
+  flags: 'g',        // Regex flags (default: 'g'). Use 'gi' for case-insensitive, '' for first match only
 }
 
-'Price: $29.99' → 'Price: $'  // Remove digits
-'a1b2c3' → 'abc'           // Remove all digits
+'Price: $29.99' → 'Price: $'  // flags: 'g' removes all digits
+'Hello WORLD' → 'Hello Earth' // flags: 'gi' for case-insensitive replace
+'test test test' → 'x test test' // flags: '' replaces first match only
 ```
 
 #### REGEX_EXTRACT
@@ -216,14 +216,12 @@ Extract text matching regex pattern.
 ```typescript
 {
   type: CleansingType.REGEX_EXTRACT,
-  params: {
-    pattern: '\\d+',      // Regex pattern
-  }
+  pattern: '\\d+',      // Regex pattern
 }
 
 'Price: $29.99' → '29'
 'Order #12345 confirmed' → '12345'
-'a1b2c3' → '1', '2', '3' (each match)
+'a1b2c3' → ['1', '2', '3'] (global pattern returns all matches)
 ```
 
 ### Date Formatting
@@ -234,9 +232,9 @@ Parse and reformat dates.
 ```typescript
 {
   type: CleansingType.DATE_FORMAT,
-  params: {
-    format: 'YYYY-MM-DD',  // Output format
-  }
+  format: 'YYYY-MM-DD',  // Output format (moment.js)
+  timezone: 'UTC',       // Optional
+  locale: 'en',          // Optional
 }
 
 'January 15, 2024' → '2024-01-15'
@@ -252,7 +250,7 @@ Alternative fallback pipe - executes fallback pipes if primary result is empty/n
 {
   type: CleansingType.ALT_FLAG,
   primaryPipes: [
-    { type: CleansingType.REGEX_EXTRACT, params: { pattern: '\\d+' } },
+    { type: CleansingType.REGEX_EXTRACT, pattern: '\\d+' },
   ],
   fallbackPipes: [
     { type: CleansingType.TRIM },
@@ -266,12 +264,21 @@ Alternative fallback pipe - executes fallback pipes if primary result is empty/n
 
 ## Parameters
 
-Some pipes accept parameters:
+Some pipes accept parameters as flat fields on the config object:
 
 ```typescript
 interface PipeConfig {
   type: CleansingType;
-  params?: Record<string, unknown>;
+  pattern?: string;           // REGEX_REPLACE, REGEX_EXTRACT
+  replacement?: string;       // REGEX_REPLACE
+  flags?: string;             // REGEX_REPLACE — 'g' (default), 'gi', 'i', '' etc.
+  format?: string;            // DATE_FORMAT
+  timezone?: string;          // DATE_FORMAT
+  locale?: string;            // DATE_FORMAT
+  primaryPipes?: PipeConfig[];   // ALT_FLAG
+  fallbackPipes?: PipeConfig[];  // ALT_FLAG
+  fallbackOn?: 'empty' | 'null' | 'undefined' | 'all';  // ALT_FLAG
+  [key: string]: unknown;     // allows additional custom fields
 }
 ```
 
@@ -280,11 +287,9 @@ interface PipeConfig {
 ```typescript
 {
   type: CleansingType.REGEX_REPLACE,
-  params: {
-    pattern: '\\s+',           // Pattern to match
-    replacement: '-',         // Replacement string
-    flags: 'g',               // Regex flags (g, i, m, s)
-  }
+  pattern: '\\s+',   // Pattern to match
+  replacement: '-',  // Replacement string
+  flags: 'g',        // Regex flags — 'g' (default), 'gi', 'i', '' etc.
 }
 ```
 
@@ -293,9 +298,7 @@ interface PipeConfig {
 ```typescript
 {
   type: CleansingType.REGEX_EXTRACT,
-  params: {
-    pattern: '[A-Z0-9]+',     // Pattern to extract
-  }
+  pattern: '[A-Z0-9]+',     // Pattern to extract
 }
 ```
 
@@ -304,9 +307,9 @@ interface PipeConfig {
 ```typescript
 {
   type: CleansingType.DATE_FORMAT,
-  params: {
-    format: 'YYYY-MM-DD',     // Output date format
-  }
+  format: 'YYYY-MM-DD',     // Output date format (moment.js format)
+  timezone: 'UTC',          // Optional timezone (e.g. 'America/New_York')
+  locale: 'en',             // Optional locale for output formatting
 }
 ```
 
@@ -486,9 +489,7 @@ const urls = await this.actionHelpers.scrapeAll(
         { type: CleansingType.TRIM },
         {
           type: CleansingType.REGEX_EXTRACT,
-          params: {
-            pattern: '^/products/[\\w-]+',
-          },
+          pattern: '^/products/[\\w-]+',
         },
       ],
     },
@@ -509,7 +510,7 @@ const data = await this.actionHelpers.scrape(
         {
           type: CleansingType.ALT_FLAG,
           primaryPipes: [
-            { type: CleansingType.REGEX_EXTRACT, params: { pattern: '\\d+\\.\\d{2}' } },
+            { type: CleansingType.REGEX_EXTRACT, pattern: '\\d+\\.\\d{2}' },
           ],
           // Fallback: just trim and remove currency
           fallbackPipes: [
