@@ -435,7 +435,9 @@ export class ActionHelpersService {
 
         if (action.id) {
           context[action.id] = cleanedValue;
-          this.logger.debug(`Cleansed value for '${action.id}': ${JSON.stringify(cleanedValue)}`);
+          this.logger.debug(
+            `Cleansed value for '${action.id}': ${JSON.stringify(cleanedValue)}`,
+          );
         }
         break;
       }

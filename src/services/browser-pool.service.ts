@@ -142,7 +142,9 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
 
     for (let attempt = 1; attempt <= retryMax; attempt++) {
       try {
-        this.logger.debug(`Connecting to remote Chrome (attempt ${attempt}/${retryMax})`);
+        this.logger.debug(
+          `Connecting to remote Chrome (attempt ${attempt}/${retryMax})`,
+        );
 
         const browser = await puppeteer.connect(connectOptions);
 
@@ -156,7 +158,9 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
         return browser;
       } catch (error) {
         lastError = error as Error;
-        this.logger.warn(`Connection attempt ${attempt}/${retryMax} failed: ${lastError.message}`);
+        this.logger.warn(
+          `Connection attempt ${attempt}/${retryMax} failed: ${lastError.message}`,
+        );
 
         if (attempt < retryMax) {
           await delay(retryDelay);
