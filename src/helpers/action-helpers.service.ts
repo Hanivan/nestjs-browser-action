@@ -212,7 +212,7 @@ export class ActionHelpersService {
     return await page.evaluate(
       (selector, extractAs, attr) => {
         const results = document.evaluate(
-          selector!,
+          selector,
           document,
           null,
           XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
@@ -825,7 +825,8 @@ export class ActionHelpersService {
           if (!sr) return '';
           if (extractAs === 'html' || extractAs === 'outerHtml')
             return sr.innerHTML;
-          if (extractAs === 'attribute') return el.getAttribute(attr || '') || '';
+          if (extractAs === 'attribute')
+            return el.getAttribute(attr || '') || '';
           return sr.textContent?.trim() || '';
         },
         as,
