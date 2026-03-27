@@ -407,32 +407,42 @@ export class ActionHelpersService {
 
     const value = this.interpolateValue(String(action.value || ''), context);
 
+    const actionLabel = action.id ? `[${action.action}] id="${action.id}"` : `[${action.action}]`;
+    this.logger.debug(`Executing action: ${actionLabel}`);
+
     switch (action.action) {
       case 'navigate':
+        this.logger.debug(`  navigate → ${value}`);
         await page.goto(value);
         break;
 
       case 'wait':
+        this.logger.debug(`  wait ${Number(action.value) || 0}ms`);
         await delay(Number(action.value) || 0);
         break;
 
       case 'waitFor':
+        this.logger.debug(`  waitFor target: ${this.describeTarget(action.target!)}`);
         await this.waitForTarget(page, action.target!, action.options);
         break;
 
       case 'click':
+        this.logger.debug(`  click target: ${this.describeTarget(action.target!)}`);
         await this.clickElement(page, action.target!, action.options);
         break;
 
       case 'type':
+        this.logger.debug(`  type target: ${this.describeTarget(action.target!)} value: "${value}"`);
         await this.typeText(page, action.target!, value, action.options);
         break;
 
       case 'select':
+        this.logger.debug(`  select target: ${this.describeTarget(action.target!)} value: "${value}"`);
         await this.selectOption(page, action.target!, value, action.options);
         break;
 
       case 'scroll':
+        this.logger.debug(`  scroll target: ${this.describeTarget(action.target!)}`);
         await this.scrollToElement(page, action.target!);
         break;
 
@@ -442,9 +452,12 @@ export class ActionHelpersService {
         const extractAttr = extractOptions.attribute;
 
         if (!action.target) {
+          this.logger.debug(`  extract full page HTML`);
           if (action.id) context[action.id] = await page.content();
           break;
         }
+
+        this.logger.debug(`  extract target: ${this.describeTarget(action.target)} as="${extractAs}"${extractAttr ? ` attr="${extractAttr}"` : ''}${extractOptions.multiple ? ' multiple=true' : ''}`);
 
         if (extractOptions.multiple) {
           const allValues = await this.extractAllData(
@@ -453,7 +466,10 @@ export class ActionHelpersService {
             extractAs,
             extractAttr,
           );
-          if (action.id) context[action.id] = allValues;
+          if (action.id) {
+            context[action.id] = allValues;
+            this.logger.debug(`  extracted ${Array.isArray(allValues) ? allValues.length : 1} item(s) → id="${action.id}"`);
+          }
         } else {
           const extractedValue = await this.extractData(
             page,
@@ -461,7 +477,10 @@ export class ActionHelpersService {
             extractAs,
             extractAttr,
           );
-          if (action.id) context[action.id] = extractedValue;
+          if (action.id) {
+            context[action.id] = extractedValue;
+            this.logger.debug(`  extracted → id="${action.id}": ${JSON.stringify(extractedValue)}`);
+          }
         }
         break;
       }
@@ -470,6 +489,7 @@ export class ActionHelpersService {
         const screenshotPath = String(
           action.value || `${DEFAULT_SCREENSHOT_FILENAME}-${Date.now()}.png`,
         );
+        this.logger.debug(`  screenshot → ${screenshotPath}`);
         await page.screenshot({ path: screenshotPath });
         break;
       }
@@ -502,6 +522,7 @@ export class ActionHelpersService {
         const valueKey = String(action.value || '');
         const pipeInstances = this.getCachedPipeInstances(pipes);
         const rawValue = this.resolveRawValue(valueKey, context);
+        this.logger.debug(`  cleanse raw: ${JSON.stringify(rawValue)} pipes: [${pipes.map((p) => p.type).join(', ')}]`);
 
         const cleanedValue = Array.isArray(rawValue)
           ? rawValue.map((item) =>
@@ -521,6 +542,7 @@ export class ActionHelpersService {
       case 'saveCookies': {
         const sessionName = String(value);
         const overwrite = action.options?.overwrite ?? false;
+        this.logger.debug(`  saveCookies session="${sessionName}" overwrite=${overwrite}`);
 
         // Extract metadata if provided
         const metadata: Record<string, unknown> = {};
@@ -539,6 +561,7 @@ export class ActionHelpersService {
         const sessionName = String(value);
         const throwIfNotExists =
           action.onError !== 'skip' && action.onError !== 'continue';
+        this.logger.debug(`  loadCookies session="${sessionName}"`);
 
         await this.cookieService.loadCookies(page, sessionName, {
           throwIfNotExists,
@@ -548,11 +571,13 @@ export class ActionHelpersService {
 
       case 'clearCookies': {
         const sessionName = String(value);
+        this.logger.debug(`  clearCookies session="${sessionName}"`);
         await this.cookieService.deleteCookies(sessionName);
         break;
       }
 
       case 'listCookies': {
+        this.logger.debug(`  listCookies`);
         const sessions = await this.cookieService.listCookies();
 
         if (action.id) {
@@ -562,6 +587,7 @@ export class ActionHelpersService {
       }
 
       case 'hover':
+        this.logger.debug(`  hover target: ${this.describeTarget(action.target!)}`);
         await this.hoverElement(page, action.target!, action.options);
         break;
 
@@ -569,20 +595,24 @@ export class ActionHelpersService {
         if (!value) {
           throw new Error('keyPress action requires a key value');
         }
+        this.logger.debug(`  keyPress key="${value}"`);
         await page.keyboard.press(value as KeyInput);
         break;
 
       case 'clear':
+        this.logger.debug(`  clear target: ${this.describeTarget(action.target!)}`);
         await this.clearElement(page, action.target!);
         break;
 
       case 'waitForNetwork':
+        this.logger.debug(`  waitForNetwork timeout=${action.options?.timeout ?? DEFAULT_ACTION_TIMEOUT}ms`);
         await page.waitForNetworkIdle({
           timeout: action.options?.timeout ?? DEFAULT_ACTION_TIMEOUT,
         });
         break;
 
       case 'reload':
+        this.logger.debug(`  reload waitUntil="${action.options?.waitUntil ?? 'load'}"`);
         await page.reload({
           waitUntil: action.options?.waitUntil ?? 'load',
           timeout: action.options?.timeout ?? DEFAULT_NAVIGATION_TIMEOUT,
@@ -615,19 +645,30 @@ export class ActionHelpersService {
     return true;
   }
 
+  private describeTarget(target: ActionTarget): string {
+    const base = target.value ? `${target.type}="${target.value}"` : `(no selector)`;
+    return target.shadowHost ? `shadowHost="${target.shadowHost}" > ${base}` : base;
+  }
+
   private async findElement(
     page: Page,
     target: ActionTarget,
   ): Promise<ElementHandle<Node> | null> {
+    this.logger.debug(`  findElement: ${this.describeTarget(target)}`);
+
     if (target.shadowHost) {
-      return this.findElementInShadowRoot(page, target);
+      const el = await this.findElementInShadowRoot(page, target);
+      this.logger.debug(`  findElement result: ${el ? 'found' : 'NOT FOUND'}`);
+      return el;
     }
 
     if (target.type === 'css') {
-      return page.$(target.value!) as Promise<ElementHandle<Node> | null>;
+      const el = await (page.$(target.value!) as Promise<ElementHandle<Node> | null>);
+      this.logger.debug(`  findElement result: ${el ? 'found' : 'NOT FOUND'}`);
+      return el;
     }
 
-    return page
+    const el = await page
       .evaluateHandle((selector: string) => {
         const result = document.evaluate(
           selector,
@@ -639,6 +680,8 @@ export class ActionHelpersService {
         return result.singleNodeValue;
       }, target.value!)
       .then((handle) => handle.asElement());
+    this.logger.debug(`  findElement result: ${el ? 'found' : 'NOT FOUND'}`);
+    return el;
   }
 
   private async findElementInShadowRoot(
