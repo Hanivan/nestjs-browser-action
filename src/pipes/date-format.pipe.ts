@@ -1,13 +1,18 @@
 import { IsOptional, IsString } from 'class-validator';
 import { CleansingPipe } from './cleansing-pipe';
 import { CleansingType } from '../enums/cleansing-type.enum';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-import moment = require('moment');
-
-import 'moment-timezone';
+import { DateTime } from 'luxon';
 
 /**
- * Formats dates using moment.js
+ * Formats dates using Luxon.
+ *
+ * Format tokens follow Luxon syntax (https://moment.github.io/luxon/#/formatting):
+ *   yyyy = 4-digit year, MM = month, dd = day, HH = hour, mm = minute, ss = second
+ *
+ * Special format values:
+ *   'relative' — returns a human-readable relative string, e.g. "2 hours ago"
+ *   'X'        — returns the Unix timestamp in seconds as a string
+ *   'LL'       — returns a locale-aware long date, e.g. "December 25, 2023"
  */
 export class DateFormatPipe extends CleansingPipe<string | Date, string> {
   type = CleansingType.DATE_FORMAT;
@@ -33,43 +38,53 @@ export class DateFormatPipe extends CleansingPipe<string | Date, string> {
       return String(value);
     }
 
-    let date: moment.Moment;
+    let date: DateTime;
     if (value instanceof Date) {
-      date = moment(value);
+      date = DateTime.fromJSDate(value);
     } else {
       const timestamp = parseInt(value, 10);
       if (!isNaN(timestamp) && timestamp.toString().length === 10) {
-        date = moment.unix(timestamp);
+        date = DateTime.fromSeconds(timestamp);
       } else {
-        date = moment(value, moment.ISO_8601, true);
-        if (!date.isValid()) {
+        date = DateTime.fromISO(value);
+        if (!date.isValid) {
           const dateObj = new Date(value);
           if (!isNaN(dateObj.getTime())) {
-            date = moment(dateObj);
+            date = DateTime.fromJSDate(dateObj);
           }
         }
       }
     }
 
-    if (this.timezone && date.isValid()) {
-      date = date.tz(this.timezone);
+    if (this.timezone && date.isValid) {
+      date = date.setZone(this.timezone);
     }
 
-    if (this.locale && date.isValid()) {
-      date = date.locale(this.locale);
+    if (this.locale && date.isValid) {
+      date = date.setLocale(this.locale);
     }
 
-    if (!date.isValid()) {
+    if (!date.isValid) {
       return value.toString();
     }
 
     if (this.format) {
       if (this.format === 'relative') {
-        return date.fromNow();
+        return date.toRelative()!;
       }
-      return date.format(this.format);
+      if (this.format === 'X') {
+        return date.toUnixInteger().toString();
+      }
+      if (this.format === 'LL') {
+        return date.toLocaleString({
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+      }
+      return date.toFormat(this.format);
     }
 
-    return date.format();
+    return date.toISO()!;
   }
 }

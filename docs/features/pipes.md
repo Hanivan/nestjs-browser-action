@@ -227,12 +227,12 @@ Extract text matching regex pattern.
 ### Date Formatting
 
 #### DATE_FORMAT
-Parse and reformat dates.
+Parse and reformat dates using [Luxon](https://moment.github.io/luxon/#/formatting) format tokens.
 
 ```typescript
 {
   type: CleansingType.DATE_FORMAT,
-  format: 'YYYY-MM-DD',  // Output format (moment.js)
+  format: 'yyyy-MM-dd',  // Output format (Luxon tokens)
   timezone: 'UTC',       // Optional
   locale: 'en',          // Optional
 }
@@ -240,6 +240,8 @@ Parse and reformat dates.
 'January 15, 2024' → '2024-01-15'
 '15/01/2024' → '2024-01-15'
 ```
+
+Special `format` values: `'relative'` → `"2 hours ago"`, `'X'` → Unix timestamp seconds, `'LL'` → locale-aware long date.
 
 ### Advanced
 
@@ -307,11 +309,14 @@ interface PipeConfig {
 ```typescript
 {
   type: CleansingType.DATE_FORMAT,
-  format: 'YYYY-MM-DD',     // Output date format (moment.js format)
+  format: 'yyyy-MM-dd',     // Output date format (Luxon tokens: yyyy=year, MM=month, dd=day)
   timezone: 'UTC',          // Optional timezone (e.g. 'America/New_York')
   locale: 'en',             // Optional locale for output formatting
 }
 ```
+
+Common Luxon tokens: `yyyy` year · `MM` month · `dd` day · `HH` hour · `mm` minute · `ss` second.
+Special values: `'relative'` · `'X'` (Unix seconds) · `'LL'` (locale long date).
 
 ### Alt Flag Parameters
 
