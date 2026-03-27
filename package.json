@@ -1,6 +1,6 @@
 {
   "name": "@hanivanrizky/nestjs-browser-action",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Puppeteer-based browser automation module for NestJS",
   "author": "Hanivan Rizky S <hanivan20@gmail.com> (https://www.hanivan.my.id)",
   "license": "MIT",
