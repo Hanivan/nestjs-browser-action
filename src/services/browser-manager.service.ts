@@ -16,12 +16,12 @@ export class BrowserManagerService {
   }
 
   async getBrowser(): Promise<Browser> {
-    this.logger.log('Acquiring browser from pool', 'debug');
+    this.logger.debug('Acquiring browser from pool');
     return await this.poolService.acquire();
   }
 
   releaseBrowser(browser: Browser): void {
-    this.logger.log('Releasing browser to pool', 'debug');
+    this.logger.debug('Releasing browser to pool');
     this.poolService.release(browser);
   }
 

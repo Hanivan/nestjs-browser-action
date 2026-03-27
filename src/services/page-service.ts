@@ -18,7 +18,7 @@ export class PageService {
   }
 
   async createPage(): Promise<Page> {
-    this.logger.log('Creating new page', 'debug');
+    this.logger.debug('Creating new page');
     this.currentBrowser = await this.browserManager.getBrowser();
     this.currentPage = await this.currentBrowser.newPage();
     return this.currentPage;
@@ -28,7 +28,7 @@ export class PageService {
     if (!this.currentPage) {
       await this.createPage();
     }
-    this.logger.log(`Navigating to ${url}`, 'debug');
+    this.logger.debug(`Navigating to ${url}`);
     if (this.currentPage) {
       await this.currentPage.goto(url, options);
       return this.currentPage;

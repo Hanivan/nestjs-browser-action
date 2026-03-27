@@ -64,9 +64,8 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
       this.logger.log('Browser mode: Local Puppeteer');
     }
 
-    this.logger.log(
+    this.logger.warn(
       'Call app.enableShutdownHooks() in main.ts to ensure graceful browser cleanup on Ctrl+C',
-      'warn',
     );
 
     this.logger.log(
@@ -114,7 +113,7 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
 
     const browser = await puppeteer.launch(this.launchOptions);
     const disconnectHandler = () => {
-      this.logger.log('Browser disconnected', 'warn');
+      this.logger.warn('Browser disconnected');
     };
     browser.on('disconnected', disconnectHandler);
     this.disconnectListeners.set(browser, disconnectHandler);
@@ -143,27 +142,21 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
 
     for (let attempt = 1; attempt <= retryMax; attempt++) {
       try {
-        this.logger.log(
-          `Connecting to remote Chrome (attempt ${attempt}/${retryMax})`,
-          'debug',
-        );
+        this.logger.debug(`Connecting to remote Chrome (attempt ${attempt}/${retryMax})`);
 
         const browser = await puppeteer.connect(connectOptions);
 
         const disconnectHandler = () => {
-          this.logger.log('Remote Chrome disconnected', 'warn');
+          this.logger.warn('Remote Chrome disconnected');
         };
         browser.on('disconnected', disconnectHandler);
         this.disconnectListeners.set(browser, disconnectHandler);
 
-        this.logger.log('Successfully connected to remote Chrome', 'debug');
+        this.logger.debug('Successfully connected to remote Chrome');
         return browser;
       } catch (error) {
         lastError = error as Error;
-        this.logger.log(
-          `Connection attempt ${attempt}/${retryMax} failed: ${lastError.message}`,
-          'warn',
-        );
+        this.logger.warn(`Connection attempt ${attempt}/${retryMax} failed: ${lastError.message}`);
 
         if (attempt < retryMax) {
           await delay(retryDelay);
@@ -254,7 +247,7 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
             }
           }
         } catch {
-          this.logger.log('Error during browser cleanup', 'error');
+          this.logger.error('Error during browser cleanup');
         }
       }),
     );

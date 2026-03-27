@@ -55,7 +55,7 @@ export class ActionHelpersService {
     path: string,
     options?: ScreenshotOptions,
   ): Promise<Buffer> {
-    this.logger.log(`Taking screenshot of ${url}`, 'debug');
+    this.logger.debug(`Taking screenshot of ${url}`);
     const page = await this.pageService.navigateTo(url);
     const result = await page.screenshot({ path, ...options });
     await this.pageService.closePage();
@@ -67,7 +67,7 @@ export class ActionHelpersService {
     path: string,
     options?: PDFOptions,
   ): Promise<Buffer> {
-    this.logger.log(`Generating PDF for ${url}`, 'debug');
+    this.logger.debug(`Generating PDF for ${url}`);
     const page = await this.pageService.navigateTo(url);
     const pdf = await page.pdf({ path, ...options });
     await this.pageService.closePage();
@@ -79,7 +79,7 @@ export class ActionHelpersService {
     selectors: T,
     options?: ScraperOptions,
   ): Promise<ScrapeResult> {
-    this.logger.log(`Scraping ${url}`, 'debug');
+    this.logger.debug(`Scraping ${url}`);
     const page = await this.pageService.navigateTo(url);
 
     const result: ScrapeResult = {};
@@ -95,7 +95,7 @@ export class ActionHelpersService {
           result[key] = value;
         }
       } catch {
-        this.logger.log(`Failed to scrape ${selector}`, 'warn');
+        this.logger.warn(`Failed to scrape ${selector}`);
       }
     }
 
@@ -108,7 +108,7 @@ export class ActionHelpersService {
     selectors: T,
     options?: ScraperOptions,
   ): Promise<ScrapeAllResult> {
-    this.logger.log(`Scraping all elements from ${url}`, 'debug');
+    this.logger.debug(`Scraping all elements from ${url}`);
     const page = await this.pageService.navigateTo(url);
 
     const result: ScrapeAllResult = {};
@@ -151,7 +151,7 @@ export class ActionHelpersService {
           (result as ScrapeResult)[key] = values;
         }
       } catch {
-        this.logger.log(`Failed to scrape ${selector}`, 'warn');
+        this.logger.warn(`Failed to scrape ${selector}`);
       }
     }
 
@@ -238,7 +238,7 @@ export class ActionHelpersService {
     selector: string,
     timeout?: number,
   ): Promise<Page> {
-    this.logger.log(`Waiting for ${selector} on ${url}`, 'debug');
+    this.logger.debug(`Waiting for ${selector} on ${url}`);
     const page = await this.pageService.navigateTo(url);
     await page.waitForSelector(selector, { timeout });
     return page;
@@ -248,7 +248,7 @@ export class ActionHelpersService {
     url: string,
     script: string | (() => any),
   ): Promise<T> {
-    this.logger.log(`Evaluating script on ${url}`, 'debug');
+    this.logger.debug(`Evaluating script on ${url}`);
     const page = await this.pageService.navigateTo(url);
     const result = await page.evaluate(script as string);
     await this.pageService.closePage();
@@ -260,7 +260,7 @@ export class ActionHelpersService {
     workflow: WorkflowDefinition,
     variables?: VariableContext,
   ): Promise<WorkflowResultTyped<T>> {
-    this.logger.log(`Starting workflow execution for ${url}`, 'debug');
+    this.logger.debug(`Starting workflow execution for ${url}`);
     const page = await this.pageService.navigateTo(url);
     const result: WorkflowResultTyped<T> = {
       success: false,
@@ -279,7 +279,7 @@ export class ActionHelpersService {
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : String(error);
-          this.logger.log(`Action failed: ${errorMessage}`, 'error');
+          this.logger.error(`Action failed: ${errorMessage}`);
 
           if (action.onError === 'continue' || action.onError === 'skip') {
             continue;
@@ -307,7 +307,7 @@ export class ActionHelpersService {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       result.errors.push(errorMessage);
-      this.logger.log(`Workflow execution failed: ${errorMessage}`, 'error');
+      this.logger.error(`Workflow execution failed: ${errorMessage}`);
     } finally {
       await this.pageService.closePage();
     }
@@ -337,10 +337,7 @@ export class ActionHelpersService {
         action.condition,
       );
       if (!shouldExecute) {
-        this.logger.log(
-          `Skipping action due to condition: ${action.action}`,
-          'debug',
-        );
+        this.logger.debug(`Skipping action due to condition: ${action.action}`);
         return;
       }
     }
@@ -409,9 +406,9 @@ export class ActionHelpersService {
           evalCode = value;
         }
 
-        this.logger.log(`Evaluating: ${evalCode}`, 'debug');
+        this.logger.debug(`Evaluating: ${evalCode}`);
         const evalResult = await page.evaluate(evalCode);
-        this.logger.log(`Result: ${JSON.stringify(evalResult)}`, 'debug');
+        this.logger.debug(`Result: ${JSON.stringify(evalResult)}`);
 
         if (action.id) {
           context[action.id] = evalResult;
@@ -438,10 +435,7 @@ export class ActionHelpersService {
 
         if (action.id) {
           context[action.id] = cleanedValue;
-          this.logger.log(
-            `Cleansed value for '${action.id}': ${JSON.stringify(cleanedValue)}`,
-            'debug',
-          );
+          this.logger.debug(`Cleansed value for '${action.id}': ${JSON.stringify(cleanedValue)}`);
         }
         break;
       }

@@ -31,7 +31,8 @@ export class LoggerWithLevel {
    * Check if a message at the given level should be logged.
    */
   private shouldLog(level: LogLevel): boolean {
-    const levels: LogLevel[] = ['log', 'error', 'warn', 'debug', 'verbose'];
+    // Ordered from most to least severe — a configured level shows itself and everything more severe
+    const levels: LogLevel[] = ['error', 'warn', 'log', 'debug', 'verbose'];
     const currentLevelIndex = levels.indexOf(this.logLevel);
     const requestedLevelIndex = levels.indexOf(level);
     return requestedLevelIndex <= currentLevelIndex;

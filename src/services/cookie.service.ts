@@ -74,7 +74,7 @@ export class CookieService {
     sessionName: string,
     options?: CookieSaveOptions<TMetadata>,
   ): Promise<CookieSession<TMetadata>> {
-    this.logger.log(`Saving cookies for session: ${sessionName}`, 'debug');
+    this.logger.debug(`Saving cookies for session: ${sessionName}`);
 
     const cookiesDir = options?.cookiesDir || this.cookiesDir;
     const sessionPath = this.getSessionPath(sessionName, cookiesDir);
@@ -145,7 +145,7 @@ export class CookieService {
     sessionName: string,
     options?: CookieLoadOptions,
   ): Promise<CookieSession<TMetadata>> {
-    this.logger.log(`Loading cookies for session: ${sessionName}`, 'debug');
+    this.logger.debug(`Loading cookies for session: ${sessionName}`);
 
     const cookiesDir = options?.cookiesDir || this.cookiesDir;
     const sessionPath = this.getSessionPath(sessionName, cookiesDir);
@@ -175,7 +175,7 @@ export class CookieService {
     try {
       await page.setCookie(...sessionData.cookies);
     } catch (error) {
-      this.logger.log(`Failed to apply some cookies: ${error}`, 'warn');
+      this.logger.warn(`Failed to apply some cookies: ${error}`);
     }
 
     if (sessionData.url) {
@@ -200,7 +200,7 @@ export class CookieService {
   }
 
   async deleteCookies(sessionName: string): Promise<void> {
-    this.logger.log(`Deleting session: ${sessionName}`, 'debug');
+    this.logger.debug(`Deleting session: ${sessionName}`);
 
     const sessionPath = this.getSessionPath(sessionName);
 
@@ -217,7 +217,7 @@ export class CookieService {
   }
 
   async clearAllCookies(): Promise<void> {
-    this.logger.log('Clearing all cookie sessions', 'debug');
+    this.logger.debug('Clearing all cookie sessions');
 
     const files = await fs.readdir(this.cookiesDir);
     const jsonFiles = files.filter((f) => f.endsWith('.json'));
@@ -232,7 +232,7 @@ export class CookieService {
   async listCookies<
     TMetadata extends Record<string, unknown> = Record<string, unknown>,
   >(): Promise<CookieSessionInfo<TMetadata>[]> {
-    this.logger.log('Listing cookie sessions', 'debug');
+    this.logger.debug('Listing cookie sessions');
 
     try {
       const files = await fs.readdir(this.cookiesDir);
@@ -252,7 +252,7 @@ export class CookieService {
               metadata: data.metadata,
             } as CookieSessionInfo<TMetadata>;
           } catch {
-            this.logger.log(`Skipping invalid session file: ${file}`, 'warn');
+            this.logger.warn(`Skipping invalid session file: ${file}`);
             return null;
           }
         }),
