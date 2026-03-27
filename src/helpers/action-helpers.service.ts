@@ -167,13 +167,35 @@ export class ActionHelpersService {
     as: ActionOptions['as'] = 'text',
     attribute?: string,
   ): Promise<string[]> {
+    if (target.shadowHost && !target.value) {
+      const hosts = await page.$$(target.shadowHost);
+      const results = await Promise.all(
+        hosts.map((host) =>
+          host.evaluate(
+            (el, extractAs, attr) => {
+              const sr = el.shadowRoot;
+              if (!sr) return '';
+              if (extractAs === 'html' || extractAs === 'outerHtml')
+                return sr.innerHTML;
+              if (extractAs === 'attribute')
+                return el.getAttribute(attr || '') || '';
+              return sr.textContent?.trim() || '';
+            },
+            as,
+            attribute,
+          ),
+        ),
+      );
+      return results;
+    }
+
     if (target.shadowHost) {
       return await this.extractAllFromShadowRoot(page, target, as, attribute);
     }
 
     if (target.type === 'css') {
       return await page.$$eval(
-        target.value,
+        target.value!,
         (elements, extractAs, attr) =>
           elements.map((el) => {
             if (extractAs === 'html') return el.innerHTML;
@@ -190,7 +212,7 @@ export class ActionHelpersService {
     return await page.evaluate(
       (selector, extractAs, attr) => {
         const results = document.evaluate(
-          selector,
+          selector!,
           document,
           null,
           XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
@@ -211,7 +233,7 @@ export class ActionHelpersService {
         }
         return values;
       },
-      target.value,
+      target.value!,
       as,
       attribute,
     );
@@ -263,7 +285,7 @@ export class ActionHelpersService {
             }
             return values;
           },
-          target.value,
+          target.value!,
           target.type,
           as,
           attribute,
@@ -602,7 +624,7 @@ export class ActionHelpersService {
     }
 
     if (target.type === 'css') {
-      return page.$(target.value) as Promise<ElementHandle<Node> | null>;
+      return page.$(target.value!) as Promise<ElementHandle<Node> | null>;
     }
 
     return page
@@ -615,7 +637,7 @@ export class ActionHelpersService {
           null,
         );
         return result.singleNodeValue;
-      }, target.value)
+      }, target.value!)
       .then((handle) => handle.asElement());
   }
 
@@ -659,7 +681,7 @@ export class ActionHelpersService {
     const timeout = options?.timeout || DEFAULT_ACTION_TIMEOUT;
 
     if (target.type === 'css') {
-      await page.waitForSelector(target.value, { timeout });
+      await page.waitForSelector(target.value!, { timeout });
     } else {
       await page.waitForFunction(
         (selector) => {
@@ -673,7 +695,7 @@ export class ActionHelpersService {
           return result.singleNodeValue !== null;
         },
         { timeout },
-        target.value,
+        target.value!,
       );
     }
   }
@@ -794,6 +816,23 @@ export class ActionHelpersService {
     as: ActionOptions['as'] = 'text',
     attribute?: string,
   ): Promise<string> {
+    if (target.shadowHost && !target.value) {
+      const host = await page.$(target.shadowHost);
+      if (!host) throw new Error(`Shadow host not found: ${target.shadowHost}`);
+      return host.evaluate(
+        (el, extractAs, attr) => {
+          const sr = el.shadowRoot;
+          if (!sr) return '';
+          if (extractAs === 'html' || extractAs === 'outerHtml')
+            return sr.innerHTML;
+          if (extractAs === 'attribute') return el.getAttribute(attr || '') || '';
+          return sr.textContent?.trim() || '';
+        },
+        as,
+        attribute,
+      );
+    }
+
     const element = await this.findElement(page, target);
     if (!element) {
       throw new Error(`Element not found: ${target.value}`);

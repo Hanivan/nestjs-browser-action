@@ -10,7 +10,7 @@ import type { PipeConfig } from './types';
  */
 export interface ActionTarget {
   type: 'css' | 'xpath';
-  value: string;
+  value?: string; // Omit to extract the shadow root itself (requires shadowHost)
   shadowHost?: string; // For Shadow DOM elements
 }
 
