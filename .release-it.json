@@ -33,8 +33,8 @@
     }
   },
   "hooks": {
-    "before:init": ["yarn test", "yarn build"],
-    "after:bump": ["yarn build"],
+    "before:init": ["pnpm test", "pnpm build"],
+    "after:bump": ["pnpm build"],
     "after:release": "echo Successfully released ${name} v${version}!"
   }
 }

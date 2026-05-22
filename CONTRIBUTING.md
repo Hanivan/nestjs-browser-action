@@ -16,7 +16,7 @@ Thank you for your interest in contributing! This guide will help you set up you
 ### Prerequisites
 
 - Node.js >= 18.0.0
-- Yarn or npm
+- pnpm (npm or Yarn also work)
 - Git
 
 ### Installation
@@ -27,13 +27,13 @@ git clone https://github.com/hanivanrizky/nestjs-browser-action.git
 cd nestjs-browser-action
 
 # Install dependencies
-yarn install
+pnpm install
 
 # Build the project
-yarn build
+pnpm build
 
 # Run tests
-yarn test
+pnpm test
 ```
 
 ## Project Structure
@@ -66,21 +66,21 @@ nestjs-browser-action/
 
 Before submitting a pull request or publishing a release, it's important to test your changes locally in a real NestJS application.
 
-### Method 1: Using Yarn Link (Recommended for Active Development)
+### Method 1: Using pnpm Link (Recommended for Active Development)
 
 **Step 1: Link the package locally**
 
 In this repository:
 ```bash
-yarn build
-yarn link
+pnpm build
+pnpm link --global
 ```
 
 **Step 2: Link in your test project**
 
 In your NestJS test project:
 ```bash
-yarn link @hanivanrizky/nestjs-browser-action
+pnpm link --global @hanivanrizky/nestjs-browser-action
 ```
 
 Now you can import and use the module:
@@ -96,12 +96,12 @@ Make changes to the source code, rebuild, and the test project will automaticall
 
 In your test project:
 ```bash
-yarn unlink @hanivanrizky/nestjs-browser-action
+pnpm unlink @hanivanrizky/nestjs-browser-action
 ```
 
 In this repository:
 ```bash
-yarn unlink
+pnpm unlink --global
 ```
 
 ### Method 2: Using Tarball (Recommended for Release Testing)
@@ -112,10 +112,10 @@ This method is best for testing the final package before publishing.
 
 ```bash
 # Build the project
-yarn build
+pnpm build
 
 # Create tarball
-yarn pack
+pnpm pack
 ```
 
 This creates a file like: `@hanivanrizky-nestjs-browser-action-0.0.1.tgz`
@@ -125,17 +125,17 @@ This creates a file like: `@hanivanrizky-nestjs-browser-action-0.0.1.tgz`
 In your NestJS test project:
 
 ```bash
-yarn add ../nestjs-browser-action/@hanivanrizky-nestjs-browser-action-0.0.1.tgz
+pnpm add ../nestjs-browser-action/@hanivanrizky-nestjs-browser-action-0.0.1.tgz
 ```
 
 **Step 3: Test thoroughly**
 
 ```bash
 # Run your test application
-yarn start
+pnpm start
 
 # Or run tests
-yarn test
+pnpm test
 ```
 
 **Step 4: Verify functionality**
@@ -162,7 +162,7 @@ export class AppModule {}
 After testing, you can remove the package:
 
 ```bash
-yarn remove @hanivanrizky-nestjs-browser-action
+pnpm remove @hanivanrizky-nestjs-browser-action
 ```
 
 ### Method 3: Installing from GitHub Branch
@@ -176,7 +176,7 @@ git push origin feature-branch
 **Step 2: Install in test project from GitHub**
 
 ```bash
-yarn add git+https://github.com/hanivanrizky/nestjs-browser-action.git#feature-branch
+pnpm add git+https://github.com/hanivanrizky/nestjs-browser-action.git#feature-branch
 ```
 
 This is useful for testing with collaborators before merging.
@@ -243,13 +243,13 @@ This project uses ESLint and Prettier for code formatting:
 
 ```bash
 # Check code style
-yarn lint
+pnpm lint
 
 # Auto-fix issues
-yarn lint --fix
+pnpm lint --fix
 
 # Format code
-yarn format
+pnpm format
 ```
 
 ### Testing
@@ -316,8 +316,8 @@ git commit -m "docs(readme): add installation instructions"
 ### Pull Request Process
 
 1. Update documentation if needed
-2. Ensure all tests pass: `yarn test`
-3. Ensure build succeeds: `yarn build`
+2. Ensure all tests pass: `pnpm test`
+3. Ensure build succeeds: `pnpm build`
 4. Update CHANGELOG if needed
 5. Create PR with descriptive title and description
 6. Link related issues
@@ -332,7 +332,7 @@ This project uses Husky for Git hooks:
 Runs ESLint to check code quality:
 
 ```bash
-yarn lint
+pnpm lint
 ```
 
 ### Pre-push
@@ -362,7 +362,7 @@ SKIP_TESTS=true git push
 This project uses `release-it` for automated releases:
 
 ```bash
-yarn release
+pnpm release
 ```
 
 **What release-it does:**
@@ -386,16 +386,16 @@ release-it analyzes your commits and suggests the appropriate version bump:
 
 ```bash
 # Patch release
-yarn release patch
+pnpm release patch
 
 # Minor release
-yarn release minor
+pnpm release minor
 
 # Major release
-yarn release major
+pnpm release major
 
 # Pre-release (beta, alpha, etc.)
-yarn release --preRelease=beta
+pnpm release --preRelease=beta
 ```
 
 ### Dry Run
@@ -403,7 +403,7 @@ yarn release --preRelease=beta
 Test the release process without actually releasing:
 
 ```bash
-yarn release --dry-run
+pnpm release --dry-run
 ```
 
 ### Pre-release Checklist
@@ -423,15 +423,15 @@ Before creating a release:
 **Step 1: Create tarball**
 
 ```bash
-yarn build
-yarn pack
+pnpm build
+pnpm pack
 ```
 
 **Step 2: Test in demo project**
 
 ```bash
 cd ../demo-project
-yarn add ../nestjs-browser-action/@hanivanrizky-nestjs-browser-action-0.0.1.tgz
+pnpm add ../nestjs-browser-action/@hanivanrizky-nestjs-browser-action-0.0.1.tgz
 ```
 
 **Step 3: Verify functionality**
@@ -443,7 +443,7 @@ Run your tests and verify the module works as expected.
 If everything works:
 
 ```bash
-yarn release
+pnpm release
 ```
 
 ## Getting Help

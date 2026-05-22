@@ -28,6 +28,8 @@ A NestJS module that provides Puppeteer-based browser automation with configurab
 npm install @hanivanrizky/nestjs-browser-action
 # or
 yarn add @hanivanrizky/nestjs-browser-action
+# or
+pnpm add @hanivanrizky/nestjs-browser-action
 ```
 
 ### From GitHub
@@ -35,9 +37,9 @@ yarn add @hanivanrizky/nestjs-browser-action
 ```bash
 npm install https://github.com/Hanivan/nestjs-browser-action.git
 # or
-yarn add https://github.com/Hanivan/nestjs-browser-action.git
+pnpm add https://github.com/Hanivan/nestjs-browser-action.git
 # or using SSH
-yarn add git@github.com:Hanivan/nestjs-browser-action.git
+pnpm add git@github.com:Hanivan/nestjs-browser-action.git
 ```
 
 ## Quick Start
@@ -271,16 +273,16 @@ const workflow = await this.actionHelpers.scrapeWithActions<{
 
 ```bash
 # Build
-yarn build
+pnpm build
 
 # Run tests
-yarn test
+pnpm test
 
 # Lint code
-yarn lint
+pnpm lint
 
 # Format code
-yarn format
+pnpm format
 ```
 
 ### Git Hooks

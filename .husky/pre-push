@@ -1,5 +1,5 @@
 echo "Building project..."
-yarn build
+pnpm build
 
 if [ $? -ne 0 ]; then
   echo "Build failed! Please fix the errors before pushing."
@@ -13,7 +13,7 @@ echo "Running tests (skip with SKIP_TESTS=true)..."
 if [ "$SKIP_TESTS" = "true" ]; then
   echo "Tests skipped (SKIP_TESTS=true)"
 else
-  yarn test
+  pnpm test
   if [ $? -ne 0 ]; then
     echo "Tests failed! Please fix the failing tests before pushing."
     echo "To skip tests, run: SKIP_TESTS=true git push"

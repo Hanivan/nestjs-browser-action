@@ -1,2 +1,2 @@
 echo "Running linter..."
-yarn lint
+pnpm lint
