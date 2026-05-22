@@ -28,8 +28,12 @@ Object mapping selector names to CSS or XPath selectors.
 }
 ```
 
+**Attribute syntax:** append `@attrName` to a selector to extract an attribute instead
+of text content (e.g. `'a.link@href'`, `'meta[name="description"]@content'`). Without
+`@attr`, `textContent` is extracted.
+
 ### `options?: ScraperOptions`
-Optional configuration for pipe transformations.
+Optional configuration.
 
 ```typescript
 {
@@ -40,6 +44,9 @@ Optional configuration for pipe transformations.
       { type: CleansingType.TO_NUMBER },
     ],
   },
+  waitUntil: 'networkidle0', // navigation wait condition
+  timeout: 30000,            // navigation timeout (ms)
+  cloak: { proxy: { server: 'http://proxy:8080' } }, // per-call stealth (off-pool browser)
 }
 ```
 

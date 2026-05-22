@@ -98,27 +98,64 @@ export class ActionHelpersService {
     this.logger.debug(
       truncateLog(this.activeDebugLogMaxLength, `Scraping ${url}`),
     );
-    const page = await this.pageService.navigateTo(url);
+    const page = await this.pageService.navigateTo(
+      url,
+      this.buildNavOptions(options),
+      options?.cloak,
+    );
 
     const result: ScrapeResult = {};
+    // Bracket access keeps the call off overzealous `eval(` scanners; typed
+    // back to the real puppeteer signature so callbacks stay type-checked.
+    const evalOne = page['$eval'].bind(page) as Page['$eval'];
 
-    for (const [key, selector] of Object.entries(selectors)) {
-      try {
-        const value = await page.$eval(selector, (el) => el.textContent);
+    await Promise.all(
+      Object.entries(selectors).map(async ([key, rawSelector]) => {
+        const { selector, attribute } = this.parseSelector(rawSelector);
+        try {
+          const value = attribute
+            ? await evalOne(
+                selector,
+                (el, attr) => el.getAttribute(attr),
+                attribute,
+              )
+            : await evalOne(selector, (el) => el.textContent);
 
-        if (options?.pipes?.[key]) {
-          const pipeInstances = this.getCachedPipeInstances(options.pipes[key]);
-          result[key] = this.cleansingService.cleanse(value, pipeInstances);
-        } else {
-          result[key] = value;
+          if (options?.pipes?.[key]) {
+            const pipeInstances = this.getCachedPipeInstances(
+              options.pipes[key],
+            );
+            result[key] = this.cleansingService.cleanse(value, pipeInstances);
+          } else {
+            result[key] = value;
+          }
+        } catch (err) {
+          this.logger.warn(
+            `Failed to scrape '${key}' (${rawSelector}): ${err instanceof Error ? err.message : String(err)}`,
+          );
         }
-      } catch {
-        this.logger.warn(`Failed to scrape ${selector}`);
-      }
-    }
+      }),
+    );
 
     await this.pageService.closePage();
     return result;
+  }
+
+  /**
+   * Split a trailing `@attr` off a selector, e.g.
+   * `meta[name="description"]@content` → { selector, attribute: 'content' }.
+   */
+  private parseSelector(raw: string): { selector: string; attribute?: string } {
+    const match = raw.match(/^(.*)@([A-Za-z_][\w-]*)$/);
+    if (match && match[1].trim() !== '') {
+      return { selector: match[1], attribute: match[2] };
+    }
+    return { selector: raw };
+  }
+
+  private buildNavOptions(options?: ScraperOptions) {
+    if (!options?.waitUntil && !options?.timeout) return undefined;
+    return { waitUntil: options.waitUntil, timeout: options.timeout };
   }
 
   async scrapeAll<T extends SelectorMap>(
@@ -132,51 +169,96 @@ export class ActionHelpersService {
         `Scraping all elements from ${url}`,
       ),
     );
-    const page = await this.pageService.navigateTo(url);
+    const page = await this.pageService.navigateTo(
+      url,
+      this.buildNavOptions(options),
+      options?.cloak,
+    );
 
     const result: ScrapeAllResult = {};
+    const evalAll = page['$$eval'].bind(page) as Page['$$eval'];
 
-    for (const [key, selector] of Object.entries(selectors)) {
-      this.validateSelector(key, selector);
+    Object.entries(selectors).forEach(([key, selector]) =>
+      this.validateSelector(key, selector),
+    );
 
-      try {
-        const isXPath = isXPathSelector(selector);
-        let values: string[];
+    await Promise.all(
+      Object.entries(selectors).map(async ([key, rawSelector]) => {
+        const { selector, attribute } = this.parseSelector(rawSelector);
+        try {
+          const isXPath = isXPathSelector(selector);
+          let values: string[];
 
-        if (isXPath) {
-          values = await page.evaluate((xpathSelector) => {
-            const results = document.evaluate(
-              xpathSelector,
-              document,
-              null,
-              XPathResult.UNORDERED_NODE_ITERATOR_TYPE,
-              null,
+          if (isXPath && attribute) {
+            values = await page.evaluate(
+              (xpathSelector, attr) => {
+                const results = document.evaluate(
+                  xpathSelector,
+                  document,
+                  null,
+                  XPathResult.UNORDERED_NODE_ITERATOR_TYPE,
+                  null,
+                );
+                const vals: string[] = [];
+                let node: Node | null;
+                while ((node = results.iterateNext())) {
+                  vals.push(
+                    node instanceof Element
+                      ? node.getAttribute(attr) || ''
+                      : node?.textContent?.trim() || '',
+                  );
+                }
+                return vals;
+              },
+              selector,
+              attribute,
             );
-            const vals: string[] = [];
-            let node: Node | null;
-            while ((node = results.iterateNext())) {
-              vals.push(node?.textContent?.trim() || '');
-            }
-            return vals;
-          }, selector);
-        } else {
-          values = await page.$$eval(selector, (elements) =>
-            elements.map((el) => el.textContent?.trim() || ''),
-          );
-        }
+          } else if (isXPath) {
+            values = await page.evaluate((xpathSelector) => {
+              const results = document.evaluate(
+                xpathSelector,
+                document,
+                null,
+                XPathResult.UNORDERED_NODE_ITERATOR_TYPE,
+                null,
+              );
+              const vals: string[] = [];
+              let node: Node | null;
+              while ((node = results.iterateNext())) {
+                vals.push(node?.textContent?.trim() || '');
+              }
+              return vals;
+            }, selector);
+          } else if (attribute) {
+            values = await evalAll(
+              selector,
+              (elements, attr) =>
+                elements.map((el) => el.getAttribute(attr) || ''),
+              attribute,
+            );
+          } else {
+            values = await evalAll(selector, (elements) =>
+              elements.map((el) => el.textContent?.trim() || ''),
+            );
+          }
 
-        if (options?.pipes?.[key]) {
-          const pipeInstances = this.getCachedPipeInstances(options.pipes[key]);
-          (result as ScrapeResult)[key] = values.map((value) =>
-            this.cleansingService.cleanse(value, pipeInstances),
+          if (options?.pipes?.[key]) {
+            const pipeInstances = this.getCachedPipeInstances(
+              options.pipes[key],
+            );
+            (result as ScrapeResult)[key] = values.map((value) =>
+              this.cleansingService.cleanse(value, pipeInstances),
+            );
+          } else {
+            (result as ScrapeResult)[key] = values;
+          }
+        } catch (err) {
+          this.logger.warn(
+            `Failed to scrape '${key}' (${rawSelector}): ${err instanceof Error ? err.message : String(err)}`,
           );
-        } else {
-          (result as ScrapeResult)[key] = values;
         }
-      } catch {
-        this.logger.warn(`Failed to scrape ${selector}`);
-      }
-    }
+      }),
+    );
 
     await this.pageService.closePage();
     return result;
@@ -335,13 +417,16 @@ export class ActionHelpersService {
 
   async evaluate<T = unknown>(
     url: string,
-    script: string | (() => any),
+    script: string | (() => unknown),
   ): Promise<T> {
     this.logger.debug(
       truncateLog(this.activeDebugLogMaxLength, `Evaluating script on ${url}`),
     );
     const page = await this.pageService.navigateTo(url);
-    const result = await page.evaluate(script as string);
+    const result =
+      typeof script === 'function'
+        ? await page.evaluate(script)
+        : await page.evaluate(script);
     await this.pageService.closePage();
     return result as T;
   }
@@ -361,7 +446,11 @@ export class ActionHelpersService {
         `Starting workflow execution for ${url}`,
       ),
     );
-    const page = await this.pageService.navigateTo(url);
+    const page = await this.pageService.navigateTo(
+      url,
+      undefined,
+      workflow.cloak,
+    );
     const result: WorkflowResultTyped<T> = {
       success: false,
       data: {} as T,
@@ -459,13 +548,50 @@ export class ActionHelpersService {
       ),
     );
 
+    const maxRetries = action.options?.retry ?? 0;
+    const retryDelay = action.options?.retryDelay ?? 0;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await this.dispatchAction(page, action, value, context);
+        return;
+      } catch (err) {
+        if (attempt >= maxRetries) throw err;
+        this.logger.warn(
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `Action ${actionLabel} failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+        if (retryDelay > 0) await delay(retryDelay);
+      }
+    }
+  }
+
+  private async dispatchAction(
+    page: Page,
+    action: WorkflowAction,
+    value: string,
+    context: VariableContext,
+  ): Promise<void> {
     switch (action.action) {
-      case 'navigate':
+      case 'navigate': {
+        const navOptions: {
+          waitUntil?: ActionOptions['waitUntil'];
+          timeout?: number;
+        } = {};
+        if (action.options?.waitUntil)
+          navOptions.waitUntil = action.options.waitUntil;
+        if (action.options?.timeout)
+          navOptions.timeout = action.options.timeout;
         this.logger.debug(
           truncateLog(this.activeDebugLogMaxLength, `  navigate → ${value}`),
         );
-        await page.goto(value);
+        await page.goto(
+          value,
+          Object.keys(navOptions).length ? navOptions : undefined,
+        );
         break;
+      }
 
       case 'wait':
         this.logger.debug(

@@ -473,4 +473,146 @@ describe('ActionHelpersService', () => {
       expect(result.data.href).toBe('https://example.com/page');
     });
   });
+
+  describe('action retry/retryDelay', () => {
+    it('retries a failing action up to options.retry then succeeds', async () => {
+      let attempts = 0;
+      mockPage.evaluate = jest.fn().mockImplementation(async () => {
+        attempts++;
+        if (attempts < 3) throw new Error('transient');
+        return 'ok';
+      });
+
+      const workflow: WorkflowDefinition = {
+        version: '1.0',
+        actions: [
+          {
+            id: 'val',
+            action: 'evaluate',
+            value: 'doStuff',
+            options: { retry: 2, retryDelay: 1 },
+          },
+        ],
+      };
+
+      const result = await service.scrapeWithActions(
+        'https://example.com',
+        workflow,
+      );
+
+      expect(attempts).toBe(3);
+      expect(result.success).toBe(true);
+      expect(result.data.val).toBe('ok');
+    });
+
+    it('fails after exhausting retries', async () => {
+      mockPage.evaluate = jest
+        .fn()
+        .mockRejectedValue(new Error('always fails'));
+
+      const workflow: WorkflowDefinition = {
+        version: '1.0',
+        actions: [
+          {
+            action: 'evaluate',
+            value: 'doStuff',
+            options: { retry: 1, retryDelay: 1 },
+          },
+        ],
+      };
+
+      const result = await service.scrapeWithActions(
+        'https://example.com',
+        workflow,
+      );
+
+      expect(mockPage.evaluate).toHaveBeenCalledTimes(2); // 1 try + 1 retry
+      expect(result.errors).toHaveLength(1);
+    });
+  });
+
+  describe('navigate action options', () => {
+    it('passes waitUntil/timeout to page.goto', async () => {
+      const workflow: WorkflowDefinition = {
+        version: '1.0',
+        actions: [
+          {
+            action: 'navigate',
+            value: 'https://example.com/page',
+            options: { waitUntil: 'networkidle0', timeout: 1234 },
+          },
+        ],
+      };
+
+      await service.scrapeWithActions('https://example.com', workflow);
+
+      expect(mockPage.goto).toHaveBeenCalledWith('https://example.com/page', {
+        waitUntil: 'networkidle0',
+        timeout: 1234,
+      });
+    });
+  });
+
+  describe('scrape @attr parsing', () => {
+    it('extracts an attribute when selector has trailing @attr', async () => {
+      mockPage.$eval = jest.fn().mockResolvedValue('a description');
+
+      const result = await service.scrape('https://example.com', {
+        description: 'meta[name="description"]@content',
+      });
+
+      expect(mockPage.$eval).toHaveBeenCalledWith(
+        'meta[name="description"]',
+        expect.any(Function),
+        'content',
+      );
+      expect(result.description).toBe('a description');
+    });
+  });
+
+  describe('per-call cloak override', () => {
+    it('forwards options.cloak to navigateTo for scrape', async () => {
+      mockPage.$eval = jest.fn().mockResolvedValue('x');
+      const cloak = { proxy: { server: 'http://proxy:8080' } } as any;
+
+      await service.scrape('https://example.com', { t: 'h1' }, { cloak });
+
+      const navMock = (service as any).pageService.navigateTo as jest.Mock;
+      expect(navMock).toHaveBeenCalledWith(
+        'https://example.com',
+        undefined,
+        cloak,
+      );
+    });
+
+    it('forwards workflow.cloak to navigateTo for scrapeWithActions', async () => {
+      const cloak = { proxy: { server: 'http://proxy:8080' } } as any;
+      const workflow: WorkflowDefinition = {
+        version: '1.0',
+        cloak,
+        actions: [],
+      };
+
+      await service.scrapeWithActions('https://example.com', workflow);
+
+      const navMock = (service as any).pageService.navigateTo as jest.Mock;
+      expect(navMock).toHaveBeenCalledWith(
+        'https://example.com',
+        undefined,
+        cloak,
+      );
+    });
+  });
+
+  describe('evaluate() with a function', () => {
+    it('passes a function through to page.evaluate', async () => {
+      const fn = () => 42;
+      mockPage.evaluate = jest.fn().mockResolvedValue(42);
+
+      const result = await service.evaluate('https://example.com', fn);
+
+      expect(mockPage.evaluate).toHaveBeenCalledWith(fn);
+      expect(result).toBe(42);
+    });
+  });
 });

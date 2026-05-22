@@ -72,9 +72,10 @@ Wait for selector to appear on page.
 
 ---
 
-##### `evaluate<T>(url, script): Promise<T>`
+##### `evaluate<T>(url, script: string | (() => unknown)): Promise<T>`
 
-Execute JavaScript in page context.
+Execute JavaScript in page context. `script` may be a string or a function (functions
+are passed directly to `page.evaluate`, preserving normal Puppeteer semantics).
 
 ---
 
@@ -215,7 +216,8 @@ interface BrowserActionOptions {
   pool?: {
     min?: number;              // Minimum pool size (default: 2)
     max?: number;              // Maximum pool size (default: 10)
-    idleTimeoutMs?: number;   // Idle timeout (default: 30000ms)
+    idleTimeoutMs?: number;    // Close idle browsers down to min after this (default: 30000ms, 0 disables)
+    acquireTimeoutMs?: number; // Reject acquire() if none free within this (default: 30000ms, 0 waits forever)
     strategy?: 'round-robin' | 'least-recently-used'; // Pool selection (default: 'round-robin')
   };
 
@@ -326,6 +328,9 @@ interface ActionOptions {
   metadata?: Record<string, unknown>; // Additional metadata (cookies)
   pipes?: PipeConfig[];          // Pipes for cleanse action
   multiple?: boolean;            // Extract all matching elements (extract)
+  as?: 'text' | 'html' | 'outerHtml' | 'attribute'; // Extract mode (default: 'text')
+  attribute?: string;            // Attribute name when as: 'attribute'
+  waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2'; // navigate / reload
 }
 ```
 
@@ -351,6 +356,7 @@ interface WorkflowDefinition {
   version: string;
   actions: WorkflowAction[];
   onError?: WorkflowErrorConfig;
+  cloak?: CloakOptions;  // Per-call stealth override (off-pool browser; not in remote mode)
 }
 ```
 
@@ -394,6 +400,9 @@ interface WorkflowErrorConfig {
 ```typescript
 interface ScraperOptions {
   pipes?: PipeOptions;
+  waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2'; // Navigation wait
+  timeout?: number;     // Navigation timeout (ms)
+  cloak?: CloakOptions; // Per-call stealth override (off-pool browser; not in remote mode)
 }
 ```
 
@@ -464,7 +473,8 @@ interface LoadCookieOptions {
 interface PoolOptions {
   min?: number;
   max?: number;
-  idleTimeoutMs?: number;
+  idleTimeoutMs?: number;    // Reap idle browsers down to min (default: 30000ms, 0 disables)
+  acquireTimeoutMs?: number; // Reject acquire() if none free in time (default: 30000ms, 0 waits forever)
   strategy?: 'round-robin' | 'least-recently-used';
 }
 ```

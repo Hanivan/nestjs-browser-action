@@ -23,13 +23,16 @@ Object mapping selector names to CSS or XPath selectors. Each selector extracts 
 ```typescript
 {
   titles: '.card h2',      // All card titles
-  links: 'a.card-page-link', // All card links
+  links: 'a.card-page-link@href', // href of all card links (@attr syntax)
   prices: '.price',         // All prices
 }
 ```
 
+**Attribute syntax:** append `@attrName` to a selector to extract an attribute from each
+matching element instead of text content (e.g. `'a.card-page-link@href'`).
+
 ### `options?: ScraperOptions`
-Optional configuration for pipe transformations applied to **each element individually**.
+Optional configuration. Pipe transformations are applied to **each element individually**.
 
 ```typescript
 {
@@ -39,6 +42,9 @@ Optional configuration for pipe transformations applied to **each element indivi
       { type: CleansingType.TO_LOWER_CASE },
     ],
   },
+  waitUntil: 'networkidle0', // navigation wait condition
+  timeout: 30000,            // navigation timeout (ms)
+  cloak: { proxy: { server: 'http://proxy:8080' } }, // per-call stealth (off-pool browser)
 }
 ```
 

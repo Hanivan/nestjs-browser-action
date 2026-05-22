@@ -74,6 +74,7 @@ interface WorkflowDefinition {
   version: string;                    // Workflow version (e.g., "1.0")
   actions: WorkflowAction[];           // Array of actions to execute
   onError?: WorkflowErrorConfig;      // Global error handling
+  cloak?: CloakOptions;               // Per-call stealth override (off-pool browser; not in remote mode)
 }
 
 interface WorkflowAction {
@@ -521,8 +522,14 @@ interface ActionOptions {
   overwrite?: boolean;           // Overwrite existing file (cookies)
   metadata?: Record<string, unknown>; // Additional metadata (cookies)
   pipes?: PipeConfig[];          // Pipes for cleanse action
+  as?: 'text' | 'html' | 'outerHtml' | 'attribute'; // Extract mode (default: 'text')
+  attribute?: string;            // Attribute name when as: 'attribute'
+  waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2'; // navigate / reload
 }
 ```
+
+`retry` / `retryDelay` are honored by every action: a failing action is retried up to
+`retry` times, waiting `retryDelay` ms between attempts.
 
 ## Error Handling
 

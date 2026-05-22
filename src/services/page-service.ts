@@ -3,12 +3,14 @@ import type { Browser, Page, WaitForOptions } from 'puppeteer-core';
 import { BrowserManagerService } from './browser-manager.service';
 import type { LogLevel } from '@nestjs/common';
 import { LoggerWithLevel } from '../helpers/logger.util';
+import type { CloakOptions } from '../interfaces/browser-action-options';
 
 @Injectable({ scope: Scope.TRANSIENT })
 export class PageService {
   private readonly logger: LoggerWithLevel;
   private currentBrowser?: Browser;
   private currentPage?: Page;
+  private dedicated = false;
 
   constructor(private readonly browserManager: BrowserManagerService) {
     this.logger = new LoggerWithLevel(
@@ -17,16 +19,27 @@ export class PageService {
     );
   }
 
-  async createPage(): Promise<Page> {
+  async createPage(cloak?: CloakOptions): Promise<Page> {
     this.logger.debug('Creating new page');
-    this.currentBrowser = await this.browserManager.getBrowser();
+    if (cloak) {
+      this.currentBrowser =
+        await this.browserManager.getDedicatedBrowser(cloak);
+      this.dedicated = true;
+    } else {
+      this.currentBrowser = await this.browserManager.getBrowser();
+      this.dedicated = false;
+    }
     this.currentPage = await this.currentBrowser.newPage();
     return this.currentPage;
   }
 
-  async navigateTo(url: string, options?: WaitForOptions): Promise<Page> {
+  async navigateTo(
+    url: string,
+    options?: WaitForOptions,
+    cloak?: CloakOptions,
+  ): Promise<Page> {
     if (!this.currentPage) {
-      await this.createPage();
+      await this.createPage(cloak);
     }
     this.logger.debug(`Navigating to ${url}`);
     if (this.currentPage) {
@@ -42,8 +55,13 @@ export class PageService {
       this.currentPage = undefined;
     }
     if (this.currentBrowser) {
-      this.browserManager.releaseBrowser(this.currentBrowser);
+      if (this.dedicated) {
+        await this.browserManager.destroyDedicatedBrowser(this.currentBrowser);
+      } else {
+        this.browserManager.releaseBrowser(this.currentBrowser);
+      }
       this.currentBrowser = undefined;
+      this.dedicated = false;
     }
   }
 

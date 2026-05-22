@@ -4,6 +4,7 @@
  */
 
 import type { PipeConfig } from './types';
+import type { CloakOptions } from './browser-action-options';
 
 /**
  * Target selector for browser actions
@@ -106,6 +107,12 @@ export interface WorkflowDefinition {
    * Set to 0 to disable truncation for this workflow.
    */
   debugLogMaxLength?: number;
+  /**
+   * Per-call CloakBrowser override. When set, the workflow runs on a dedicated
+   * off-pool browser (proxy/UA rotation), closed when the workflow finishes.
+   * Ignored in remote (CDP) mode.
+   */
+  cloak?: CloakOptions;
 }
 
 /**

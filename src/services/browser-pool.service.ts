@@ -7,7 +7,6 @@ import {
 import type { Browser } from 'puppeteer-core';
 import { connect } from 'puppeteer-core';
 import {
-  AVAILABILITY_CHECK_INTERVAL_MS,
   BROWSER_ACTION_OPTIONS,
   DEFAULT_POOL_OPTIONS,
   DEFAULT_REMOTE_OPTIONS,
@@ -15,6 +14,7 @@ import {
 } from '../constants/browser-action.constants';
 import type {
   BrowserActionOptions,
+  CloakOptions,
   RemoteOptions,
 } from '../interfaces/browser-action-options';
 import type { LogLevel } from '@nestjs/common';
@@ -29,9 +29,19 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
   private available: Set<Browser> = new Set();
   private inUse: Set<Browser> = new Set();
   private disconnectListeners = new Map<Browser, () => void>();
+  private lastUsed = new Map<Browser, number>();
+  private waiters: Array<{
+    resolve: () => void;
+    reject: (err: Error) => void;
+    timer?: ReturnType<typeof setTimeout>;
+  }> = [];
   private minSize: number = DEFAULT_POOL_OPTIONS.min;
   private maxSize: number = DEFAULT_POOL_OPTIONS.max;
+  private idleTimeoutMs: number = DEFAULT_POOL_OPTIONS.idleTimeoutMs;
+  private acquireTimeoutMs: number = DEFAULT_POOL_OPTIONS.acquireTimeoutMs;
   private currentIndex: number = 0;
+  private reaper?: ReturnType<typeof setInterval>;
+  private destroyed = false;
 
   constructor(
     @Inject(BROWSER_ACTION_OPTIONS)
@@ -46,6 +56,11 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     this.minSize = this.options.pool?.min || DEFAULT_POOL_OPTIONS.min;
     this.maxSize = this.options.pool?.max || DEFAULT_POOL_OPTIONS.max;
+    this.idleTimeoutMs =
+      this.options.pool?.idleTimeoutMs ?? DEFAULT_POOL_OPTIONS.idleTimeoutMs;
+    this.acquireTimeoutMs =
+      this.options.pool?.acquireTimeoutMs ??
+      DEFAULT_POOL_OPTIONS.acquireTimeoutMs;
 
     // Validate remote options
     this.validateRemoteOptions(this.options.remote);
@@ -79,11 +94,39 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
     browsers.forEach((browser) => {
       this.pool.push(browser);
       this.available.add(browser);
+      this.touch(browser);
     });
+
+    this.startReaper();
 
     this.logger.log(
       `Browser pool initialized with ${this.pool.length} browsers`,
     );
+  }
+
+  private touch(browser: Browser): void {
+    this.lastUsed.set(browser, Date.now());
+  }
+
+  private startReaper(): void {
+    if (this.reaper || this.idleTimeoutMs <= 0) return;
+    this.reaper = setInterval(() => this.reapIdle(), this.idleTimeoutMs);
+    // Don't keep the event loop alive solely for the reaper.
+    this.reaper.unref?.();
+  }
+
+  private reapIdle(): void {
+    if (this.destroyed) return;
+    const now = Date.now();
+    for (const browser of Array.from(this.available)) {
+      if (this.pool.length <= this.minSize) break;
+      const last = this.lastUsed.get(browser) ?? now;
+      if (now - last >= this.idleTimeoutMs) {
+        this.evict(browser);
+        void this.closeBrowser(browser);
+        this.logger.debug('Reaped idle browser');
+      }
+    }
   }
 
   getLogLevel(): LogLevel {
@@ -110,9 +153,24 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
       return await this.connectWithRetry(this.options.remote);
     }
 
+    const browser = await this.launchLocal();
+
+    const disconnectHandler = () => {
+      this.logger.warn('Browser disconnected; evicting from pool');
+      void this.handleDisconnect(browser);
+    };
+    browser.on('disconnected', disconnectHandler);
+    this.disconnectListeners.set(browser, disconnectHandler);
+    return browser;
+  }
+
+  private async launchLocal(cloakOverride?: CloakOptions): Promise<Browser> {
     const { launch, launchPersistentContext } = await loadCloakPuppeteer();
 
-    const cloak = this.options.cloak ?? {};
+    const cloak: CloakOptions = {
+      ...(this.options.cloak ?? {}),
+      ...(cloakOverride ?? {}),
+    };
     const cloakOptions = {
       ...cloak,
       launchOptions: {
@@ -121,19 +179,31 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
       },
     };
 
-    const browser = cloak.userDataDir
+    return cloak.userDataDir
       ? await launchPersistentContext({
           ...cloakOptions,
           userDataDir: cloak.userDataDir,
         })
       : await launch(cloakOptions);
+  }
 
-    const disconnectHandler = () => {
-      this.logger.warn('Browser disconnected');
-    };
-    browser.on('disconnected', disconnectHandler);
-    this.disconnectListeners.set(browser, disconnectHandler);
-    return browser;
+  /**
+   * Launch a one-off browser outside the pool with per-call cloak overrides
+   * (e.g. proxy/UA rotation). The caller must release it via
+   * {@link destroyDedicatedBrowser}. Not supported in remote CDP mode.
+   */
+  async createDedicatedBrowser(cloakOverride?: CloakOptions): Promise<Browser> {
+    if (this.options.remote) {
+      throw new Error(
+        'Per-call cloak override is not supported in remote CDP mode',
+      );
+    }
+    this.logger.debug('Launching dedicated (off-pool) browser');
+    return await this.launchLocal(cloakOverride);
+  }
+
+  async destroyDedicatedBrowser(browser: Browser): Promise<void> {
+    await this.closeBrowser(browser);
   }
 
   private async connectWithRetry(
@@ -165,7 +235,8 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
         const browser = await connect(connectOptions);
 
         const disconnectHandler = () => {
-          this.logger.warn('Remote Chrome disconnected');
+          this.logger.warn('Remote Chrome disconnected; evicting from pool');
+          void this.handleDisconnect(browser);
         };
         browser.on('disconnected', disconnectHandler);
         this.disconnectListeners.set(browser, disconnectHandler);
@@ -190,21 +261,28 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
   }
 
   async acquire(): Promise<Browser> {
-    if (this.available.size === 0) {
+    // Loop so that a waiter woken by release() re-checks availability rather
+    // than blindly assuming a browser is free — two waiters can wake from the
+    // same release; only one gets the browser, the other waits again.
+    for (;;) {
+      if (this.available.size > 0) {
+        const browser = this.getNextAvailable();
+        this.available.delete(browser);
+        this.inUse.add(browser);
+        this.touch(browser);
+        return browser;
+      }
+
       if (this.pool.length < this.maxSize) {
         const browser = await this.createBrowser();
         this.pool.push(browser);
-        this.available.add(browser);
         this.inUse.add(browser);
+        this.touch(browser);
         return browser;
       }
+
       await this.waitForAvailable();
     }
-
-    const browser = this.getNextAvailable();
-    this.available.delete(browser);
-    this.inUse.add(browser);
-    return browser;
   }
 
   private getNextAvailable(): Browser {
@@ -215,20 +293,81 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
   }
 
   private waitForAvailable(): Promise<void> {
-    return new Promise((resolve) => {
-      const checkInterval = setInterval(() => {
-        if (this.available.size > 0) {
-          clearInterval(checkInterval);
-          resolve();
-        }
-      }, AVAILABILITY_CHECK_INTERVAL_MS);
+    return new Promise<void>((resolve, reject) => {
+      const waiter: (typeof this.waiters)[number] = { resolve, reject };
+      if (this.acquireTimeoutMs > 0) {
+        waiter.timer = setTimeout(() => {
+          const idx = this.waiters.indexOf(waiter);
+          if (idx >= 0) this.waiters.splice(idx, 1);
+          reject(
+            new Error(
+              `Timed out acquiring browser after ${this.acquireTimeoutMs}ms (pool exhausted)`,
+            ),
+          );
+        }, this.acquireTimeoutMs);
+      }
+      this.waiters.push(waiter);
     });
+  }
+
+  private signalWaiter(): void {
+    const waiter = this.waiters.shift();
+    if (waiter) {
+      if (waiter.timer) clearTimeout(waiter.timer);
+      waiter.resolve();
+    }
   }
 
   release(browser: Browser): void {
     if (this.inUse.has(browser)) {
       this.inUse.delete(browser);
       this.available.add(browser);
+      this.touch(browser);
+    }
+    this.signalWaiter();
+  }
+
+  private evict(browser: Browser): void {
+    this.pool = this.pool.filter((b) => b !== browser);
+    this.available.delete(browser);
+    this.inUse.delete(browser);
+    this.lastUsed.delete(browser);
+    const handler = this.disconnectListeners.get(browser);
+    if (handler) {
+      browser.off('disconnected', handler);
+      this.disconnectListeners.delete(browser);
+    }
+  }
+
+  private async closeBrowser(browser: Browser): Promise<void> {
+    try {
+      if (browser.connected) {
+        if (this.options.remote) {
+          await browser.disconnect();
+        } else {
+          await browser.close();
+        }
+      }
+    } catch {
+      this.logger.error('Error closing browser');
+    }
+  }
+
+  private async handleDisconnect(browser: Browser): Promise<void> {
+    this.evict(browser);
+    if (this.destroyed) return;
+
+    // Lazily recreate to keep the pool at >= min.
+    try {
+      while (this.pool.length < this.minSize && !this.destroyed) {
+        const replacement = await this.createBrowser();
+        this.pool.push(replacement);
+        this.available.add(replacement);
+        this.touch(replacement);
+        this.signalWaiter();
+      }
+    } catch {
+      this.logger.error('Failed to recreate browser after disconnect');
     }
   }
 
@@ -241,6 +380,18 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
+    this.destroyed = true;
+    if (this.reaper) {
+      clearInterval(this.reaper);
+      this.reaper = undefined;
+    }
+    // Reject any pending acquire() waiters so callers don't hang on shutdown.
+    while (this.waiters.length > 0) {
+      const waiter = this.waiters.shift()!;
+      if (waiter.timer) clearTimeout(waiter.timer);
+      waiter.reject(new Error('Browser pool is shutting down'));
+    }
+
     const isRemote = !!this.options.remote;
     this.logger.log(
       isRemote
@@ -276,6 +427,7 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
     this.available.clear();
     this.inUse.clear();
     this.disconnectListeners.clear();
+    this.lastUsed.clear();
     this.logger.log('Browser pool shut down');
   }
 }

@@ -4,6 +4,7 @@
  */
 
 import { CleansingType } from '../enums/cleansing-type.enum';
+import type { CloakOptions } from './browser-action-options';
 
 /**
  * Pipe configuration interface
@@ -81,6 +82,16 @@ export type ScrapeAllResult = Partial<Record<string, unknown[]>>;
  */
 export type ScraperOptions = {
   pipes?: PipeOptions;
+  /** Navigation wait condition passed to page.goto. */
+  waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2';
+  /** Navigation timeout (ms) passed to page.goto. */
+  timeout?: number;
+  /**
+   * Per-call CloakBrowser override. When set, this call runs on a dedicated
+   * off-pool browser launched with these stealth options (proxy/UA rotation),
+   * closed when the call finishes. Ignored for remote (CDP) mode.
+   */
+  cloak?: CloakOptions;
 };
 
 /**

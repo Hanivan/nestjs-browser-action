@@ -58,12 +58,15 @@ Navigate to a URL.
 
 **Parameters:**
 - `value` (string): URL to navigate to
+- `options.waitUntil` (`'load'` | `'domcontentloaded'` | `'networkidle0'` | `'networkidle2'`): When to consider navigation done
+- `options.timeout` (number): Navigation timeout (ms)
 
 **Example:**
 ```typescript
 {
   action: 'navigate' as const,
   value: '${baseUrl}/products',  // Can use variables
+  options: { waitUntil: 'networkidle0', timeout: 30000 },
 }
 ```
 
@@ -783,7 +786,7 @@ interface ActionOptions {
   multiple?: boolean;            // Extract all elements (extract action)
   as?: 'text' | 'html' | 'outerHtml' | 'attribute'; // Extract mode (default: 'text')
   attribute?: string;            // Attribute name when as: 'attribute'
-  waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2'; // For reload
+  waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2'; // navigate / reload
 }
 ```
 

@@ -3,6 +3,7 @@ import type { Browser } from 'puppeteer-core';
 import { BrowserPoolService } from './browser-pool.service';
 import { LoggerWithLevel } from '../helpers/logger.util';
 import type { LogLevel } from '@nestjs/common';
+import type { CloakOptions } from '../interfaces/browser-action-options';
 
 @Injectable()
 export class BrowserManagerService {
@@ -23,6 +24,16 @@ export class BrowserManagerService {
   releaseBrowser(browser: Browser): void {
     this.logger.debug('Releasing browser to pool');
     this.poolService.release(browser);
+  }
+
+  async getDedicatedBrowser(cloak?: CloakOptions): Promise<Browser> {
+    this.logger.debug('Acquiring dedicated browser (per-call cloak override)');
+    return await this.poolService.createDedicatedBrowser(cloak);
+  }
+
+  async destroyDedicatedBrowser(browser: Browser): Promise<void> {
+    this.logger.debug('Destroying dedicated browser');
+    await this.poolService.destroyDedicatedBrowser(browser);
   }
 
   getPoolStatus(): { size: number; available: number } {

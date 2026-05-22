@@ -4,6 +4,7 @@ export const DEFAULT_POOL_OPTIONS = {
   min: 2,
   max: 10,
   idleTimeoutMs: 30000,
+  acquireTimeoutMs: 30000,
   strategy: 'round-robin' as const,
 };
 

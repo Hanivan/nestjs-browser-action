@@ -208,6 +208,24 @@ BrowserActionModule.forRoot({
 passthrough for backward compatibility. `cloak` is ignored when `remote` is set
 (remote uses plain CDP connect).
 
+**Per-call cloak override (proxy/UA rotation):** pass `cloak` per request to launch a
+dedicated off-pool browser with its own stealth config — useful for rotating proxies or
+fingerprints across requests. Not supported in remote CDP mode.
+
+```typescript
+// scrape / scrapeAll
+await actions.scrape(url, { title: 'h1' }, {
+  cloak: { proxy: { server: 'http://rotating-proxy:8080' } },
+});
+
+// workflow
+await actions.scrapeWithActions(url, {
+  version: '1.0',
+  cloak: { proxy: { server: 'http://rotating-proxy:8080' } },
+  actions: [...],
+});
+```
+
 ### Remote Chrome Connection
 
 Connect to remote Chrome instances via Chrome DevTools Protocol (CDP):
@@ -256,7 +274,8 @@ BrowserActionModule.forRoot({
   pool: {
     min: 2,
     max: 10,
-    idleTimeoutMs: 30000,
+    idleTimeoutMs: 30000,    // reap idle browsers down to min (0 disables)
+    acquireTimeoutMs: 30000, // reject acquire() if none free in time (0 waits forever)
     strategy: 'round-robin',
   },
   cookies: {

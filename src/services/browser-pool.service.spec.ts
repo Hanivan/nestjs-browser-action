@@ -374,3 +374,162 @@ describe('BrowserPoolService', () => {
     });
   });
 });
+
+function createEmitterBrowser(): Browser & { emit: (evt: string) => void } {
+  const handlers: Record<string, () => void> = {};
+  return {
+    connected: true,
+    close: jest.fn().mockResolvedValue(undefined),
+    disconnect: jest.fn().mockResolvedValue(undefined),
+    newPage: jest.fn(),
+    on: jest.fn((evt: string, cb: () => void) => {
+      handlers[evt] = cb;
+    }),
+    off: jest.fn((evt: string) => {
+      delete handlers[evt];
+    }),
+    emit: (evt: string) => handlers[evt]?.(),
+  } as unknown as Browser & { emit: (evt: string) => void };
+}
+
+describe('BrowserPoolService robustness', () => {
+  let created: Array<Browser & { emit: (evt: string) => void }>;
+
+  beforeEach(() => {
+    created = [];
+    mockCloak.launch.mockImplementation(async () => {
+      const b = createEmitterBrowser();
+      created.push(b);
+      return b;
+    });
+  });
+
+  afterEach(() => jest.clearAllMocks());
+
+  async function makeService(
+    pool: Record<string, unknown>,
+  ): Promise<BrowserPoolService> {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        BrowserPoolService,
+        {
+          provide: BROWSER_ACTION_OPTIONS,
+          useValue: { logLevel: 'warn' as const, pool },
+        },
+      ],
+    }).compile();
+    const svc = module.get<BrowserPoolService>(BrowserPoolService);
+    await svc.onModuleInit();
+    return svc;
+  }
+
+  it('never hands out undefined to concurrent waiters (acquire race)', async () => {
+    const svc = await makeService({ min: 1, max: 1 });
+    const first = await svc.acquire();
+    expect(first).toBeDefined();
+
+    // Two waiters queued while pool is exhausted
+    const p1 = svc.acquire();
+    const p2 = svc.acquire();
+
+    svc.release(first);
+    const a = await p1;
+    expect(a).toBeDefined();
+
+    svc.release(a);
+    const b = await p2;
+    expect(b).toBeDefined();
+
+    await svc.onModuleDestroy();
+  });
+
+  it('evicts disconnected browser and recreates to keep min', async () => {
+    const svc = await makeService({ min: 2, max: 4 });
+    expect(svc.getPoolSize()).toBe(2);
+
+    const dead = created[0];
+    dead.emit('disconnected');
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(svc.getPoolSize()).toBe(2); // recreated back to min
+    // The dead browser must not be in the pool anymore
+    const handed: Browser[] = [];
+    handed.push(await svc.acquire());
+    handed.push(await svc.acquire());
+    expect(handed).not.toContain(dead);
+
+    await svc.onModuleDestroy();
+  });
+
+  it('rejects acquire after acquireTimeoutMs when pool exhausted', async () => {
+    const svc = await makeService({ min: 1, max: 1, acquireTimeoutMs: 80 });
+    const held = await svc.acquire();
+    expect(held).toBeDefined();
+
+    await expect(svc.acquire()).rejects.toThrow(/Timed out acquiring browser/);
+
+    await svc.onModuleDestroy();
+  });
+
+  it('createDedicatedBrowser launches off-pool and is not pooled', async () => {
+    const svc = await makeService({ min: 1, max: 2 });
+    const sizeBefore = svc.getPoolSize();
+
+    const dedicated = await svc.createDedicatedBrowser({
+      proxy: { server: 'http://proxy:8080' },
+    } as never);
+
+    expect(dedicated).toBeDefined();
+    expect(svc.getPoolSize()).toBe(sizeBefore); // not added to pool
+
+    await svc.destroyDedicatedBrowser(dedicated);
+    expect(dedicated.close).toHaveBeenCalled();
+
+    await svc.onModuleDestroy();
+  });
+
+  it('createDedicatedBrowser rejects in remote CDP mode', async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        BrowserPoolService,
+        {
+          provide: BROWSER_ACTION_OPTIONS,
+          useValue: {
+            logLevel: 'warn' as const,
+            pool: { min: 1, max: 1 },
+            remote: { browserURL: 'http://localhost:9222' },
+          },
+        },
+      ],
+    }).compile();
+    const svc = module.get<BrowserPoolService>(BrowserPoolService);
+    (puppeteerCore.connect as jest.Mock) = jest
+      .fn()
+      .mockResolvedValue(createEmitterBrowser());
+    await svc.onModuleInit();
+
+    await expect(svc.createDedicatedBrowser()).rejects.toThrow(
+      /not supported in remote/,
+    );
+
+    await svc.onModuleDestroy();
+  });
+
+  it('reaps idle browsers down to min after idleTimeoutMs', async () => {
+    const svc = await makeService({ min: 1, max: 3, idleTimeoutMs: 50 });
+    // grow to 3
+    const b1 = await svc.acquire();
+    const b2 = await svc.acquire();
+    const b3 = await svc.acquire();
+    svc.release(b1);
+    svc.release(b2);
+    svc.release(b3);
+    expect(svc.getPoolSize()).toBe(3);
+
+    await new Promise((r) => setTimeout(r, 140));
+
+    expect(svc.getPoolSize()).toBe(1); // reaped down to min
+
+    await svc.onModuleDestroy();
+  });
+});

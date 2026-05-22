@@ -268,7 +268,8 @@ import { BrowserActionModule } from '@hanivanrizky/nestjs-browser-action';
       pool: {
         min: 2,   // Minimum 2 browsers always available
         max: 10,  // Maximum 10 browsers in pool
-        idleTimeoutMs: 30000,  // Close idle browsers after 30s
+        idleTimeoutMs: 30000,  // Reap idle browsers down to min after 30s (0 disables)
+        acquireTimeoutMs: 30000,  // Reject acquire() if none free in time (0 waits forever)
         strategy: 'round-robin',  // or 'least-recently-used'
       },
     }),
