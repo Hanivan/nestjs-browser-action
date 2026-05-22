@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.8.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.7.0...v0.8.0) (2026-05-22)
+
+
+### Features
+
+* Enhance browser automation with CloakBrowser integration ([958a746](https://github.com/Hanivan/nestjs-browser-action/commit/958a7463b898d68f5f699b0a4def95f41de4e19f))
+
 # [0.7.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.6.0...v0.7.0) (2026-03-27)
 
 
