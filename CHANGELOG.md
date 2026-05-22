@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.9.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.8.0...v0.9.0) (2026-05-22)
+
+
+### Features
+
+* Enhance scraping capabilities with new options and attribute extraction ([fa29af6](https://github.com/Hanivan/nestjs-browser-action/commit/fa29af6fa2f5edad3c0c99276a8f26ceed66ce4e))
+
 # [0.8.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.7.0...v0.8.0) (2026-05-22)
 
 
