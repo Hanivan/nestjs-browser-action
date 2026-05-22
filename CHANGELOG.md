@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/Hanivan/nestjs-browser-action/compare/v0.10.0...v0.10.1) (2026-05-22)
+
+
+### Bug Fixes
+
+* lift launchOptions.headless to top level for cloakbrowser ([2502d58](https://github.com/Hanivan/nestjs-browser-action/commit/2502d58cb1d81d5d363dc7fb4dd6e2eea7b33c78))
+
 # [0.10.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.9.1...v0.10.0) (2026-05-22)
 
 
