@@ -124,8 +124,10 @@ describe('BrowserPoolService', () => {
     const service = module.get<BrowserPoolService>(BrowserPoolService);
     await service.onModuleInit();
 
-    // launchOptions is forwarded to CloakBrowser's launchOptions passthrough
+    // launchOptions is forwarded to CloakBrowser's launchOptions passthrough,
+    // and headless is also lifted to the top level CloakBrowser reads.
     expect(mockCloak.launch).toHaveBeenCalledWith({
+      headless: true,
       launchOptions: {
         headless: true,
         args: ['--no-sandbox'],
@@ -133,6 +135,35 @@ describe('BrowserPoolService', () => {
     });
     expect(mockCloak.launch).toHaveBeenCalledTimes(2); // min: 2 browsers
     expect(puppeteerCore.connect).not.toHaveBeenCalled();
+  });
+
+  it('should lift launchOptions.headless=false to the top level so headful launches work', async () => {
+    const headfulOptions = {
+      ...mockOptions,
+      launchOptions: {
+        headless: false,
+      },
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        BrowserPoolService,
+        {
+          provide: BROWSER_ACTION_OPTIONS,
+          useValue: headfulOptions,
+        },
+      ],
+    }).compile();
+
+    const service = module.get<BrowserPoolService>(BrowserPoolService);
+    await service.onModuleInit();
+
+    expect(mockCloak.launch).toHaveBeenCalledWith({
+      headless: false,
+      launchOptions: {
+        headless: false,
+      },
+    });
   });
 
   describe('Remote connection validation', () => {

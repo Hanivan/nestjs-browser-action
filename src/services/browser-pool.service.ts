@@ -171,8 +171,10 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
       ...(this.options.cloak ?? {}),
       ...(cloakOverride ?? {}),
     };
+    const headless = this.options.launchOptions?.headless ?? cloak.headless;
     const cloakOptions = {
       ...cloak,
+      ...(typeof headless === 'boolean' ? { headless } : {}),
       launchOptions: {
         ...(cloak.launchOptions ?? {}),
         ...(this.options.launchOptions as Record<string, unknown> | undefined),
