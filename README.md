@@ -20,6 +20,7 @@ A NestJS module that provides stealth browser automation (CloakBrowser + puppete
 - (^_^) **Type-Safe**: Full TypeScript support with generics
 - (^^) **Remote Chrome**: Connect to remote Chrome instances via CDP (browserURL/browserWSEndpoint)
 - (•̀ᴗ•́) **Stealth**: Local launches use CloakBrowser stealth Chromium (proxy, humanize, geoip, timezone/locale spoofing)
+- (⌐■_■) **TLS Fingerprint**: Capture the browser's own TLS/HTTP handshake (ja3/ja4, ciphers, http2 akamai, headers)
 
 ## Installation
 
@@ -101,6 +102,7 @@ export class MyService {
 | [`scrapeAllWithWorkflow()`](./docs/methods/workflow.md) | Workflow with multi-element |
 | [`takeScreenshot()`](./docs/methods/screenshots.md) | Capture screenshots |
 | [`generatePDF()`](./docs/methods/screenshots.md) | Generate PDFs |
+| [`captureTlsFingerprint()`](./docs/api-reference.md#capturetlsfingerprintpath-url-promisetlsfingerprint) | Capture browser's TLS/HTTP fingerprint |
 | [Browser & Page Control](./docs/methods/browser-control.md) | Low-level control |
 
 ### (☆^O^☆) Feature Guides

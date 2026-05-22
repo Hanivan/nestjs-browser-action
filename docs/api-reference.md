@@ -66,6 +66,17 @@ Generate PDF of web page.
 
 ---
 
+##### `captureTlsFingerprint(path, url?): Promise<TlsFingerprint>`
+
+Navigate to a TLS-inspection endpoint (default `TLS_CAPTURE_URL` = `https://tls.peet.ws/api/all`), parse the browser's own TLS/HTTP fingerprint, save it to `path` as JSON, and return the curated result. The request is made by the browser itself, so the captured ja3/ja4/akamai reflect this browser's handshake. The full upstream payload is preserved under `raw`.
+
+```typescript
+const fp = await browserAction.captureTlsFingerprint('./out/tls.json');
+// fp.ja3, fp.ja4, fp.headers, fp.akamaiFingerprint, fp.raw, ...
+```
+
+---
+
 ##### `waitForSelector(url, selector, timeout?): Promise<Page>`
 
 Wait for selector to appear on page.
@@ -404,6 +415,32 @@ interface WorkflowErrorConfig {
   screenshot?: boolean;
   screenshotPath?: string;
   continue?: boolean;
+}
+```
+
+### TlsFingerprint
+
+Returned by `captureTlsFingerprint()`. Curated TLS/HTTP fingerprint with the full upstream payload under `raw`.
+
+```typescript
+interface TlsFingerprint {
+  capturedAt: string;          // ISO timestamp of the capture
+  ip: string;                  // source IP:port seen by endpoint
+  httpVersion: string;         // negotiated HTTP version, e.g. 'h2'
+  method: string;              // request method
+  userAgent: string;           // User-Agent sent
+  ja3: string;
+  ja3Hash: string;
+  ja4: string;
+  ja4_r?: string;
+  peetprint: string;
+  peetprintHash: string;
+  ciphers: string[];           // offered cipher suites
+  tlsExtensions: string[];     // TLS extension names, in order
+  akamaiFingerprint: string;   // HTTP/2 akamai fingerprint
+  akamaiFingerprintHash: string;
+  headers: string[];           // request headers from HTTP/2 HEADERS frame
+  raw: Record<string, unknown>; // full unmodified upstream response
 }
 ```
 

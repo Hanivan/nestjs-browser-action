@@ -360,6 +360,7 @@ async safeBrowserUsage() {
 - [`takeScreenshot()`](./screenshots.md) - Screenshot capture
 - [`generatePDF()`](./screenshots.md) - PDF generation
 - [`scrape()`](./scrape.md) - High-level scraping (handles page lifecycle)
+- [`captureTlsFingerprint()`](../api-reference.md#capturetlsfingerprintpath-url-promisetlsfingerprint) - Capture browser's TLS/HTTP fingerprint
 
 ## See Also
 

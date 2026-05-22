@@ -40,6 +40,10 @@ export const DEFAULT_NAVIGATION_TIMEOUT = 30000;
 export const DEFAULT_SCROLL_DELAY_MS = 100;
 export const DEFAULT_SCREENSHOT_FILENAME = 'screenshot';
 export const DEFAULT_ERROR_SCREENSHOT_FILENAME = 'error';
+// TLS/HTTP fingerprint capture endpoint (returns JSON describing the
+// browser's own TLS handshake — ja3/ja4, ciphers, http2 akamai, headers).
+export const TLS_CAPTURE_URL = 'https://tls.peet.ws/api/all';
+
 export const DEFAULT_COOKIE_OPTIONS = {
   enabled: true,
   cookiesDir: './cookies',
