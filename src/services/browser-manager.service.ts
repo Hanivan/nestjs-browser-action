@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Browser } from 'puppeteer-core';
 import { BrowserPoolService } from './browser-pool.service';
-import { LoggerWithLevel } from '../helpers/logger.util';
+import { LoggerWithLevel } from '../utils/logger.util';
 import type { LogLevel } from '@nestjs/common';
 import type { CloakOptions } from '../interfaces/browser-action-options';
 

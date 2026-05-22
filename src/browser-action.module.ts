@@ -5,8 +5,8 @@ import {
 } from './browser-action.module-definition';
 import { BrowserPoolService } from './services/browser-pool.service';
 import { BrowserManagerService } from './services/browser-manager.service';
-import { PageService } from './services/page-service';
-import { ActionHelpersService } from './helpers/action-helpers.service';
+import { PageService } from './services/page.service';
+import { BrowserActionService } from './services/browser-action.service';
 import { CookieService } from './services/cookie.service';
 import { CleansingService } from './services/cleansing.service';
 import { BROWSER_ACTION_OPTIONS } from './constants';
@@ -40,14 +40,14 @@ export class BrowserActionModule {
         BrowserPoolService,
         BrowserManagerService,
         PageService,
-        ActionHelpersService,
+        BrowserActionService,
         CookieService,
         CleansingService,
       ],
       exports: [
         BrowserManagerService,
         PageService,
-        ActionHelpersService,
+        BrowserActionService,
         CookieService,
         CleansingService,
       ],
@@ -71,14 +71,14 @@ export class BrowserActionModule {
         BrowserPoolService,
         BrowserManagerService,
         PageService,
-        ActionHelpersService,
+        BrowserActionService,
         CookieService,
         CleansingService,
       ],
       exports: [
         BrowserManagerService,
         PageService,
-        ActionHelpersService,
+        BrowserActionService,
         CookieService,
         CleansingService,
       ],

@@ -6,9 +6,9 @@ import type {
   ElementHandle,
   KeyInput,
 } from 'puppeteer-core';
-import { PageService } from '../services/page-service';
-import { CookieService } from '../services/cookie.service';
-import { CleansingService } from '../services/cleansing.service';
+import { PageService } from './page.service';
+import { CookieService } from './cookie.service';
+import { CleansingService } from './cleansing.service';
 import { CleansingPipe } from '../pipes/cleansing-pipe';
 import type {
   WorkflowDefinition,
@@ -26,10 +26,10 @@ import {
   PipeConfig,
 } from '../interfaces/types';
 import type { BrowserActionOptions } from '../interfaces/browser-action-options';
-import { LoggerWithLevel } from './logger.util';
-import { delay } from './delay.util';
-import { isXPathSelector } from './dom.util';
-import { truncateLog } from './truncate-log.util';
+import { LoggerWithLevel } from '../utils/logger.util';
+import { delay } from '../utils/delay.util';
+import { isXPathSelector } from '../utils/dom.util';
+import { truncateLog } from '../utils/truncate-log.util';
 import {
   BROWSER_ACTION_OPTIONS,
   DEFAULT_ACTION_TIMEOUT,
@@ -41,7 +41,7 @@ import {
 } from '../constants/browser-action.constants';
 
 @Injectable({ scope: Scope.TRANSIENT })
-export class ActionHelpersService {
+export class BrowserActionService {
   private readonly logger: LoggerWithLevel;
   private readonly pipeCache = new Map<string, CleansingPipe[]>();
   private activeDebugLogMaxLength: number;
@@ -55,7 +55,7 @@ export class ActionHelpersService {
     private readonly moduleOptions?: BrowserActionOptions,
   ) {
     this.logger = new LoggerWithLevel(
-      ActionHelpersService.name,
+      BrowserActionService.name,
       this.pageService.getLogLevel(),
     );
     this.activeDebugLogMaxLength =

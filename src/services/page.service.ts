@@ -2,7 +2,7 @@ import { Injectable, Scope } from '@nestjs/common';
 import type { Browser, Page, WaitForOptions } from 'puppeteer-core';
 import { BrowserManagerService } from './browser-manager.service';
 import type { LogLevel } from '@nestjs/common';
-import { LoggerWithLevel } from '../helpers/logger.util';
+import { LoggerWithLevel } from '../utils/logger.util';
 import type { CloakOptions } from '../interfaces/browser-action-options';
 
 @Injectable({ scope: Scope.TRANSIENT })

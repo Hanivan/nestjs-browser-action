@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ActionHelpersService } from './action-helpers.service';
-import { PageService } from '../services/page-service';
-import { CookieService } from '../services/cookie.service';
-import { CleansingService } from '../services/cleansing.service';
+import { BrowserActionService } from './browser-action.service';
+import { PageService } from './page.service';
+import { CookieService } from './cookie.service';
+import { CleansingService } from './cleansing.service';
 import { WorkflowDefinition } from '../interfaces/workflow-options';
 
-describe('ActionHelpersService', () => {
-  let service: ActionHelpersService;
+describe('BrowserActionService', () => {
+  let service: BrowserActionService;
   let mockPage: any;
 
   beforeEach(async () => {
@@ -39,7 +39,7 @@ describe('ActionHelpersService', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        ActionHelpersService,
+        BrowserActionService,
         {
           provide: PageService,
           useValue: mockPageService,
@@ -55,7 +55,7 @@ describe('ActionHelpersService', () => {
       ],
     }).compile();
 
-    service = await module.resolve<ActionHelpersService>(ActionHelpersService);
+    service = await module.resolve<BrowserActionService>(BrowserActionService);
   });
 
   it('should be defined', () => {

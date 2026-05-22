@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BrowserActionModule } from './browser-action.module';
 import { CleansingService } from './services/cleansing.service';
-import { ActionHelpersService } from './helpers/action-helpers.service';
+import { BrowserActionService } from './services/browser-action.service';
 
 describe('BrowserActionModule - Cleansing Service Registration', () => {
   it('should provide CleansingService when using forRoot', async () => {
@@ -10,7 +10,7 @@ describe('BrowserActionModule - Cleansing Service Registration', () => {
     }).compile();
 
     expect(module.get(CleansingService)).toBeDefined();
-    expect(await module.resolve(ActionHelpersService)).toBeDefined();
+    expect(await module.resolve(BrowserActionService)).toBeDefined();
   });
 
   it('should export CleansingService for use in other modules', async () => {
@@ -33,6 +33,6 @@ describe('BrowserActionModule - Cleansing Service Registration', () => {
     }).compile();
 
     expect(module.get(CleansingService)).toBeDefined();
-    expect(await module.resolve(ActionHelpersService)).toBeDefined();
+    expect(await module.resolve(BrowserActionService)).toBeDefined();
   });
 });

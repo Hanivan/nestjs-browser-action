@@ -14,7 +14,7 @@ import type {
   CookieSessionInfo,
   CookieSessionFile,
 } from '../interfaces/cookie-options';
-import { LoggerWithLevel } from '../helpers/logger.util';
+import { LoggerWithLevel } from '../utils/logger.util';
 
 @Injectable()
 export class CookieService {

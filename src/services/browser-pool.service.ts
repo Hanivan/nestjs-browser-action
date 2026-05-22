@@ -18,9 +18,9 @@ import type {
   RemoteOptions,
 } from '../interfaces/browser-action-options';
 import type { LogLevel } from '@nestjs/common';
-import { LoggerWithLevel } from '../helpers/logger.util';
-import { delay } from '../helpers/delay.util';
-import { loadCloakPuppeteer } from './cloak.loader';
+import { LoggerWithLevel } from '../utils/logger.util';
+import { delay } from '../utils/delay.util';
+import { loadCloakPuppeteer } from '../utils/cloak.loader';
 
 @Injectable()
 export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {

@@ -12,7 +12,7 @@ Complete reference of all services, interfaces, and configuration options.
 
 ## Services
 
-### ActionHelpersService
+### BrowserActionService
 
 High-level browser automation service.
 

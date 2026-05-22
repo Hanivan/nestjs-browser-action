@@ -9,7 +9,7 @@ const mockCloak = {
   launch: jest.fn(),
   launchPersistentContext: jest.fn(),
 };
-jest.mock('./cloak.loader', () => ({
+jest.mock('../utils/cloak.loader', () => ({
   loadCloakPuppeteer: () => Promise.resolve(mockCloak),
 }));
 jest.mock('puppeteer-core', () => ({

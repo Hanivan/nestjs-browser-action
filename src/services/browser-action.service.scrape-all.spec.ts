@@ -1,18 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ActionHelpersService } from './action-helpers.service';
-import { PageService } from '../services/page-service';
-import { CleansingService } from '../services/cleansing.service';
-import { CookieService } from '../services/cookie.service';
+import { BrowserActionService } from './browser-action.service';
+import { PageService } from './page.service';
+import { CleansingService } from './cleansing.service';
+import { CookieService } from './cookie.service';
 
-describe('ActionHelpersService - scrapeAll', () => {
-  let service: ActionHelpersService;
+describe('BrowserActionService - scrapeAll', () => {
+  let service: BrowserActionService;
   let pageService: PageService;
   let cleansingService: CleansingService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        ActionHelpersService,
+        BrowserActionService,
         {
           provide: PageService,
           useValue: {
@@ -35,7 +35,7 @@ describe('ActionHelpersService - scrapeAll', () => {
       ],
     }).compile();
 
-    service = await module.resolve<ActionHelpersService>(ActionHelpersService);
+    service = await module.resolve<BrowserActionService>(BrowserActionService);
     pageService = await module.resolve<PageService>(PageService);
     cleansingService = module.get<CleansingService>(CleansingService);
   });
@@ -235,7 +235,7 @@ describe('ActionHelpersService - scrapeAll', () => {
 });
 
 describe('scrapeAllWithWorkflow', () => {
-  let service: ActionHelpersService;
+  let service: BrowserActionService;
   let pageService: PageService;
   let cleansingService: CleansingService;
   let cookieService: CookieService;
@@ -243,7 +243,7 @@ describe('scrapeAllWithWorkflow', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        ActionHelpersService,
+        BrowserActionService,
         {
           provide: PageService,
           useValue: {
@@ -266,7 +266,7 @@ describe('scrapeAllWithWorkflow', () => {
       ],
     }).compile();
 
-    service = await module.resolve<ActionHelpersService>(ActionHelpersService);
+    service = await module.resolve<BrowserActionService>(BrowserActionService);
     pageService = await module.resolve<PageService>(PageService);
     cleansingService = module.get<CleansingService>(CleansingService);
     cookieService = module.get<CookieService>(CookieService);

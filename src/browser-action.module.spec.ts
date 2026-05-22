@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BrowserActionModule } from './browser-action.module';
 import { BrowserManagerService } from './services/browser-manager.service';
-import { PageService } from './services/page-service';
-import { ActionHelpersService } from './helpers/action-helpers.service';
+import { PageService } from './services/page.service';
+import { BrowserActionService } from './services/browser-action.service';
 
 describe('BrowserActionModule', () => {
   it('should register module with forRoot', async () => {
@@ -17,7 +17,7 @@ describe('BrowserActionModule', () => {
 
     expect(module.get(BrowserManagerService)).toBeDefined();
     expect(await module.resolve(PageService)).toBeDefined();
-    expect(await module.resolve(ActionHelpersService)).toBeDefined();
+    expect(await module.resolve(BrowserActionService)).toBeDefined();
 
     await module.close();
   });
@@ -36,7 +36,7 @@ describe('BrowserActionModule', () => {
 
     expect(module.get(BrowserManagerService)).toBeDefined();
     expect(await module.resolve(PageService)).toBeDefined();
-    expect(await module.resolve(ActionHelpersService)).toBeDefined();
+    expect(await module.resolve(BrowserActionService)).toBeDefined();
 
     await module.close();
   });

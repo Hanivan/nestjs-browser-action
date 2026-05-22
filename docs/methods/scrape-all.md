@@ -61,12 +61,12 @@ Returns an object where each selector maps to an **array** of values. Missing se
 ### Basic Usage
 
 ```typescript
-import { ActionHelpersService } from '@hanivanrizky/nestjs-browser-action';
+import { BrowserActionService } from '@hanivanrizky/nestjs-browser-action';
 
 @Injectable()
 export class MyService {
   constructor(
-    private readonly actionHelpers: ActionHelpersService,
+    private readonly actionHelpers: BrowserActionService,
   ) {}
 
   async scrapeAllProducts() {

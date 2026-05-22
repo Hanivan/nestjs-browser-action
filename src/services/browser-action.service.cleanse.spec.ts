@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import type { Page } from 'puppeteer-core';
-import { ActionHelpersService } from './action-helpers.service';
-import { PageService } from '../services/page-service';
-import { CookieService } from '../services/cookie.service';
-import { CleansingService } from '../services/cleansing.service';
+import { BrowserActionService } from './browser-action.service';
+import { PageService } from './page.service';
+import { CookieService } from './cookie.service';
+import { CleansingService } from './cleansing.service';
 import {
   WorkflowAction,
   WorkflowDefinition,
@@ -14,8 +14,8 @@ import { CleansingType } from '../enums/cleansing-type.enum';
 // Mock Page type for testing
 type MockPage = Partial<Page>;
 
-describe('ActionHelpersService - Cleanse Action', () => {
-  let service: ActionHelpersService;
+describe('BrowserActionService - Cleanse Action', () => {
+  let service: BrowserActionService;
   let pageService: PageService;
   let cookieService: CookieService;
   let cleansingService: CleansingService;
@@ -23,7 +23,7 @@ describe('ActionHelpersService - Cleanse Action', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        ActionHelpersService,
+        BrowserActionService,
         {
           provide: PageService,
           useValue: {
@@ -46,7 +46,7 @@ describe('ActionHelpersService - Cleanse Action', () => {
       ],
     }).compile();
 
-    service = await module.resolve<ActionHelpersService>(ActionHelpersService);
+    service = await module.resolve<BrowserActionService>(BrowserActionService);
     pageService = await module.resolve<PageService>(PageService);
     cookieService = module.get<CookieService>(CookieService);
     cleansingService = module.get<CleansingService>(CleansingService);

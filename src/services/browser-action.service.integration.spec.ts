@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ActionHelpersService } from './action-helpers.service';
-import { PageService } from '../services/page-service';
-import { CookieService } from '../services/cookie.service';
-import { CleansingService } from '../services/cleansing.service';
+import { BrowserActionService } from './browser-action.service';
+import { PageService } from './page.service';
+import { CookieService } from './cookie.service';
+import { CleansingService } from './cleansing.service';
 import { ScrapeCleansingOptions } from '../interfaces/cleansing-options';
 import { CleansingType } from '../enums/cleansing-type.enum';
 
-describe('ActionHelpersService - Integration Tests', () => {
-  let service: ActionHelpersService;
+describe('BrowserActionService - Integration Tests', () => {
+  let service: BrowserActionService;
   let pageService: PageService;
   let cookieService: CookieService;
   let cleansingService: CleansingService;
@@ -15,7 +15,7 @@ describe('ActionHelpersService - Integration Tests', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        ActionHelpersService,
+        BrowserActionService,
         {
           provide: PageService,
           useValue: {
@@ -38,7 +38,7 @@ describe('ActionHelpersService - Integration Tests', () => {
       ],
     }).compile();
 
-    service = await module.resolve<ActionHelpersService>(ActionHelpersService);
+    service = await module.resolve<BrowserActionService>(BrowserActionService);
     pageService = await module.resolve<PageService>(PageService);
     cookieService = module.get<CookieService>(CookieService);
     cleansingService = module.get<CleansingService>(CleansingService);

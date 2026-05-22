@@ -126,12 +126,12 @@ interface WorkflowAction {
 ### Simple Navigation and Extraction
 
 ```typescript
-import { ActionHelpersService } from '@hanivanrizky/nestjs-browser-action';
+import { BrowserActionService } from '@hanivanrizky/nestjs-browser-action';
 
 @Injectable()
 export class MyService {
   constructor(
-    private readonly actionHelpers: ActionHelpersService,
+    private readonly actionHelpers: BrowserActionService,
   ) {}
 
   async scrapeArticle() {

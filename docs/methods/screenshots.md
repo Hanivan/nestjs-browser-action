@@ -55,12 +55,12 @@ Returns the screenshot image as a Buffer.
 #### Basic Screenshot
 
 ```typescript
-import { ActionHelpersService } from '@hanivanrizky/nestjs-browser-action';
+import { BrowserActionService } from '@hanivanrizky/nestjs-browser-action';
 
 @Injectable()
 export class MyService {
   constructor(
-    private readonly actionHelpers: ActionHelpersService,
+    private readonly actionHelpers: BrowserActionService,
   ) {}
 
   async capturePage() {
@@ -185,12 +185,12 @@ Returns the PDF file as a Buffer.
 #### Basic PDF Generation
 
 ```typescript
-import { ActionHelpersService } from '@hanivanrizky/nestjs-browser-action';
+import { BrowserActionService } from '@hanivanrizky/nestjs-browser-action';
 
 @Injectable()
 export class MyService {
   constructor(
-    private readonly actionHelpers: ActionHelpersService,
+    private readonly actionHelpers: BrowserActionService,
   ) {}
 
   async generatePDFFromURL() {

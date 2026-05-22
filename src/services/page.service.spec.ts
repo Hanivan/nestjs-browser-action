@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PageService } from './page-service';
+import { PageService } from './page.service';
 import { BrowserManagerService } from './browser-manager.service';
 import { Browser, Page } from 'puppeteer-core';
 

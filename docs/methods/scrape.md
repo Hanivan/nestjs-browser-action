@@ -63,12 +63,12 @@ Returns an object with extracted data. Missing selectors are undefined (Partial 
 ### Basic Usage
 
 ```typescript
-import { ActionHelpersService } from '@hanivanrizky/nestjs-browser-action';
+import { BrowserActionService } from '@hanivanrizky/nestjs-browser-action';
 
 @Injectable()
 export class MyService {
   constructor(
-    private readonly actionHelpers: ActionHelpersService,
+    private readonly actionHelpers: BrowserActionService,
   ) {}
 
   async scrapeProduct() {

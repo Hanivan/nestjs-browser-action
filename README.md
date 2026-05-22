@@ -66,12 +66,12 @@ export class AppModule {}
 
 ```typescript
 import { Injectable } from '@nestjs/common';
-import { ActionHelpersService } from '@hanivanrizky/nestjs-browser-action';
+import { BrowserActionService } from '@hanivanrizky/nestjs-browser-action';
 
 @Injectable()
 export class MyService {
   constructor(
-    private readonly actionHelpers: ActionHelpersService,
+    private readonly actionHelpers: BrowserActionService,
   ) {}
 
   async scrapeData() {
@@ -259,7 +259,7 @@ BrowserActionModule.forRoot({
 
 | Service | Description |
 |---------|-------------|
-| **ActionHelpersService** | High-level automation methods (scrape, screenshot, PDF, workflows) |
+| **BrowserActionService** | High-level automation methods (scrape, screenshot, PDF, workflows) |
 | **BrowserManagerService** | Browser pool management |
 | **PageService** | Page lifecycle and navigation |
 | **CookieService** | Cookie persistence |

@@ -1,7 +1,7 @@
 import { IsOptional } from 'class-validator';
 import { CleansingPipe } from './cleansing-pipe';
 import { CleansingType } from '../enums/cleansing-type.enum';
-import { normalizeWhitespace } from '../helpers/string.util';
+import { normalizeWhitespace } from '../utils/string.util';
 
 /**
  * Sanitizes text by removing HTML tags and XSS vulnerabilities
