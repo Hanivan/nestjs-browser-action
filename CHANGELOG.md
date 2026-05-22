@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.10.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.9.1...v0.10.0) (2026-05-22)
+
+
+### Features
+
+* Add TLS fingerprint capture functionality ([d6918c9](https://github.com/Hanivan/nestjs-browser-action/commit/d6918c99f8ca73c00dd9dedd4a776a64683adb57))
+
 ## [0.9.1](https://github.com/Hanivan/nestjs-browser-action/compare/v0.9.0...v0.9.1) (2026-05-22)
 
 # [0.9.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.8.0...v0.9.0) (2026-05-22)
