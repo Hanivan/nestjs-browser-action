@@ -323,7 +323,7 @@ const workflow = {
   ],
 };
 
-await this.actionHelpers.scrapeWithActions(workflow);
+await this.actionHelpers.scrapeWithWorkflow(workflow);
 ```
 
 ## Error Handling
@@ -407,7 +407,7 @@ await this.actionHelpers.takeScreenshot(url, filename);
 ## Related Methods
 
 - [`scrape()`](./scrape.md) - Scraping with screenshots in workflow
-- [`scrapeWithActions()`](./workflow.md) - Full workflow support
+- [`scrapeWithWorkflow()`](./workflow.md) - Full workflow support
 - [Browser Control](./browser-control.md) - Direct page manipulation
 
 ## See Also

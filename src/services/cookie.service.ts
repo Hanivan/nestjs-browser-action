@@ -267,7 +267,7 @@ export class CookieService {
     }
   }
 
-  async hasSession(sessionName: string): Promise<boolean> {
+  async hasCookieSession(sessionName: string): Promise<boolean> {
     const sessionPath = this.getSessionPath(sessionName);
 
     try {

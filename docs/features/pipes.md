@@ -78,7 +78,7 @@ export class MyService {
   ) {}
 
   async cleanText() {
-    const pipes = this.cleansingService.loadPipes([
+    const pipes = this.cleansingService.buildPipes([
       { type: CleansingType.TRIM },
       { type: CleansingType.NORMALIZE_WHITESPACE },
       { type: CleansingType.TO_LOWER_CASE },
@@ -421,26 +421,45 @@ const result = this.cleansingService.cleanse(
 
 ## Creating Custom Pipes
 
-Create custom pipes by extending `CleansingPipe`:
+Create a custom pipe by extending `CleansingPipe` and implementing `exec()` plus a unique `type` string:
 
 ```typescript
 import { CleansingPipe } from '@hanivanrizky/nestjs-browser-action';
 
-export class CustomPipe extends CleansingPipe<string, string> {
-  async transform(data: string): Promise<string> {
-    // Your transformation logic
-    return data.toUpperCase();
+export class ShoutPipe extends CleansingPipe<string, string> {
+  type = 'shout';
+
+  exec (value: string): string {
+    return String(value).toUpperCase();
   }
 }
 ```
 
-Then register in `CleansingService`:
+Register it so config-driven paths (`scrape` `pipes`, workflow `cleanse` actions, `buildPipes`) can resolve the `type`. Two ways:
+
+**1. Declaratively, via module options (registered at startup):**
 
 ```typescript
-private readonly PIPE_TYPE_MAP = {
-  // ... existing pipes ...
-  'custom': CustomPipe,
-};
+BrowserActionModule.forRoot({
+  customPipes: { shout: ShoutPipe },
+});
+```
+
+**2. Programmatically, via `CleansingService`:**
+
+```typescript
+constructor(private readonly cleansing: CleansingService) {
+  this.cleansing.registerPipe('shout', ShoutPipe);
+  // or bulk: this.cleansing.registerPipes({ shout: ShoutPipe });
+}
+```
+
+Registration throws if the `type` clashes with a builtin or an already-registered custom pipe.
+
+Once registered, use it like any builtin:
+
+```typescript
+{ pipes: { title: [{ type: 'shout' }] } }
 ```
 
 ## Examples
@@ -555,4 +574,3 @@ const data = await this.actionHelpers.scrape(
 
 - [CleansingType Enum](../api-reference.md#cleansingtype) - All pipe types
 - [Profiles Reference](./profiles.md) - Predefined profiles
-- [Custom Pipes Guide](./custom-pipes.md) - Creating custom pipes

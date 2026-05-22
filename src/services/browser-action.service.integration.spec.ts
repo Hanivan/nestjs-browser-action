@@ -32,7 +32,7 @@ describe('BrowserActionService - Integration Tests', () => {
           provide: CleansingService,
           useValue: {
             cleanse: jest.fn(),
-            loadPipes: jest.fn().mockReturnValue([]),
+            buildPipes: jest.fn().mockReturnValue([]),
           },
         },
       ],
@@ -80,7 +80,7 @@ describe('BrowserActionService - Integration Tests', () => {
         { exec: jest.fn((val: string) => parseFloat(val)) }, // TO_NUMBER
       ];
 
-      (cleansingService.loadPipes as jest.Mock).mockReturnValue(
+      (cleansingService.buildPipes as jest.Mock).mockReturnValue(
         mockPipeInstances,
       );
       (cleansingService.cleanse as jest.Mock).mockImplementation(
@@ -100,8 +100,8 @@ describe('BrowserActionService - Integration Tests', () => {
         name: '  Product Name  ',
       });
 
-      // Verify loadPipes was called with the config
-      expect(cleansingService.loadPipes).toHaveBeenCalledWith([
+      // Verify buildPipes was called with the config
+      expect(cleansingService.buildPipes).toHaveBeenCalledWith([
         { type: CleansingType.REMOVE_CURRENCY_SYMBOL },
         { type: CleansingType.TRIM },
         { type: CleansingType.TO_NUMBER },
@@ -145,7 +145,9 @@ describe('BrowserActionService - Integration Tests', () => {
 
       // Mock cleansing service
       const mockTrimPipe = { exec: jest.fn((val: string) => val.trim()) };
-      (cleansingService.loadPipes as jest.Mock).mockReturnValue([mockTrimPipe]);
+      (cleansingService.buildPipes as jest.Mock).mockReturnValue([
+        mockTrimPipe,
+      ]);
       (cleansingService.cleanse as jest.Mock).mockImplementation(
         (value, pipes) => {
           return pipes.reduce(
@@ -193,7 +195,7 @@ describe('BrowserActionService - Integration Tests', () => {
         { exec: jest.fn((val: string) => val.replace(/\s+/g, ' ')) },
         { exec: jest.fn((val: string) => val.toLowerCase()) },
       ];
-      (cleansingService.loadPipes as jest.Mock).mockReturnValue(mockPipes);
+      (cleansingService.buildPipes as jest.Mock).mockReturnValue(mockPipes);
       (cleansingService.cleanse as jest.Mock).mockImplementation(
         (value, pipes) => {
           return pipes.reduce(
@@ -209,8 +211,8 @@ describe('BrowserActionService - Integration Tests', () => {
         text: 'hello world',
       });
 
-      // Verify loadPipes was called with all pipe configs
-      expect(cleansingService.loadPipes).toHaveBeenCalledWith([
+      // Verify buildPipes was called with all pipe configs
+      expect(cleansingService.buildPipes).toHaveBeenCalledWith([
         { type: CleansingType.TRIM },
         { type: CleansingType.NORMALIZE_WHITESPACE },
         { type: CleansingType.TO_LOWER_CASE },

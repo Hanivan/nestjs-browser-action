@@ -68,9 +68,9 @@ describe('CookieService', () => {
     });
   });
 
-  describe('hasSession', () => {
+  describe('hasCookieSession', () => {
     it('should return false for non-existent session', async () => {
-      const result = await service.hasSession('nonexistent');
+      const result = await service.hasCookieSession('nonexistent');
       expect(result).toBe(false);
     });
 
@@ -87,7 +87,7 @@ describe('CookieService', () => {
         }),
       );
 
-      const result = await service.hasSession('test');
+      const result = await service.hasCookieSession('test');
       expect(result).toBe(true);
     });
   });
@@ -310,7 +310,7 @@ describe('CookieService', () => {
 
       await service.deleteCookies('test-session');
 
-      const exists = await service.hasSession('test-session');
+      const exists = await service.hasCookieSession('test-session');
       expect(exists).toBe(false);
     });
 

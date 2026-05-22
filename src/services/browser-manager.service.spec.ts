@@ -36,7 +36,7 @@ describe('BrowserManagerService', () => {
     const mockBrowser: Partial<Browser> = {};
     (poolService.acquire as jest.Mock).mockResolvedValue(mockBrowser);
 
-    const browser = await service.getBrowser();
+    const browser = await service.acquireBrowser();
     expect(browser).toBe(mockBrowser);
     expect(poolService.acquire).toHaveBeenCalled();
   });

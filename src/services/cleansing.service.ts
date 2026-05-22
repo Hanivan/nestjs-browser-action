@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, Optional } from '@nestjs/common';
 import { CleansingPipe } from '../pipes/cleansing-pipe';
 import { TrimPipe } from '../pipes/trim.pipe';
 import { ToNumberPipe } from '../pipes/to-number.pipe';
@@ -17,10 +17,14 @@ import { CLEANSING_PROFILES } from '../pipes/profiles';
 import { CleansingProfile } from '../enums/cleansing-profile.enum';
 import { CleansingType } from '../enums/cleansing-type.enum';
 import type { PipeConfig } from '../interfaces/types';
+import type { BrowserActionOptions } from '../interfaces/browser-action-options';
+import { BROWSER_ACTION_OPTIONS } from '../constants/browser-action.constants';
+
+export type CleansingPipeClass = new () => CleansingPipe;
 
 @Injectable()
 export class CleansingService {
-  private readonly PIPE_TYPE_MAP = {
+  private readonly pipeRegistry: Record<string, CleansingPipeClass> = {
     [CleansingType.TRIM]: TrimPipe,
     [CleansingType.TO_NUMBER]: ToNumberPipe,
     [CleansingType.SANITIZE_TEXT]: SanitizeTextPipe,
@@ -35,6 +39,36 @@ export class CleansingService {
     [CleansingType.REMOVE_LINE_BREAKS]: RemoveLineBreaksPipe,
     [CleansingType.ALT_FLAG]: AltFlagPipe,
   };
+
+  constructor(
+    @Optional()
+    @Inject(BROWSER_ACTION_OPTIONS)
+    options?: BrowserActionOptions,
+  ) {
+    if (options?.customPipes) {
+      this.registerPipes(options.customPipes);
+    }
+  }
+
+  /**
+   * Register a custom pipe so config-driven paths (scrape/workflow/buildPipes)
+   * can resolve its `type` string. Throws if the type is already registered.
+   */
+  registerPipe(type: string, pipeClass: CleansingPipeClass): void {
+    if (this.pipeRegistry[type]) {
+      throw new Error(`Pipe type already registered: ${type}`);
+    }
+    this.pipeRegistry[type] = pipeClass;
+  }
+
+  /**
+   * Register multiple custom pipes at once. See {@link registerPipe}.
+   */
+  registerPipes(pipes: Record<string, CleansingPipeClass>): void {
+    for (const [type, pipeClass] of Object.entries(pipes)) {
+      this.registerPipe(type, pipeClass);
+    }
+  }
 
   cleanse<TInput = unknown, TOutput = unknown>(
     data: TInput,
@@ -51,14 +85,14 @@ export class CleansingService {
     profileName: CleansingProfile,
   ): T {
     const profilePipes = CLEANSING_PROFILES[profileName];
-    return this.cleanse(data, this.loadPipes(profilePipes)) as T;
+    return this.cleanse(data, this.buildPipes(profilePipes)) as T;
   }
 
-  loadPipes(config: PipeConfig[]): CleansingPipe[] {
+  buildPipes(config: PipeConfig[]): CleansingPipe[] {
     const pipes: CleansingPipe[] = [];
 
     for (const pipeConfig of config) {
-      const PipeClass = this.PIPE_TYPE_MAP[pipeConfig.type];
+      const PipeClass = this.pipeRegistry[pipeConfig.type];
 
       if (!PipeClass) {
         throw new Error(`Unknown pipe type: ${pipeConfig.type}`);
@@ -70,14 +104,14 @@ export class CleansingService {
 
       if (primaryPipes) {
         (pipeInstance as AltFlagPipe).primaryPipes =
-          this.loadPipes(primaryPipes);
+          this.buildPipes(primaryPipes);
       }
       if (fallbackPipes) {
         (pipeInstance as AltFlagPipe).fallbackPipes =
-          this.loadPipes(fallbackPipes);
+          this.buildPipes(fallbackPipes);
       }
 
-      pipes.push(pipeInstance as CleansingPipe);
+      pipes.push(pipeInstance);
     }
 
     return pipes;

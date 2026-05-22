@@ -318,7 +318,7 @@ const results = await this.actionHelpers.scrapeAll(
 
 - [`scrape()`](./scrape.md) - Extract single elements
 - [`scrapeAllWithWorkflow()`](./workflow.md) - Multi-element with workflow
-- [`scrapeWithActions()`](./workflow.md) - Workflow-based automation
+- [`scrapeWithWorkflow()`](./workflow.md) - Workflow-based automation
 
 ## See Also
 

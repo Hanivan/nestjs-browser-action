@@ -16,7 +16,7 @@ export class BrowserManagerService {
     );
   }
 
-  async getBrowser(): Promise<Browser> {
+  async acquireBrowser(): Promise<Browser> {
     this.logger.debug('Acquiring browser from pool');
     return await this.poolService.acquire();
   }
@@ -26,7 +26,7 @@ export class BrowserManagerService {
     this.poolService.release(browser);
   }
 
-  async getDedicatedBrowser(cloak?: CloakOptions): Promise<Browser> {
+  async createDedicatedBrowser(cloak?: CloakOptions): Promise<Browser> {
     this.logger.debug('Acquiring dedicated browser (per-call cloak override)');
     return await this.poolService.createDedicatedBrowser(cloak);
   }

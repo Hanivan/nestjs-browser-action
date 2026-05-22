@@ -877,7 +877,7 @@ const workflow = {
   ],
 };
 
-await this.actionHelpers.scrapeWithActions(url, workflow, variables);
+await this.actionHelpers.scrapeWithWorkflow(url, workflow, variables);
 ```
 
 ## XPath Selectors

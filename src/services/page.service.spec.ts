@@ -28,7 +28,7 @@ describe('PageService', () => {
         {
           provide: BrowserManagerService,
           useValue: {
-            getBrowser: jest.fn().mockResolvedValue(mockBrowser),
+            acquireBrowser: jest.fn().mockResolvedValue(mockBrowser),
             releaseBrowser: jest.fn(),
             getLogLevel: jest.fn().mockReturnValue('log' as const),
           },
@@ -47,7 +47,7 @@ describe('PageService', () => {
   it('should create a new page', async () => {
     const page = await service.createPage();
     expect(page).toBeDefined();
-    expect(browserManager.getBrowser).toHaveBeenCalled();
+    expect(browserManager.acquireBrowser).toHaveBeenCalled();
   });
 
   it('should navigate to URL', async () => {

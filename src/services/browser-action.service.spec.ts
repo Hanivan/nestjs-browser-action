@@ -118,7 +118,7 @@ describe('BrowserActionService', () => {
         ],
       };
 
-      await service.scrapeWithActions('https://example.com', workflow);
+      await service.scrapeWithWorkflow('https://example.com', workflow);
 
       expect(mockCookieService.saveCookies).toHaveBeenCalledWith(
         expect.any(Object),
@@ -138,7 +138,7 @@ describe('BrowserActionService', () => {
         ],
       };
 
-      await service.scrapeWithActions('https://example.com', workflow);
+      await service.scrapeWithWorkflow('https://example.com', workflow);
 
       expect(mockCookieService.loadCookies).toHaveBeenCalledWith(
         expect.any(Object),
@@ -158,7 +158,7 @@ describe('BrowserActionService', () => {
         ],
       };
 
-      await service.scrapeWithActions('https://example.com', workflow);
+      await service.scrapeWithWorkflow('https://example.com', workflow);
 
       expect(mockCookieService.deleteCookies).toHaveBeenCalledWith(
         'test-session',
@@ -182,7 +182,7 @@ describe('BrowserActionService', () => {
         ],
       };
 
-      const result = await service.scrapeWithActions(
+      const result = await service.scrapeWithWorkflow(
         'https://example.com',
         workflow,
       );
@@ -207,7 +207,7 @@ describe('BrowserActionService', () => {
         ],
       };
 
-      await service.scrapeWithActions('https://example.com', workflow);
+      await service.scrapeWithWorkflow('https://example.com', workflow);
 
       expect(mockCookieService.saveCookies).toHaveBeenCalledWith(
         expect.any(Object),
@@ -237,7 +237,7 @@ describe('BrowserActionService', () => {
         ],
       };
 
-      await service.scrapeWithActions('https://example.com', workflow);
+      await service.scrapeWithWorkflow('https://example.com', workflow);
 
       expect(mockCookieService.loadCookies).toHaveBeenCalled();
     });
@@ -264,7 +264,7 @@ describe('BrowserActionService', () => {
         actions: [{ action: 'hover', target: { type: 'css', value: '#menu' } }],
       };
 
-      await service.scrapeWithActions('https://example.com', workflow);
+      await service.scrapeWithWorkflow('https://example.com', workflow);
 
       expect(mockPage.$).toHaveBeenCalledWith('#menu');
       expect(mockElement.hover).toHaveBeenCalled();
@@ -283,7 +283,7 @@ describe('BrowserActionService', () => {
         ],
       };
 
-      const result = await service.scrapeWithActions(
+      const result = await service.scrapeWithWorkflow(
         'https://example.com',
         workflow,
       );
@@ -296,7 +296,7 @@ describe('BrowserActionService', () => {
         actions: [{ action: 'keyPress', value: 'Enter' }],
       };
 
-      await service.scrapeWithActions('https://example.com', workflow);
+      await service.scrapeWithWorkflow('https://example.com', workflow);
 
       expect(mockPage.keyboard.press).toHaveBeenCalledWith('Enter');
     });
@@ -309,7 +309,7 @@ describe('BrowserActionService', () => {
         ],
       };
 
-      await service.scrapeWithActions('https://example.com', workflow);
+      await service.scrapeWithWorkflow('https://example.com', workflow);
 
       expect(mockPage.$).toHaveBeenCalledWith('#email');
       expect(mockElement.evaluate).toHaveBeenCalled();
@@ -321,7 +321,7 @@ describe('BrowserActionService', () => {
         actions: [{ action: 'waitForNetwork' }],
       };
 
-      await service.scrapeWithActions('https://example.com', workflow);
+      await service.scrapeWithWorkflow('https://example.com', workflow);
 
       expect(mockPage.waitForNetworkIdle).toHaveBeenCalledWith(
         expect.objectContaining({ timeout: expect.any(Number) }),
@@ -334,7 +334,7 @@ describe('BrowserActionService', () => {
         actions: [{ action: 'waitForNetwork', options: { timeout: 5000 } }],
       };
 
-      await service.scrapeWithActions('https://example.com', workflow);
+      await service.scrapeWithWorkflow('https://example.com', workflow);
 
       expect(mockPage.waitForNetworkIdle).toHaveBeenCalledWith({
         timeout: 5000,
@@ -347,7 +347,7 @@ describe('BrowserActionService', () => {
         actions: [{ action: 'reload' }],
       };
 
-      await service.scrapeWithActions('https://example.com', workflow);
+      await service.scrapeWithWorkflow('https://example.com', workflow);
 
       expect(mockPage.reload).toHaveBeenCalledWith(
         expect.objectContaining({ waitUntil: 'load' }),
@@ -360,7 +360,7 @@ describe('BrowserActionService', () => {
         actions: [{ action: 'reload', options: { waitUntil: 'networkidle0' } }],
       };
 
-      await service.scrapeWithActions('https://example.com', workflow);
+      await service.scrapeWithWorkflow('https://example.com', workflow);
 
       expect(mockPage.reload).toHaveBeenCalledWith(
         expect.objectContaining({ waitUntil: 'networkidle0' }),
@@ -384,7 +384,7 @@ describe('BrowserActionService', () => {
         actions: [{ id: 'pageHtml', action: 'extract' }],
       };
 
-      const result = await service.scrapeWithActions(
+      const result = await service.scrapeWithWorkflow(
         'https://example.com',
         workflow,
       );
@@ -411,7 +411,7 @@ describe('BrowserActionService', () => {
         ],
       };
 
-      const result = await service.scrapeWithActions(
+      const result = await service.scrapeWithWorkflow(
         'https://example.com',
         workflow,
       );
@@ -439,7 +439,7 @@ describe('BrowserActionService', () => {
         ],
       };
 
-      const result = await service.scrapeWithActions(
+      const result = await service.scrapeWithWorkflow(
         'https://example.com',
         workflow,
       );
@@ -465,7 +465,7 @@ describe('BrowserActionService', () => {
         ],
       };
 
-      const result = await service.scrapeWithActions(
+      const result = await service.scrapeWithWorkflow(
         'https://example.com',
         workflow,
       );
@@ -495,7 +495,7 @@ describe('BrowserActionService', () => {
         ],
       };
 
-      const result = await service.scrapeWithActions(
+      const result = await service.scrapeWithWorkflow(
         'https://example.com',
         workflow,
       );
@@ -521,7 +521,7 @@ describe('BrowserActionService', () => {
         ],
       };
 
-      const result = await service.scrapeWithActions(
+      const result = await service.scrapeWithWorkflow(
         'https://example.com',
         workflow,
       );
@@ -544,7 +544,7 @@ describe('BrowserActionService', () => {
         ],
       };
 
-      await service.scrapeWithActions('https://example.com', workflow);
+      await service.scrapeWithWorkflow('https://example.com', workflow);
 
       expect(mockPage.goto).toHaveBeenCalledWith('https://example.com/page', {
         waitUntil: 'networkidle0',
@@ -585,7 +585,7 @@ describe('BrowserActionService', () => {
       );
     });
 
-    it('forwards workflow.cloak to navigateTo for scrapeWithActions', async () => {
+    it('forwards workflow.cloak to navigateTo for scrapeWithWorkflow', async () => {
       const cloak = { proxy: { server: 'http://proxy:8080' } } as any;
       const workflow: WorkflowDefinition = {
         version: '1.0',
@@ -593,7 +593,7 @@ describe('BrowserActionService', () => {
         actions: [],
       };
 
-      await service.scrapeWithActions('https://example.com', workflow);
+      await service.scrapeWithWorkflow('https://example.com', workflow);
 
       const navMock = (service as any).pageService.navigateTo as jest.Mock;
       expect(navMock).toHaveBeenCalledWith(

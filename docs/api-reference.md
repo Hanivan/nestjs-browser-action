@@ -34,7 +34,7 @@ Extract all matching elements from web page.
 
 ---
 
-##### `scrapeWithActions<T>(url, workflow, variables?): Promise<WorkflowResultTyped<T>>`
+##### `scrapeWithWorkflow<T>(url, workflow, variables?): Promise<WorkflowResultTyped<T>>`
 
 Execute workflow-based browser automation.
 
@@ -44,7 +44,7 @@ Execute workflow-based browser automation.
 
 ##### `scrapeAllWithWorkflow<T>(url, workflow, variables?): Promise<WorkflowResultTyped<T>>`
 
-Execute workflow with multi-element extraction support (alias for `scrapeWithActions` with `options.multiple`).
+Execute workflow with multi-element extraction support (alias for `scrapeWithWorkflow` with `options.multiple`).
 
 **See:** [Workflow Documentation](../methods/workflow.md)
 
@@ -85,7 +85,7 @@ Manage browser pool connections.
 
 #### Methods
 
-##### `getBrowser(): Promise<Browser>`
+##### `acquireBrowser(): Promise<Browser>`
 
 Acquire browser from pool.
 
@@ -164,7 +164,7 @@ Clear all cookie sessions.
 
 List all saved sessions.
 
-##### `hasSession(sessionName): boolean`
+##### `hasCookieSession(sessionName): boolean`
 
 Check if session exists.
 
@@ -186,9 +186,17 @@ Apply pipes to transform data.
 
 Apply predefined profile to data.
 
-##### `loadPipes(config: PipeConfig[]): CleansingPipe[]`
+##### `buildPipes(config: PipeConfig[]): CleansingPipe[]`
 
-Load pipe instances from configuration.
+Build pipe instances from configuration.
+
+##### `registerPipe(type: string, pipeClass: new () => CleansingPipe): void`
+
+Register a custom pipe so config-driven paths (`scrape` `pipes`, workflow `cleanse` actions, `buildPipes`) can resolve its `type`. Throws if `type` clashes with a builtin or an already-registered custom pipe.
+
+##### `registerPipes(pipes: Record<string, new () => CleansingPipe>): void`
+
+Register multiple custom pipes at once. Equivalent to calling `registerPipe` per entry.
 
 **See:** [Pipe System](../features/pipes.md)
 
@@ -243,6 +251,10 @@ interface BrowserActionOptions {
     autoLoad?: boolean;         // Auto-load before workflows
     defaultSessionName?: string; // Default session name (default: 'default')
   };
+
+  // Custom cleansing pipes, keyed by `type`. Registered on CleansingService at
+  // startup so config-driven paths (scrape `pipes`, workflow `cleanse`) resolve them.
+  customPipes?: Record<string, new () => CleansingPipe>;
 }
 ```
 
@@ -410,7 +422,7 @@ interface ScraperOptions {
 
 ```typescript
 interface PipeConfig {
-  type: CleansingType;
+  type: CleansingType | string; // string = custom registered pipe type
   pattern?: string;
   replacement?: string;
   format?: string;

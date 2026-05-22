@@ -36,7 +36,7 @@ class CookieService {
 
   listCookies(): Promise<CookieSessionInfo[]>;
 
-  hasSession(sessionName: string): Promise<boolean>;
+  hasCookieSession(sessionName: string): Promise<boolean>;
 }
 ```
 
@@ -130,7 +130,7 @@ const workflow = {
   ],
 };
 
-await this.actionHelpers.scrapeWithActions(workflow);
+await this.actionHelpers.scrapeWithWorkflow(workflow);
 ```
 
 #### Load Cookies Before Actions
@@ -192,7 +192,7 @@ const workflow = {
   ],
 };
 
-const result = await this.actionHelpers.scrapeWithActions(workflow);
+const result = await this.actionHelpers.scrapeWithWorkflow(workflow);
 ```
 
 ### Session Management
@@ -200,8 +200,8 @@ const result = await this.actionHelpers.scrapeWithActions(workflow);
 #### Check if Session Exists
 
 ```typescript
-const hasSession = await this.cookieService.hasSession('user-session');
-console.log('Session exists:', hasSession);  // true/false
+const hasCookieSession = await this.cookieService.hasCookieSession('user-session');
+console.log('Session exists:', hasCookieSession);  // true/false
 ```
 
 #### List All Sessions
@@ -367,7 +367,7 @@ async loginOnce() {
     ],
   };
 
-  await this.actionHelpers.scrapeWithActions(workflow);
+  await this.actionHelpers.scrapeWithWorkflow(workflow);
 }
 
 async useSavedSession() {
@@ -382,7 +382,7 @@ async useSavedSession() {
     ],
   };
 
-  const result = await this.actionHelpers.scrapeWithActions(workflow);
+  const result = await this.actionHelpers.scrapeWithWorkflow(workflow);
   console.log('Dashboard data:', result.data.data);
 }
 ```
@@ -449,7 +449,7 @@ async tempWorkflow() {
     ],
   };
 
-  await this.actionHelpers.scrapeWithActions(workflow);
+  await this.actionHelpers.scrapeWithWorkflow(workflow);
 }
 ```
 
@@ -528,7 +528,7 @@ async safeCookieSave(page: Page, sessionName: string) {
 ## Related Methods
 
 - [Workflow Actions](../workflow-actions.md#cookie-actions) - Cookie workflow actions
-- [scrapeWithActions()](../methods/workflow.md) - Workflow-based automation
+- [scrapeWithWorkflow()](../methods/workflow.md) - Workflow-based automation
 - [PageService](../methods/browser-control.md#pageservice) - Page management
 
 ## See Also

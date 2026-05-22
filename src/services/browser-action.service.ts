@@ -431,7 +431,7 @@ export class BrowserActionService {
     return result as T;
   }
 
-  async scrapeWithActions<T = Record<string, unknown>>(
+  async scrapeWithWorkflow<T = Record<string, unknown>>(
     url: string,
     workflow: WorkflowDefinition,
     variables?: VariableContext,
@@ -509,9 +509,9 @@ export class BrowserActionService {
     workflow: WorkflowDefinition,
     variables?: VariableContext,
   ): Promise<WorkflowResultTyped<T>> {
-    // Reuse existing scrapeWithActions infrastructure
+    // Reuse existing scrapeWithWorkflow infrastructure
     // The only difference is the name - it already supports multi-element via options.multiple
-    return await this.scrapeWithActions<T>(url, workflow, variables);
+    return await this.scrapeWithWorkflow<T>(url, workflow, variables);
   }
 
   private async executeAction(
@@ -1161,7 +1161,7 @@ export class BrowserActionService {
   private getCachedPipeInstances(config: PipeConfig[]): CleansingPipe[] {
     const cacheKey = JSON.stringify(config);
     if (!this.pipeCache.has(cacheKey)) {
-      this.pipeCache.set(cacheKey, this.cleansingService.loadPipes(config));
+      this.pipeCache.set(cacheKey, this.cleansingService.buildPipes(config));
     }
     return this.pipeCache.get(cacheKey)!;
   }

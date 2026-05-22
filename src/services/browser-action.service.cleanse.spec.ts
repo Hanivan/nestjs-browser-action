@@ -40,7 +40,7 @@ describe('BrowserActionService - Cleanse Action', () => {
           provide: CleansingService,
           useValue: {
             cleanse: jest.fn(),
-            loadPipes: jest.fn(),
+            buildPipes: jest.fn(),
           },
         },
       ],
@@ -69,7 +69,7 @@ describe('BrowserActionService - Cleanse Action', () => {
         },
       };
 
-      (cleansingService.loadPipes as jest.Mock).mockReturnValueOnce([
+      (cleansingService.buildPipes as jest.Mock).mockReturnValueOnce([
         { type: 'remove-currency-symbol' },
         { type: 'trim' },
         { type: 'to-number' },
@@ -79,7 +79,7 @@ describe('BrowserActionService - Cleanse Action', () => {
       await service['executeAction'](mockPage, action, context);
 
       expect(context.cleanedPrice).toBe(29.99);
-      expect(cleansingService.loadPipes).toHaveBeenCalledWith([
+      expect(cleansingService.buildPipes).toHaveBeenCalledWith([
         { type: 'remove-currency-symbol' },
         { type: 'trim' },
         { type: 'to-number' },
@@ -102,7 +102,7 @@ describe('BrowserActionService - Cleanse Action', () => {
         },
       };
 
-      (cleansingService.loadPipes as jest.Mock).mockReturnValueOnce([
+      (cleansingService.buildPipes as jest.Mock).mockReturnValueOnce([
         { type: 'trim' },
       ]);
       (cleansingService.cleanse as jest.Mock).mockReturnValueOnce('clean text');
@@ -110,7 +110,7 @@ describe('BrowserActionService - Cleanse Action', () => {
       await service['executeAction'](mockPage, action, context);
 
       expect(context.cleanedText).toBe('clean text');
-      expect(cleansingService.loadPipes).toHaveBeenCalledWith([
+      expect(cleansingService.buildPipes).toHaveBeenCalledWith([
         { type: 'trim' },
       ]);
       expect(cleansingService.cleanse).toHaveBeenCalledWith(
@@ -137,7 +137,7 @@ describe('BrowserActionService - Cleanse Action', () => {
         },
       };
 
-      (cleansingService.loadPipes as jest.Mock).mockReturnValueOnce([
+      (cleansingService.buildPipes as jest.Mock).mockReturnValueOnce([
         { type: 'remove-currency-symbol' },
         { type: 'trim' },
         { type: 'to-number' },
@@ -147,7 +147,7 @@ describe('BrowserActionService - Cleanse Action', () => {
       await service['executeAction'](mockPage, action, context);
 
       expect(context.cleanedPrice).toBe(29.99);
-      expect(cleansingService.loadPipes).toHaveBeenCalledWith([
+      expect(cleansingService.buildPipes).toHaveBeenCalledWith([
         { type: 'remove-currency-symbol' },
         { type: 'trim' },
         { type: 'to-number' },
@@ -212,7 +212,7 @@ describe('BrowserActionService - Cleanse Action', () => {
         },
       };
 
-      (cleansingService.loadPipes as jest.Mock).mockReturnValueOnce([
+      (cleansingService.buildPipes as jest.Mock).mockReturnValueOnce([
         { type: 'trim' },
         { type: 'normalize-whitespace' },
         { type: 'remove-special-chars', params: { keep: [' '] } },
@@ -225,7 +225,7 @@ describe('BrowserActionService - Cleanse Action', () => {
       await service['executeAction'](mockPage, action, context);
 
       expect(context.processedText).toBe('hello world 12345');
-      expect(cleansingService.loadPipes).toHaveBeenCalledWith([
+      expect(cleansingService.buildPipes).toHaveBeenCalledWith([
         { type: 'trim' },
         { type: 'normalize-whitespace' },
         { type: 'remove-special-chars', params: { keep: [' '] } },
@@ -251,7 +251,7 @@ describe('BrowserActionService - Cleanse Action', () => {
         },
       };
 
-      (cleansingService.loadPipes as jest.Mock).mockReturnValueOnce([
+      (cleansingService.buildPipes as jest.Mock).mockReturnValueOnce([
         { type: 'trim' },
       ]);
       (cleansingService.cleanse as jest.Mock)
@@ -294,7 +294,7 @@ describe('BrowserActionService - Cleanse Action', () => {
       await service['executeAction'](mockPage, action, context);
 
       expect(context).not.toHaveProperty('cleanedValue');
-      expect(cleansingService.loadPipes).not.toHaveBeenCalled();
+      expect(cleansingService.buildPipes).not.toHaveBeenCalled();
     });
   });
 
@@ -341,7 +341,7 @@ describe('BrowserActionService - Cleanse Action', () => {
         { exec: jest.fn((val: string) => val.replace('$', '')) }, // remove-currency-symbol: '$29.99' -> '29.99'
         { exec: jest.fn((val: string) => Number(val)) }, // to-number: '29.99' -> 29.99
       ];
-      (cleansingService.loadPipes as jest.Mock).mockReturnValue(
+      (cleansingService.buildPipes as jest.Mock).mockReturnValue(
         mockPipeInstances,
       );
       (cleansingService.cleanse as jest.Mock).mockImplementation(
@@ -353,12 +353,12 @@ describe('BrowserActionService - Cleanse Action', () => {
         },
       );
 
-      const result = await service.scrapeWithActions(url, workflow);
+      const result = await service.scrapeWithWorkflow(url, workflow);
 
       expect(result.success).toBe(true);
       expect(result.data.rawPrice).toBe('$29.99');
       expect(result.data.cleanPrice).toBe(29.99);
-      expect(cleansingService.loadPipes).toHaveBeenCalledWith([
+      expect(cleansingService.buildPipes).toHaveBeenCalledWith([
         { type: 'remove-currency-symbol' },
         { type: 'to-number' },
       ]);
@@ -401,7 +401,7 @@ describe('BrowserActionService - Cleanse Action', () => {
       (pageService.closePage as jest.Mock).mockResolvedValue(undefined);
 
       // Mock pipe loading
-      (cleansingService.loadPipes as jest.Mock)
+      (cleansingService.buildPipes as jest.Mock)
         .mockReturnValueOnce([
           { type: 'remove-currency-symbol' },
           { type: 'trim' },
@@ -423,7 +423,7 @@ describe('BrowserActionService - Cleanse Action', () => {
         price: 29.99,
         title: 'Product Title',
       });
-      expect(cleansingService.loadPipes).toHaveBeenCalledTimes(2);
+      expect(cleansingService.buildPipes).toHaveBeenCalledTimes(2);
       expect(cleansingService.cleanse).toHaveBeenCalledWith(
         '$  29.99  ',
         expect.any(Array),
@@ -461,7 +461,7 @@ describe('BrowserActionService - Cleanse Action', () => {
       (pageService.closePage as jest.Mock).mockResolvedValue(undefined);
 
       // Mock only price pipe loading
-      (cleansingService.loadPipes as jest.Mock).mockReturnValueOnce([
+      (cleansingService.buildPipes as jest.Mock).mockReturnValueOnce([
         { type: 'remove-currency-symbol' },
         { type: 'to-number' },
       ]);
@@ -475,7 +475,7 @@ describe('BrowserActionService - Cleanse Action', () => {
         price: 29.99,
         title: 'Product Title',
       });
-      expect(cleansingService.loadPipes).toHaveBeenCalledTimes(1);
+      expect(cleansingService.buildPipes).toHaveBeenCalledTimes(1);
       expect(cleansingService.cleanse).toHaveBeenCalledWith(
         '$29.99',
         expect.any(Array),
@@ -510,7 +510,7 @@ describe('BrowserActionService - Cleanse Action', () => {
       (pageService.navigateTo as jest.Mock).mockResolvedValue(mockPage);
       (pageService.closePage as jest.Mock).mockResolvedValue(undefined);
 
-      (cleansingService.loadPipes as jest.Mock).mockReturnValueOnce([
+      (cleansingService.buildPipes as jest.Mock).mockReturnValueOnce([
         { type: 'trim' },
       ]);
       (cleansingService.cleanse as jest.Mock).mockReturnValueOnce('29.99');
@@ -537,7 +537,7 @@ describe('BrowserActionService - Cleanse Action', () => {
 
     it('should strip bracket markers from price string', () => {
       const input = '[penghapusan dimulai]  JP¥46.196  [penghapusan selesai]';
-      const pipes = realCleansingService.loadPipes([
+      const pipes = realCleansingService.buildPipes([
         {
           type: CleansingType.REGEX_REPLACE,
           pattern: '\\[penghapusan dimulai\\]\\s*',
@@ -562,7 +562,7 @@ describe('BrowserActionService - Cleanse Action', () => {
         '[penghapusan dimulai]  JP¥46.196  [penghapusan selesai]',
         '[penghapusan dimulai]  JP¥12.000  [penghapusan selesai]',
       ];
-      const pipes = realCleansingService.loadPipes([
+      const pipes = realCleansingService.buildPipes([
         {
           type: CleansingType.REGEX_REPLACE,
           pattern: '\\[penghapusan dimulai\\]\\s*',
@@ -586,7 +586,7 @@ describe('BrowserActionService - Cleanse Action', () => {
 
     it('should leave string unchanged when no markers present', () => {
       const input = 'JP¥46.196';
-      const pipes = realCleansingService.loadPipes([
+      const pipes = realCleansingService.buildPipes([
         {
           type: CleansingType.REGEX_REPLACE,
           pattern: '\\[penghapusan dimulai\\]\\s*',
@@ -607,7 +607,7 @@ describe('BrowserActionService - Cleanse Action', () => {
     });
   });
 
-  describe('scrapeWithActions with cleanse action', () => {
+  describe('scrapeWithWorkflow with cleanse action', () => {
     it('should execute cleanse workflow action', async () => {
       const workflow = {
         version: '1.0' as const,
@@ -647,7 +647,7 @@ describe('BrowserActionService - Cleanse Action', () => {
         { exec: jest.fn((val: string) => val.trim()) },
         { exec: jest.fn((val: string) => parseFloat(val)) },
       ];
-      cleansingService.loadPipes.mockReturnValue(mockPipeInstances);
+      cleansingService.buildPipes.mockReturnValue(mockPipeInstances);
       cleansingService.cleanse.mockImplementation((value, pipes) => {
         return pipes.reduce(
           (result: any, pipe: any) => pipe.exec(result),
@@ -655,7 +655,7 @@ describe('BrowserActionService - Cleanse Action', () => {
         );
       });
 
-      const result = await service.scrapeWithActions(
+      const result = await service.scrapeWithWorkflow(
         'https://example.com',
         workflow,
       );
@@ -698,7 +698,7 @@ describe('BrowserActionService - Cleanse Action', () => {
       };
       pageService.navigateTo.mockResolvedValue(mockPage as any);
 
-      const result = await service.scrapeWithActions(
+      const result = await service.scrapeWithWorkflow(
         'https://example.com',
         workflow,
       );
@@ -744,7 +744,7 @@ describe('BrowserActionService - Cleanse Action', () => {
       const mockPipeInstances = [
         { exec: jest.fn((val: string) => val.trim()) },
       ];
-      cleansingService.loadPipes.mockReturnValue(mockPipeInstances);
+      cleansingService.buildPipes.mockReturnValue(mockPipeInstances);
       cleansingService.cleanse.mockImplementation((value, pipes) => {
         return pipes.reduce(
           (result: any, pipe: any) => pipe.exec(result),
@@ -752,7 +752,7 @@ describe('BrowserActionService - Cleanse Action', () => {
         );
       });
 
-      const result = await service.scrapeWithActions(
+      const result = await service.scrapeWithWorkflow(
         'https://example.com',
         workflow,
       );

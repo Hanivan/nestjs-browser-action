@@ -20,7 +20,7 @@ export class MyService {
 ```
 
 **Methods:**
-- `getBrowser(): Promise<Browser>` - Acquire browser from pool
+- `acquireBrowser(): Promise<Browser>` - Acquire browser from pool
 - `releaseBrowser(browser: Browser): Promise<void>` - Return browser to pool
 - `getPoolStatus(): PoolStatus` - Get pool statistics
 
@@ -63,7 +63,7 @@ console.log('Waiting:', status.waiting);        // Requests waiting
 ```typescript
 async manualBrowserControl() {
   // Acquire browser from pool
-  const browser = await this.browserManager.getBrowser();
+  const browser = await this.browserManager.acquireBrowser();
 
   try {
     // Create page
@@ -306,7 +306,7 @@ strategy: 'least-recently-used'
 
 ```typescript
 async safeBrowserUsage() {
-  const browser = await this.browserManager.getBrowser();
+  const browser = await this.browserManager.acquireBrowser();
 
   try {
     const page = await browser.newPage();
@@ -327,7 +327,7 @@ async safeBrowserUsage() {
 
 1. **Always release browsers:**
    ```typescript
-   const browser = await this.browserManager.getBrowser();
+   const browser = await this.browserManager.acquireBrowser();
    try {
      // ... operations ...
    } finally {

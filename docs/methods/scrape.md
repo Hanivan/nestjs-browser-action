@@ -214,7 +214,7 @@ console.log(data.nonexistent);  // undefined (no error thrown)
 ## Related Methods
 
 - [`scrapeAll()`](./scrape-all.md) - Extract multiple elements
-- [`scrapeWithActions()`](./workflow.md) - Workflow-based automation
+- [`scrapeWithWorkflow()`](./workflow.md) - Workflow-based automation
 - [`waitForSelector()`](./browser-control.md) - Wait for elements before scraping
 
 ## See Also

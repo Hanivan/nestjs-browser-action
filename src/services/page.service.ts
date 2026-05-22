@@ -23,10 +23,10 @@ export class PageService {
     this.logger.debug('Creating new page');
     if (cloak) {
       this.currentBrowser =
-        await this.browserManager.getDedicatedBrowser(cloak);
+        await this.browserManager.createDedicatedBrowser(cloak);
       this.dedicated = true;
     } else {
-      this.currentBrowser = await this.browserManager.getBrowser();
+      this.currentBrowser = await this.browserManager.acquireBrowser();
       this.dedicated = false;
     }
     this.currentPage = await this.currentBrowser.newPage();

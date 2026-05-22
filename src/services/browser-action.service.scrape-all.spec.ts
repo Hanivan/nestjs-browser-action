@@ -28,7 +28,7 @@ describe('BrowserActionService - scrapeAll', () => {
         {
           provide: CleansingService,
           useValue: {
-            loadPipes: jest.fn(),
+            buildPipes: jest.fn(),
             cleanse: jest.fn(),
           },
         },
@@ -118,7 +118,7 @@ describe('BrowserActionService - scrapeAll', () => {
     (pageService.closePage as jest.Mock).mockResolvedValue(undefined);
 
     const mockPipe = { exec: jest.fn((val: string) => val.trim()) };
-    (cleansingService.loadPipes as jest.Mock).mockReturnValue([mockPipe]);
+    (cleansingService.buildPipes as jest.Mock).mockReturnValue([mockPipe]);
     (cleansingService.cleanse as jest.Mock).mockImplementation((val, pipes) =>
       pipes.reduce((acc: any, pipe: any) => pipe.exec(acc), val),
     );
@@ -138,7 +138,9 @@ describe('BrowserActionService - scrapeAll', () => {
     expect(result).toEqual({
       titles: ['TITLE 1', 'TITLE 2', 'TITLE 3'],
     });
-    expect(cleansingService.loadPipes).toHaveBeenCalledWith([{ type: 'trim' }]);
+    expect(cleansingService.buildPipes).toHaveBeenCalledWith([
+      { type: 'trim' },
+    ]);
     expect(cleansingService.cleanse).toHaveBeenCalledTimes(3);
   });
 
@@ -153,7 +155,7 @@ describe('BrowserActionService - scrapeAll', () => {
     const mockToNumberPipe = {
       exec: jest.fn((val: string) => parseFloat(val)),
     };
-    (cleansingService.loadPipes as jest.Mock).mockReturnValue([
+    (cleansingService.buildPipes as jest.Mock).mockReturnValue([
       mockToNumberPipe,
     ]);
     (cleansingService.cleanse as jest.Mock).mockReturnValue(29.99);
@@ -170,7 +172,7 @@ describe('BrowserActionService - scrapeAll', () => {
       },
     );
 
-    expect(cleansingService.loadPipes).toHaveBeenCalledWith([
+    expect(cleansingService.buildPipes).toHaveBeenCalledWith([
       { type: 'to-number' },
     ]);
     expect(cleansingService.cleanse).toHaveBeenCalledTimes(3);
@@ -259,7 +261,7 @@ describe('scrapeAllWithWorkflow', () => {
         {
           provide: CleansingService,
           useValue: {
-            loadPipes: jest.fn(),
+            buildPipes: jest.fn(),
             cleanse: jest.fn(),
           },
         },

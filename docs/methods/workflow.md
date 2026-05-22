@@ -1,6 +1,6 @@
 # Workflow-Based Automation
 
-Declarative browser automation using workflows with [`scrapeWithActions()`](#scrapewithactions) and [`scrapeAllWithWorkflow()`](#scrapeallwithworkflow).
+Declarative browser automation using workflows with [`scrapeWithWorkflow()`](#scrapewithactions) and [`scrapeAllWithWorkflow()`](#scrapeallwithworkflow).
 
 ## Overview
 
@@ -14,14 +14,14 @@ The workflow system provides a powerful, declarative way to automate complex bro
 - (♡˙︶˙♡) **Cookie Management:** Save/load sessions for persistence
 - (・_・) **Type-Safe:** Full TypeScript support with generics
 
-## scrapeWithActions()
+## scrapeWithWorkflow()
 
 Execute a workflow to automate browser interactions and data extraction.
 
 ### Signature
 
 ```typescript
-async scrapeWithActions<T = Record<string, unknown>>(
+async scrapeWithWorkflow<T = Record<string, unknown>>(
   url: string,
   workflow: WorkflowDefinition,
   variables?: VariableContext,
@@ -53,7 +53,7 @@ Promise<WorkflowResultTyped<T>>
 
 ## scrapeAllWithWorkflow()
 
-Execute a workflow with multi-element extraction support (alias for `scrapeWithActions` with `options.multiple`).
+Execute a workflow with multi-element extraction support (alias for `scrapeWithWorkflow` with `options.multiple`).
 
 ### Signature
 
@@ -65,7 +65,7 @@ async scrapeAllWithWorkflow<T = Record<string, unknown>>(
 ): Promise<WorkflowResultTyped<T>>
 ```
 
-**Note:** This is functionally equivalent to `scrapeWithActions()` - both support single and multi-element extraction via the `options.multiple` flag.
+**Note:** This is functionally equivalent to `scrapeWithWorkflow()` - both support single and multi-element extraction via the `options.multiple` flag.
 
 ## Workflow Definition
 
@@ -155,7 +155,7 @@ export class MyService {
       ],
     };
 
-    const result = await this.actionHelpers.scrapeWithActions(workflow);
+    const result = await this.actionHelpers.scrapeWithWorkflow(workflow);
 
     if (result.success) {
       console.log(result.data.title);    // "Article Title"
@@ -205,7 +205,7 @@ async searchWithWorkflow() {
     },
   };
 
-  const result = await this.actionHelpers.scrapeWithActions<{
+  const result = await this.actionHelpers.scrapeWithWorkflow<{
     firstResult: string;
   }>('https://search.example.com', workflow);
 
@@ -240,7 +240,7 @@ async searchDynamic() {
     ],
   };
 
-  const result = await this.actionHelpers.scrapeWithActions(
+  const result = await this.actionHelpers.scrapeWithWorkflow(
     'https://example.com',  // Starting URL
     workflow,
     {
@@ -315,7 +315,7 @@ async loginWithConditional() {
     ],
   };
 
-  const result = await this.actionHelpers.scrapeWithActions(workflow);
+  const result = await this.actionHelpers.scrapeWithWorkflow(workflow);
 
   if (result.success) {
     console.log('Logged in as:', result.data.userName);
@@ -430,7 +430,7 @@ async scrapeWithCleanse() {
     ],
   };
 
-  const result = await this.actionHelpers.scrapeWithActions(workflow);
+  const result = await this.actionHelpers.scrapeWithWorkflow(workflow);
 
   // Result:
   // {
@@ -476,7 +476,7 @@ async scrapeWithXPath() {
     ],
   };
 
-  const result = await this.actionHelpers.scrapeWithActions(workflow);
+  const result = await this.actionHelpers.scrapeWithWorkflow(workflow);
 }
 ```
 
@@ -503,7 +503,7 @@ async scrapeShadowDOM() {
     ],
   };
 
-  const result = await this.actionHelpers.scrapeWithActions(workflow);
+  const result = await this.actionHelpers.scrapeWithWorkflow(workflow);
 }
 ```
 

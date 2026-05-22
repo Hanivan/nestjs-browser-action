@@ -2,6 +2,7 @@ import type { LogLevel } from '@nestjs/common';
 import type { BrowserContextOptions, LaunchOptions } from 'puppeteer-core';
 import type { LaunchOptions as CloakLaunchOptions } from 'cloakbrowser';
 import { PoolOptions } from './pool-options';
+import type { CleansingPipe } from '../pipes/cleansing-pipe';
 
 /**
  * CloakBrowser stealth launch options for local browsers.
@@ -84,4 +85,12 @@ export interface BrowserActionOptions {
 
   // Cookie persistence options
   cookies?: CookieOptions;
+
+  /**
+   * Custom cleansing pipes keyed by their `type` string. Registered on the
+   * CleansingService at startup so config-driven paths (scrape `pipes`,
+   * workflow `cleanse` actions) can resolve these types. A type clashing with
+   * a builtin or another custom pipe throws at registration.
+   */
+  customPipes?: Record<string, new () => CleansingPipe>;
 }

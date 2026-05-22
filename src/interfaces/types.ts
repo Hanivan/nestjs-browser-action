@@ -11,7 +11,9 @@ import type { CloakOptions } from './browser-action-options';
  * Represents a single pipe transformation with optional parameters
  */
 export interface PipeConfig {
-  type: CleansingType;
+  // `string` accommodates custom pipe types registered via
+  // CleansingService.registerPipe / module `customPipes`.
+  type: CleansingType | string;
   pattern?: string;
   replacement?: string;
   format?: string;

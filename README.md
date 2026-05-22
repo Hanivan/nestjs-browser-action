@@ -97,7 +97,7 @@ export class MyService {
 |--------|-------------|
 | [`scrape()`](./docs/methods/scrape.md) | Extract single elements |
 | [`scrapeAll()`](./docs/methods/scrape-all.md) | Extract multiple elements |
-| [`scrapeWithActions()`](./docs/methods/workflow.md) | Workflow-based automation |
+| [`scrapeWithWorkflow()`](./docs/methods/workflow.md) | Workflow-based automation |
 | [`scrapeAllWithWorkflow()`](./docs/methods/workflow.md) | Workflow with multi-element |
 | [`takeScreenshot()`](./docs/methods/screenshots.md) | Capture screenshots |
 | [`generatePDF()`](./docs/methods/screenshots.md) | Generate PDFs |
@@ -149,7 +149,7 @@ const workflow = {
   ],
 };
 
-const result = await this.actionHelpers.scrapeWithActions(workflow);
+const result = await this.actionHelpers.scrapeWithWorkflow(workflow);
 ```
 
 ### With Data Cleansing
@@ -219,7 +219,7 @@ await actions.scrape(url, { title: 'h1' }, {
 });
 
 // workflow
-await actions.scrapeWithActions(url, {
+await actions.scrapeWithWorkflow(url, {
   version: '1.0',
   cloak: { proxy: { server: 'http://rotating-proxy:8080' } },
   actions: [...],
@@ -307,7 +307,7 @@ const result = await this.actionHelpers.scrape<ProductSelectors>(url, {
 });
 
 // Type-safe workflow results
-const workflow = await this.actionHelpers.scrapeWithActions<{
+const workflow = await this.actionHelpers.scrapeWithWorkflow<{
   title: string;
   price: number;
 }>(url, workflow);
