@@ -4,8 +4,8 @@ import {
   OnModuleDestroy,
   Inject,
 } from '@nestjs/common';
-import type { Browser, LaunchOptions } from 'puppeteer';
-import * as puppeteer from 'puppeteer';
+import type { Browser } from 'puppeteer-core';
+import { connect } from 'puppeteer-core';
 import {
   AVAILABILITY_CHECK_INTERVAL_MS,
   BROWSER_ACTION_OPTIONS,
@@ -20,6 +20,7 @@ import type {
 import type { LogLevel } from '@nestjs/common';
 import { LoggerWithLevel } from '../helpers/logger.util';
 import { delay } from '../helpers/delay.util';
+import { loadCloakPuppeteer } from './cloak.loader';
 
 @Injectable()
 export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
@@ -28,7 +29,6 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
   private available: Set<Browser> = new Set();
   private inUse: Set<Browser> = new Set();
   private disconnectListeners = new Map<Browser, () => void>();
-  private launchOptions: LaunchOptions = {};
   private minSize: number = DEFAULT_POOL_OPTIONS.min;
   private maxSize: number = DEFAULT_POOL_OPTIONS.max;
   private currentIndex: number = 0;
@@ -44,7 +44,6 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit() {
-    this.launchOptions = this.options.launchOptions || {};
     this.minSize = this.options.pool?.min || DEFAULT_POOL_OPTIONS.min;
     this.maxSize = this.options.pool?.max || DEFAULT_POOL_OPTIONS.max;
 
@@ -61,7 +60,7 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
         `Browser mode: Remote CDP (WebSocket: ${remote.browserWSEndpoint})`,
       );
     } else {
-      this.logger.log('Browser mode: Local Puppeteer');
+      this.logger.log('Browser mode: Local CloakBrowser (stealth Chromium)');
     }
 
     this.logger.warn(
@@ -111,7 +110,24 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
       return await this.connectWithRetry(this.options.remote);
     }
 
-    const browser = await puppeteer.launch(this.launchOptions);
+    const { launch, launchPersistentContext } = await loadCloakPuppeteer();
+
+    const cloak = this.options.cloak ?? {};
+    const cloakOptions = {
+      ...cloak,
+      launchOptions: {
+        ...(cloak.launchOptions ?? {}),
+        ...(this.options.launchOptions as Record<string, unknown> | undefined),
+      },
+    };
+
+    const browser = cloak.userDataDir
+      ? await launchPersistentContext({
+          ...cloakOptions,
+          userDataDir: cloak.userDataDir,
+        })
+      : await launch(cloakOptions);
+
     const disconnectHandler = () => {
       this.logger.warn('Browser disconnected');
     };
@@ -146,7 +162,7 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
           `Connecting to remote Chrome (attempt ${attempt}/${retryMax})`,
         );
 
-        const browser = await puppeteer.connect(connectOptions);
+        const browser = await connect(connectOptions);
 
         const disconnectHandler = () => {
           this.logger.warn('Remote Chrome disconnected');

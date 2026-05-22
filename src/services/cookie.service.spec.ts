@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Browser, Page } from 'puppeteer';
+import { Browser, Page } from 'puppeteer-core';
 import { CookieService } from './cookie.service';
 import { BROWSER_ACTION_OPTIONS } from '../constants/browser-action.constants';
 import * as fs from 'fs/promises';

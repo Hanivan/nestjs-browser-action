@@ -1,6 +1,16 @@
 import type { LogLevel } from '@nestjs/common';
-import type { BrowserContextOptions, LaunchOptions } from 'puppeteer';
+import type { BrowserContextOptions, LaunchOptions } from 'puppeteer-core';
+import type { LaunchOptions as CloakLaunchOptions } from 'cloakbrowser';
 import { PoolOptions } from './pool-options';
+
+/**
+ * CloakBrowser stealth launch options for local browsers.
+ * Extends CloakBrowser's launch options with an optional persistent profile dir.
+ * `userDataDir` routes the launch through `launchPersistentContext`.
+ */
+export type CloakOptions = CloakLaunchOptions & {
+  userDataDir?: string;
+};
 
 /**
  * Cookie persistence options
@@ -44,7 +54,19 @@ export interface RemoteOptions {
 }
 
 export interface BrowserActionOptions {
+  /**
+   * Raw puppeteer-core launch options, forwarded to CloakBrowser's
+   * `launchOptions` passthrough. Use `cloak` for stealth/anti-detect features.
+   */
   launchOptions?: LaunchOptions;
+
+  /**
+   * CloakBrowser stealth launch options for local browsers: proxy, humanize,
+   * geoip, timezone, locale, stealthArgs, extensionPaths, userDataDir, etc.
+   * Ignored when `remote` is set (remote uses CDP connect).
+   */
+  cloak?: CloakOptions;
+
   contextOptions?: BrowserContextOptions;
   pool?: PoolOptions;
   multiContext?: boolean;

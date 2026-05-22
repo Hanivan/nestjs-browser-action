@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BrowserManagerService } from './browser-manager.service';
 import { BrowserPoolService } from './browser-pool.service';
-import { Browser } from 'puppeteer';
+import { Browser } from 'puppeteer-core';
 
 describe('BrowserManagerService', () => {
   let service: BrowserManagerService;

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import type { Page } from 'puppeteer';
+import type { Page } from 'puppeteer-core';
 import { ActionHelpersService } from './action-helpers.service';
 import { PageService } from '../services/page-service';
 import { CookieService } from '../services/cookie.service';

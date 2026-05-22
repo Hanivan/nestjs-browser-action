@@ -1,4 +1,4 @@
-import type { Cookie } from 'puppeteer';
+import type { Cookie } from 'puppeteer-core';
 
 /**
  * Options for saving cookies

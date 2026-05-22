@@ -1,15 +1,22 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BrowserPoolService } from './browser-pool.service';
-import { Browser } from 'puppeteer';
+import { Browser } from 'puppeteer-core';
 import { BROWSER_ACTION_OPTIONS } from '../constants/browser-action.constants';
 
-// Mock puppeteer
-jest.mock('puppeteer', () => ({
+// Mock the loader so the real ESM-only cloakbrowser import never runs in tests;
+// remote CDP goes through puppeteer-core.
+const mockCloak = {
   launch: jest.fn(),
+  launchPersistentContext: jest.fn(),
+};
+jest.mock('./cloak.loader', () => ({
+  loadCloakPuppeteer: () => Promise.resolve(mockCloak),
+}));
+jest.mock('puppeteer-core', () => ({
   connect: jest.fn(),
 }));
 
-const puppeteer = require('puppeteer');
+const puppeteerCore = require('puppeteer-core');
 
 describe('BrowserPoolService', () => {
   let service: BrowserPoolService;
@@ -26,7 +33,7 @@ describe('BrowserPoolService', () => {
     mockBrowsers = [];
 
     // Create mock browser factory
-    puppeteer.launch.mockImplementation(async () => {
+    mockCloak.launch.mockImplementation(async () => {
       const mockBrowser = {
         close: jest.fn().mockResolvedValue(undefined),
         newPage: jest.fn(),
@@ -64,7 +71,7 @@ describe('BrowserPoolService', () => {
     await service.onModuleInit();
 
     expect(service.getPoolSize()).toBe(2);
-    expect(puppeteer.launch).toHaveBeenCalledTimes(2);
+    expect(mockCloak.launch).toHaveBeenCalledTimes(2);
   });
 
   it('should acquire browser from pool', async () => {
@@ -117,12 +124,15 @@ describe('BrowserPoolService', () => {
     const service = module.get<BrowserPoolService>(BrowserPoolService);
     await service.onModuleInit();
 
-    expect(puppeteer.launch).toHaveBeenCalledWith({
-      headless: true,
-      args: ['--no-sandbox'],
+    // launchOptions is forwarded to CloakBrowser's launchOptions passthrough
+    expect(mockCloak.launch).toHaveBeenCalledWith({
+      launchOptions: {
+        headless: true,
+        args: ['--no-sandbox'],
+      },
     });
-    expect(puppeteer.launch).toHaveBeenCalledTimes(2); // min: 2 browsers
-    expect(puppeteer.connect).not.toHaveBeenCalled();
+    expect(mockCloak.launch).toHaveBeenCalledTimes(2); // min: 2 browsers
+    expect(puppeteerCore.connect).not.toHaveBeenCalled();
   });
 
   describe('Remote connection validation', () => {
@@ -178,8 +188,8 @@ describe('BrowserPoolService', () => {
 
   describe('Remote connection with retry', () => {
     beforeEach(() => {
-      // Mock puppeteer.connect
-      puppeteer.connect = jest.fn();
+      // Mock puppeteerCore.connect
+      puppeteerCore.connect = jest.fn();
     });
 
     it('should connect on first attempt', async () => {
@@ -188,7 +198,7 @@ describe('BrowserPoolService', () => {
         connected: true,
         on: jest.fn(),
       } as unknown as Browser;
-      (puppeteer.connect as jest.Mock).mockResolvedValue(mockBrowser);
+      (puppeteerCore.connect as jest.Mock).mockResolvedValue(mockBrowser);
 
       const remoteOptions = {
         ...mockOptions,
@@ -210,15 +220,15 @@ describe('BrowserPoolService', () => {
       const remoteService = module.get<BrowserPoolService>(BrowserPoolService);
       await remoteService.onModuleInit();
 
-      expect(puppeteer.connect).toHaveBeenCalledTimes(2); // min: 2 browsers
-      expect(puppeteer.connect).toHaveBeenCalledWith({
+      expect(puppeteerCore.connect).toHaveBeenCalledTimes(2); // min: 2 browsers
+      expect(puppeteerCore.connect).toHaveBeenCalledWith({
         browserURL: 'http://localhost:9222',
       });
     });
 
     it('should retry on connection failure', async () => {
       let attempts = 0;
-      (puppeteer.connect as jest.Mock).mockImplementation(async () => {
+      (puppeteerCore.connect as jest.Mock).mockImplementation(async () => {
         attempts++;
         if (attempts < 3) {
           throw new Error('Connection refused');
@@ -259,7 +269,7 @@ describe('BrowserPoolService', () => {
     });
 
     it('should fail after max retries', async () => {
-      (puppeteer.connect as jest.Mock).mockRejectedValue(
+      (puppeteerCore.connect as jest.Mock).mockRejectedValue(
         new Error('Connection refused'),
       );
 
@@ -297,7 +307,7 @@ describe('BrowserPoolService', () => {
         on: jest.fn(),
       } as unknown as Browser;
 
-      puppeteer.connect = jest.fn().mockResolvedValue(mockBrowser);
+      puppeteerCore.connect = jest.fn().mockResolvedValue(mockBrowser);
 
       const bothOptions = {
         ...mockOptions,
@@ -324,8 +334,8 @@ describe('BrowserPoolService', () => {
       await service.onModuleInit();
 
       // Should use connect, not launch
-      expect(puppeteer.connect).toHaveBeenCalled();
-      expect(puppeteer.launch).not.toHaveBeenCalled();
+      expect(puppeteerCore.connect).toHaveBeenCalled();
+      expect(mockCloak.launch).not.toHaveBeenCalled();
     });
 
     it('should connect using browserWSEndpoint when provided', async () => {
@@ -335,7 +345,7 @@ describe('BrowserPoolService', () => {
         on: jest.fn(),
       } as unknown as Browser;
 
-      puppeteer.connect = jest.fn().mockResolvedValue(mockBrowser);
+      puppeteerCore.connect = jest.fn().mockResolvedValue(mockBrowser);
 
       const wsOptions = {
         ...mockOptions,
@@ -358,7 +368,7 @@ describe('BrowserPoolService', () => {
       const service = module.get<BrowserPoolService>(BrowserPoolService);
       await service.onModuleInit();
 
-      expect(puppeteer.connect).toHaveBeenCalledWith({
+      expect(puppeteerCore.connect).toHaveBeenCalledWith({
         browserWSEndpoint: 'ws://localhost:9222/devtools/page/abc123',
       });
     });

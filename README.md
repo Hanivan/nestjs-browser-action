@@ -7,7 +7,7 @@
 >
 > This project is currently in **experimental** stage and intended for **personal use only**. The API is subject to change, and production use is not recommended.
 
-A NestJS module that provides Puppeteer-based browser automation with configurable options, connection pooling, and data cleansing capabilities.
+A NestJS module that provides stealth browser automation (CloakBrowser + puppeteer-core) with configurable options, connection pooling, and data cleansing capabilities.
 
 ## Features
 
@@ -19,6 +19,7 @@ A NestJS module that provides Puppeteer-based browser automation with configurab
 - (°_°)! **Shadow DOM**: Support for web components
 - (^_^) **Type-Safe**: Full TypeScript support with generics
 - (^^) **Remote Chrome**: Connect to remote Chrome instances via CDP (browserURL/browserWSEndpoint)
+- (•̀ᴗ•́) **Stealth**: Local launches use CloakBrowser stealth Chromium (proxy, humanize, geoip, timezone/locale spoofing)
 
 ## Installation
 
@@ -180,6 +181,32 @@ const workflow = {
   ],
 };
 ```
+
+### Stealth (CloakBrowser)
+
+Local browsers launch through CloakBrowser stealth Chromium. Configure anti-detect
+features via the `cloak` option:
+
+```typescript
+BrowserActionModule.forRoot({
+  cloak: {
+    proxy: { server: 'http://host:port', username: 'user', password: 'pass' },
+    humanize: true,                 // human-like mouse/typing
+    geoip: true,                    // spoof geolocation from proxy IP
+    timezone: 'America/New_York',   // spoof timezone
+    locale: 'en-US',                // spoof locale
+    stealthArgs: true,              // anti-detect Chromium flags
+    extensionPaths: ['/path/ext'],  // load unpacked extensions
+    userDataDir: './profile',       // persistent profile (launchPersistentContext)
+    launchOptions: { headless: true, args: ['--no-sandbox'] }, // raw puppeteer-core passthrough
+  },
+  pool: { min: 2, max: 5 },
+})
+```
+
+`launchOptions` (top-level) is also forwarded to CloakBrowser's `launchOptions`
+passthrough for backward compatibility. `cloak` is ignored when `remote` is set
+(remote uses plain CDP connect).
 
 ### Remote Chrome Connection
 

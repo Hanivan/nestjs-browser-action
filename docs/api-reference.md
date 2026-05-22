@@ -199,8 +199,14 @@ Load pipe instances from configuration.
 
 ```typescript
 interface BrowserActionOptions {
-  // Browser launch options
+  // Raw puppeteer-core launch options, forwarded to CloakBrowser's
+  // launchOptions passthrough. Use `cloak` for stealth/anti-detect features.
   launchOptions?: LaunchOptions;
+
+  // CloakBrowser stealth options for local launches (ignored when `remote` is set):
+  // proxy, humanize, geoip, timezone, locale, stealthArgs, extensionPaths,
+  // userDataDir (routes through launchPersistentContext), launchOptions passthrough.
+  cloak?: CloakOptions;
 
   // Browser context options
   contextOptions?: BrowserContextOptions;
@@ -587,7 +593,7 @@ Inject a browser instance (auto-acquired from pool, auto-released).
 
 ```typescript
 import { InjectBrowser } from '@hanivanrizky/nestjs-browser-action';
-import { Browser } from 'puppeteer';
+import { Browser } from 'puppeteer-core';
 
 @Injectable()
 export class MyService {
@@ -604,7 +610,7 @@ Inject a page instance (auto-created and closed).
 
 ```typescript
 import { InjectPage } from '@hanivanrizky/nestjs-browser-action';
-import { Page } from 'puppeteer';
+import { Page } from 'puppeteer-core';
 
 @Injectable()
 export class MyService {

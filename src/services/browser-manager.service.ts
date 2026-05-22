@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { Browser } from 'puppeteer';
+import type { Browser } from 'puppeteer-core';
 import { BrowserPoolService } from './browser-pool.service';
 import { LoggerWithLevel } from '../helpers/logger.util';
 import type { LogLevel } from '@nestjs/common';

@@ -5,7 +5,7 @@ import type {
   PDFOptions,
   ElementHandle,
   KeyInput,
-} from 'puppeteer';
+} from 'puppeteer-core';
 import { PageService } from '../services/page-service';
 import { CookieService } from '../services/cookie.service';
 import { CleansingService } from '../services/cleansing.service';

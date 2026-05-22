@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import type { Page } from 'puppeteer';
+import type { Page } from 'puppeteer-core';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import {

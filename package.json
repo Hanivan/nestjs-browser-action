@@ -1,7 +1,7 @@
 {
   "name": "@hanivanrizky/nestjs-browser-action",
   "version": "0.7.0",
-  "description": "Puppeteer-based browser automation module for NestJS",
+  "description": "Stealth browser automation module for NestJS (CloakBrowser + puppeteer-core)",
   "author": "Hanivan Rizky S <hanivan20@gmail.com> (https://www.hanivan.my.id)",
   "license": "MIT",
   "main": "./dist/index.js",
@@ -66,8 +66,13 @@
   "dependencies": {
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "cloakbrowser": "^0.3.30",
     "luxon": "^3.7.2",
-    "puppeteer": "^24.38.0"
+    "puppeteer-core": "^24.38.0"
+  },
+  "optionalDependencies": {
+    "mmdb-lib": "^3.0.2",
+    "socks-proxy-agent": "^10.0.0"
   },
   "peerDependencies": {
     "@nestjs/common": "^11.0.0",
