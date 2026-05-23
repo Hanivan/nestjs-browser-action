@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.11.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.10.1...v0.11.0) (2026-05-23)
+
+
+### Features
+
+* add interceptResource workflow flag to block non-essential resources ([2b3fcd3](https://github.com/Hanivan/nestjs-browser-action/commit/2b3fcd360e8df91f97c4b51133a98080b304bf73))
+
 ## [0.10.1](https://github.com/Hanivan/nestjs-browser-action/compare/v0.10.0...v0.10.1) (2026-05-22)
 
 
