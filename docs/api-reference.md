@@ -380,6 +380,7 @@ interface WorkflowDefinition {
   actions: WorkflowAction[];
   onError?: WorkflowErrorConfig;
   cloak?: CloakOptions;  // Per-call stealth override (off-pool browser; not in remote mode)
+  interceptResource?: boolean;  // Abort css/image/media/font requests; keep js (script/xhr/fetch)
 }
 ```
 

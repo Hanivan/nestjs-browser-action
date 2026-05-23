@@ -75,6 +75,7 @@ interface WorkflowDefinition {
   actions: WorkflowAction[];           // Array of actions to execute
   onError?: WorkflowErrorConfig;      // Global error handling
   cloak?: CloakOptions;               // Per-call stealth override (off-pool browser; not in remote mode)
+  interceptResource?: boolean;        // Abort css/image/media/font requests; keep js (script/xhr/fetch)
 }
 
 interface WorkflowAction {

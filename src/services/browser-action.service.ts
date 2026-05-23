@@ -521,6 +521,7 @@ export class BrowserActionService {
       url,
       undefined,
       workflow.cloak,
+      workflow.interceptResource,
     );
     const result: WorkflowResultTyped<T> = {
       success: false,

@@ -19,7 +19,10 @@ export class PageService {
     );
   }
 
-  async createPage(cloak?: CloakOptions): Promise<Page> {
+  async createPage(
+    cloak?: CloakOptions,
+    interceptResource?: boolean,
+  ): Promise<Page> {
     this.logger.debug('Creating new page');
     if (cloak) {
       this.currentBrowser =
@@ -30,16 +33,33 @@ export class PageService {
       this.dedicated = false;
     }
     this.currentPage = await this.currentBrowser.newPage();
+    if (interceptResource) {
+      await this.enableResourceInterception(this.currentPage);
+    }
     return this.currentPage;
+  }
+
+  private async enableResourceInterception(page: Page): Promise<void> {
+    const blocked = new Set(['stylesheet', 'image', 'media', 'font']);
+    await page.setRequestInterception(true);
+    page.on('request', (request) => {
+      if (request.isInterceptResolutionHandled()) return;
+      if (blocked.has(request.resourceType())) {
+        void request.abort();
+      } else {
+        void request.continue();
+      }
+    });
   }
 
   async navigateTo(
     url: string,
     options?: WaitForOptions,
     cloak?: CloakOptions,
+    interceptResource?: boolean,
   ): Promise<Page> {
     if (!this.currentPage) {
-      await this.createPage(cloak);
+      await this.createPage(cloak, interceptResource);
     }
     this.logger.debug(`Navigating to ${url}`);
     if (this.currentPage) {

@@ -113,6 +113,11 @@ export interface WorkflowDefinition {
    * Ignored in remote (CDP) mode.
    */
   cloak?: CloakOptions;
+  /**
+   * When true, abort requests for media, stylesheet, image and font resources.
+   * Scripts (and xhr/fetch) stay enabled so JS-driven pages still run.
+   */
+  interceptResource?: boolean;
 }
 
 /**
