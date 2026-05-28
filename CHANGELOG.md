@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.12.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.11.0...v0.12.0) (2026-05-28)
+
+
+### Features
+
+* enhance security and validation across services ([0e549f7](https://github.com/Hanivan/nestjs-browser-action/commit/0e549f7c0c3e2224d8ab5b9b07ba6b66ebba5597))
+
 # [0.11.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.10.1...v0.11.0) (2026-05-23)
 
 
