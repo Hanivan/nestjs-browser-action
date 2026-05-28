@@ -1,6 +1,6 @@
 {
   "name": "@hanivanrizky/nestjs-browser-action",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "description": "Stealth browser automation module for NestJS (CloakBrowser + puppeteer-core)",
   "author": "Hanivan Rizky S <hanivan20@gmail.com> (https://www.hanivan.my.id)",
   "license": "MIT",
