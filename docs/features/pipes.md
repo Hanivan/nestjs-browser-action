@@ -462,6 +462,27 @@ Once registered, use it like any builtin:
 { pipes: { title: [{ type: 'shout' }] } }
 ```
 
+## Security
+
+### Safe Property Assignment
+
+`buildPipes()` uses a whitelist of safe properties when copying config fields to pipe instances. It blocks overwriting the `exec` and `type` properties, preventing arbitrary code execution through crafted pipe configs.
+
+### ReDoS Prevention
+
+Regex pipes (`REGEX_REPLACE`, `REGEX_EXTRACT`) validate their `pattern` against a ReDoS check. Patterns with nested quantifiers like `(a+)+` or `(a*)*` are rejected before compilation.
+
+### Nesting Depth Limit
+
+`buildPipes()` enforces a maximum nesting depth of 10 for `ALT_FLAG` `primaryPipes` and `fallbackPipes`. Deeper nesting throws a `WorkflowValidationError`.
+
+### Validation
+
+Pipe configs are validated by `validatePipeConfigs()` when used in workflows. This checks:
+- `type` is present and is a string
+- `pattern` (if present) passes the ReDoS check
+- Nested `primaryPipes` and `fallbackPipes` are validated recursively
+
 ## Examples
 
 ### E-commerce Price Cleansing

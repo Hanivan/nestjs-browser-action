@@ -681,6 +681,108 @@ export class MyService {
 }
 ```
 
+## Validators
+
+### validateWorkflow(workflow, options?)
+
+Validates a `WorkflowDefinition` before execution. Throws `WorkflowValidationError` on invalid fields.
+
+```typescript
+import { validateWorkflow, WorkflowValidationError } from '@hanivanrizky/nestjs-browser-action';
+
+try {
+  validateWorkflow(workflow);
+} catch (error) {
+  if (error instanceof WorkflowValidationError) {
+    console.log('Invalid field:', error.field);
+    console.log('Action:', error.action);
+  }
+}
+```
+
+**Options:**
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `allowCloakOverride` | `boolean` | `true` | Allow per-workflow cloak override |
+| `maxActions` | `number` | `100` | Maximum actions in workflow |
+| `maxRetry` | `number` | `100` | Maximum retry count per action |
+| `maxRetryDelayMs` | `number` | `300_000` | Maximum retry delay (ms) |
+| `maxTimeoutMs` | `number` | `300_000` | Maximum action timeout (ms) |
+| `maxWaitMs` | `number` | `300_000` | Maximum wait delay (ms) |
+| `maxDelayMs` | `number` | `60_000` | Maximum keystroke delay (ms) |
+| `maxNavigationTimeoutMs` | `number` | `300_000` | Maximum navigation timeout (ms) |
+| `allowedProtocols` | `string[]` | `['http', 'https']` | Allowed URL protocols |
+
+### validatePipeConfigs(configs, pathPrefix?)
+
+Validates an array of pipe configurations. Checks for required `type`, ReDoS-safe regex patterns, and recursively validates nested `primaryPipes`/`fallbackPipes`.
+
+```typescript
+import { validatePipeConfigs } from '@hanivanrizky/nestjs-browser-action';
+
+validatePipeConfigs([
+  { type: 'trim' },
+  { type: 'regex-extract', pattern: '\\d+' },
+]);
+```
+
+## Utilities
+
+### sanitizeForLog(value)
+
+Recursively sanitizes values for safe logging. Masks credentials in URLs and redacts sensitive keys.
+
+```typescript
+import { sanitizeForLog } from '@hanivanrizky/nestjs-browser-action';
+
+sanitizeForLog({
+  server: 'http://user:pass@proxy.com',
+  password: 'secret',
+});
+// { server: 'http://***:***@proxy.com', password: '***' }
+```
+
+### sanitizeErrorMessage(message)
+
+Sanitizes an error message string by masking embedded URL credentials.
+
+```typescript
+import { sanitizeErrorMessage } from '@hanivanrizky/nestjs-browser-action';
+
+sanitizeErrorMessage('Failed: ws://admin:secret@chrome:9222');
+// 'Failed: ws://***:***@chrome:9222'
+```
+
+### sanitizeScreenshotPath(input)
+
+Sanitizes screenshot paths to prevent directory traversal. Strips `..` sequences and backslashes, rejects absolute paths.
+
+```typescript
+import { sanitizeScreenshotPath } from '@hanivanrizky/nestjs-browser-action';
+
+sanitizeScreenshotPath('screenshots/page.png');
+// 'screenshots/page.png'
+
+sanitizeScreenshotPath('../../../etc/passwd.png');
+// 'etc/passwd.png'
+
+sanitizeScreenshotPath('/absolute/path.png');
+// throws Error: Absolute paths are not allowed for screenshots
+```
+
+### isSafeRegex(pattern)
+
+Checks if a regex pattern is safe from catastrophic backtracking (ReDoS). Returns `false` for patterns with nested quantifiers like `(a+)+`.
+
+```typescript
+import { isSafeRegex } from '@hanivanrizky/nestjs-browser-action';
+
+isSafeRegex('\\d+');      // true
+isSafeRegex('(a+)+');     // false
+isSafeRegex('(a*)*');     // false
+```
+
 ## See Also
 
 - [Method Documentation](../methods) - Detailed method guides

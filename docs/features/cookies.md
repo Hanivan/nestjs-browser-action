@@ -518,12 +518,28 @@ async safeCookieSave(page: Page, sessionName: string) {
 
 ## Features
 
-- ✅ **Persistent Storage:** Cookies saved to disk as JSON
-- ✅ **Session Metadata:** Store additional context with sessions
-- ✅ **Multiple Sessions:** Support multiple concurrent sessions
-- ✅ **Error Tolerant:** Graceful handling of missing sessions
-- ✅ **Workflow Integration:** Use in workflows with save/load/clear actions
-- ✅ **Type-Safe:** Full TypeScript support
+- **Persistent Storage:** Cookies saved to disk as JSON
+- **Session Metadata:** Store additional context with sessions
+- **Multiple Sessions:** Support multiple concurrent sessions
+- **Error Tolerant:** Graceful handling of missing sessions
+- **Workflow Integration:** Use in workflows with save/load/clear actions
+- **Type-Safe:** Full TypeScript support
+- **URL Validation:** Loaded session URLs are validated (only `http:`/`https:` allowed)
+- **Path Traversal Prevention:** `cookiesDir` options are restricted to the configured directory
+
+## Security
+
+### Stored URL Validation
+
+When `loadCookies()` restores a session, the saved `url` field is validated before navigating. Only `http:` and `https:` protocols are allowed, preventing stored open redirects to `file:`, `javascript:`, or other protocols.
+
+### Path Traversal Prevention
+
+The `cookiesDir` option in `saveCookies()` and `loadCookies()` is validated to ensure it stays within the configured cookies directory. Attempting to use a path outside the base directory throws an error.
+
+### Session Name Sanitization
+
+Session names are sanitized before use in filesystem paths. Only alphanumeric characters, underscores, and hyphens are allowed. Special characters are replaced with underscores.
 
 ## Related Methods
 

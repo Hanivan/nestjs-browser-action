@@ -296,11 +296,32 @@ strategy: 'least-recently-used'
 
 ## Connection Pooling Benefits
 
-- ✅ **Performance:** Reuse browser instances (faster than launching new ones)
-- ✅ **Resource Efficiency:** Limit maximum concurrent browsers
-- ✅ **Automatic Management:** Acquire and release automatically
-- ✅ **Scalability:** Handle concurrent requests efficiently
-- ✅ **Cleanup:** Idle browsers automatically closed
+- **Performance:** Reuse browser instances (faster than launching new ones)
+- **Resource Efficiency:** Limit maximum concurrent browsers
+- **Automatic Management:** Acquire and release automatically
+- **Scalability:** Handle concurrent requests efficiently
+- **Cleanup:** Idle browsers automatically closed
+
+## Security
+
+### Chromium Flag Warnings
+
+When launching local browsers, potentially dangerous Chromium flags are detected and logged as warnings. The library does not block these flags (developer library), but warns about flags such as:
+
+- `--remote-debugging-port`
+- `--no-sandbox`
+- `--disable-web-security`
+- `--disable-features=IsolateOrigins`
+
+### Credential Sanitization
+
+Browser connection URLs (`browserURL`, `browserWSEndpoint`) are sanitized before logging to prevent credential leakage. Credentials embedded in URLs are masked:
+
+```
+http://user:password@proxy.com  ->  http://***:***@proxy.com
+```
+
+The sanitizer covers 28 sensitive key names including `password`, `token`, `apiKey`, `secret`, `clientSecret`, and others.
 
 ## Error Handling
 

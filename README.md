@@ -2,6 +2,7 @@
 
 [![npm version](https://badge.fury.io/js/%40hanivanrizky%2Fnestjs-browser-action.svg)](https://www.npmjs.com/package/@hanivanrizky/nestjs-browser-action)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Tests: 322 passed](https://img.shields.io/badge/tests-322%20passed-brightgreen.svg)]()
 
 > **⚠️ Status: Experimental**
 >

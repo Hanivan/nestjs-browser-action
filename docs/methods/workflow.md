@@ -575,18 +575,59 @@ const actions = [
 
 ## Features
 
-- ✅ **Declarative:** Describe workflow in JSON-like structure
-- ✅ **Sequential:** Actions execute in order
-- ✅ **Variable Interpolation:** Use `${variable}` in values
-- ✅ **Conditional Execution:** Execute based on element existence
-- ✅ **Retry Logic:** Built-in retry on failure
-- ✅ **Multi-Element:** Extract single or all elements
-- ✅ **CSS & XPath:** Full selector support
-- ✅ **Shadow DOM:** Support for web components
-- ✅ **Data Cleansing:** Integrate pipe transformations
-- ✅ **Cookie Management:** Save/load sessions
-- ✅ **Error Handling:** Screenshot on error
-- ✅ **Type-Safe:** Full TypeScript generics
+- **Declarative:** Describe workflow in JSON-like structure
+- **Sequential:** Actions execute in order
+- **Variable Interpolation:** Use `${variable}` in values
+- **Conditional Execution:** Execute based on element existence
+- **Retry Logic:** Built-in retry on failure
+- **Multi-Element:** Extract single or all elements
+- **CSS & XPath:** Full selector support
+- **Shadow DOM:** Support for web components
+- **Data Cleansing:** Integrate pipe transformations
+- **Cookie Management:** Save/load sessions
+- **Error Handling:** Screenshot on error
+- **Type-Safe:** Full TypeScript generics
+- **Validation:** Workflows are validated before execution (action whitelist, bounds checking, URL/protocol restrictions)
+
+## Validation
+
+Workflows are validated by `validateWorkflow()` before execution. Invalid workflows fail fast with a `WorkflowValidationError` that includes the invalid field and action.
+
+### Validated Fields
+
+| Field | Rule |
+|---|---|
+| `action` | Must be one of 19 known action types |
+| `options.retry` | 0 to 100 |
+| `options.retryDelay` | 0 to 300,000 ms |
+| `options.timeout` | 0 to 300,000 ms |
+| `options.delay` | 0 to 60,000 ms |
+| `options.navigationTimeout` | 0 to 300,000 ms |
+| `navigate.value` | Must be a valid `http:` or `https:` URL |
+| `screenshot.value` | Must not contain `..` or start with `/` |
+| `evaluate.value` | Maximum 50,000 characters |
+| `wait.value` | 0 to 300,000 ms |
+| `cloak` | Can be disabled via `allowCloakOverride: false` |
+| `onError.screenshotPath` | Same path rules as `screenshot` |
+| `options.pipes` | Validated recursively via `validatePipeConfigs()` |
+
+### Custom Validation Options
+
+```typescript
+import { validateWorkflow } from '@hanivanrizky/nestjs-browser-action';
+
+validateWorkflow(workflow, {
+  maxActions: 50,              // default: 100
+  maxRetry: 10,                // default: 100
+  maxRetryDelayMs: 60_000,     // default: 300_000
+  maxTimeoutMs: 60_000,        // default: 300_000
+  maxWaitMs: 60_000,           // default: 300_000
+  maxDelayMs: 10_000,          // default: 60_000
+  maxNavigationTimeoutMs: 60_000, // default: 300_000
+  allowCloakOverride: false,   // default: true
+  allowedProtocols: ['https'], // default: ['http', 'https']
+});
+```
 
 ## Related Methods
 

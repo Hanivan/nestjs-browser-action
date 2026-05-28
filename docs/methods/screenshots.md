@@ -326,6 +326,24 @@ const workflow = {
 await this.actionHelpers.scrapeWithWorkflow(workflow);
 ```
 
+## Security
+
+### Path Sanitization
+
+Screenshot paths in workflows are sanitized to prevent directory traversal. Paths containing `..` or starting with `/` are rejected at validation time.
+
+```typescript
+// Valid
+{ action: 'screenshot', value: './screenshot.png' }
+{ action: 'screenshot', value: 'screenshots/page.png' }
+
+// Invalid — throws WorkflowValidationError
+{ action: 'screenshot', value: '../../../etc/passwd.png' }
+{ action: 'screenshot', value: '/absolute/path.png' }
+```
+
+Error screenshot paths (`onError.screenshotPath`) are subject to the same rules.
+
 ## Error Handling
 
 Both methods throw errors on failure:

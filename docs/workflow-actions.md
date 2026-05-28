@@ -2,6 +2,21 @@
 
 Complete reference of all workflow action types and their configurations.
 
+## Validation
+
+Workflows are validated before execution. Invalid workflows throw `WorkflowValidationError` with details about the invalid field. See [Workflow Validation](../methods/workflow.md#validation) for full validation rules.
+
+Key points:
+- Only known action types are accepted
+- `options.retry` is capped at 100
+- `options.retryDelay`, `options.timeout`, `options.navigationTimeout` are capped at 300,000 ms
+- `options.delay` (keystroke delay) is capped at 60,000 ms
+- `navigate.value` must be a valid `http:` or `https:` URL
+- `screenshot.value` must not contain `..` or start with `/`
+- `evaluate.value` is limited to 50,000 characters
+- `wait.value` is capped at 300,000 ms
+- `options.pipes` are validated recursively (ReDoS patterns rejected)
+
 ## Action Types
 
 | Action | Description | Category |
