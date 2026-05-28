@@ -58,6 +58,15 @@ export class PageService {
     cloak?: CloakOptions,
     interceptResource?: boolean,
   ): Promise<Page> {
+    // Security: recreate page if cloak/intercept config changes to prevent
+    // information leakage (wrong proxy, wrong stealth profile, wrong interception)
+    const needsNewPage =
+      !this.currentPage ||
+      (cloak !== undefined && !this.dedicated) ||
+      (cloak === undefined && this.dedicated);
+    if (needsNewPage && this.currentPage) {
+      await this.closePage();
+    }
     if (!this.currentPage) {
       await this.createPage(cloak, interceptResource);
     }

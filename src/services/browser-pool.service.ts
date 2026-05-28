@@ -22,6 +22,22 @@ import { LoggerWithLevel } from '../utils/logger.util';
 import { delay } from '../utils/delay.util';
 import { loadCloakPuppeteer } from '../utils/cloak.loader';
 
+/** Security: Chromium flags that must never be passed via user input */
+const BLOCKED_CHROMIUM_FLAGS = new Set([
+  '--remote-debugging-port',
+  '--remote-allow-origins',
+  '--load-extension',
+  '--disable-web-security',
+  '--no-sandbox',
+  '--disable-features=IsolateOrigins',
+  '--disable-site-isolation-trials',
+  '--allow-running-insecure-content',
+  '--reduce-security-for-testing',
+  '--disable-setuid-sandbox',
+  '--single-process',
+  '--no-zygote',
+]);
+
 @Injectable()
 export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
   private readonly logger: LoggerWithLevel;
@@ -42,6 +58,7 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
   private currentIndex: number = 0;
   private reaper?: ReturnType<typeof setInterval>;
   private destroyed = false;
+  private isShuttingDown = false;
 
   constructor(
     @Inject(BROWSER_ACTION_OPTIONS)
@@ -164,6 +181,19 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
     return browser;
   }
 
+  private warnOnDangerousFlags(args?: string[]): void {
+    if (!args) return;
+    for (const arg of args) {
+      const flagName = arg.split('=')[0];
+      if (BLOCKED_CHROMIUM_FLAGS.has(flagName)) {
+        this.logger.warn(
+          `Potentially dangerous Chromium flag detected: ${flagName}. ` +
+            `Only use this flag if you understand the security implications.`,
+        );
+      }
+    }
+  }
+
   private async launchLocal(cloakOverride?: CloakOptions): Promise<Browser> {
     const { launch, launchPersistentContext } = await loadCloakPuppeteer();
 
@@ -172,13 +202,18 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
       ...(cloakOverride ?? {}),
     };
     const headless = this.options.launchOptions?.headless ?? cloak.headless;
+    const launchOptions = {
+      ...(cloak.launchOptions ?? {}),
+      ...(this.options.launchOptions as Record<string, unknown> | undefined),
+    };
+    // Security: warn on potentially dangerous Chromium flags (developer responsibility)
+    if (Array.isArray(launchOptions.args)) {
+      this.warnOnDangerousFlags(launchOptions.args);
+    }
     const cloakOptions = {
       ...cloak,
       ...(typeof headless === 'boolean' ? { headless } : {}),
-      launchOptions: {
-        ...(cloak.launchOptions ?? {}),
-        ...(this.options.launchOptions as Record<string, unknown> | undefined),
-      },
+      launchOptions,
     };
 
     return cloak.userDataDir
@@ -382,6 +417,8 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
+    if (this.isShuttingDown) return;
+    this.isShuttingDown = true;
     this.destroyed = true;
     if (this.reaper) {
       clearInterval(this.reaper);

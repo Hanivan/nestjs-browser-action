@@ -2,6 +2,9 @@ import { Injectable, Inject } from '@nestjs/common';
 import type { Page } from 'puppeteer-core';
 import { promises as fs } from 'fs';
 import * as path from 'path';
+import { isURL } from 'class-validator';
+
+
 import {
   BROWSER_ACTION_OPTIONS,
   DEFAULT_COOKIE_OPTIONS,
@@ -48,11 +51,23 @@ export class CookieService {
   }
 
   /**
+   * Security: ensure a directory path is within the configured cookiesDir
+   */
+  private isSubPath(target: string, base: string): boolean {
+    const resolvedTarget = path.resolve(target);
+    const resolvedBase = path.resolve(base);
+    return resolvedTarget.startsWith(resolvedBase + path.sep) || resolvedTarget === resolvedBase;
+  }
+
+  /**
    * Get full file path for a session
    */
   private getSessionPath(sessionName: string, cookiesDir?: string): string {
     const sanitized = this.sanitizeSessionName(sessionName);
     const dir = cookiesDir || this.cookiesDir;
+    if (cookiesDir && !this.isSubPath(dir, this.cookiesDir)) {
+      throw new Error('cookiesDir must be within the configured cookies directory');
+    }
     return path.join(dir, `${sanitized}.json`);
   }
 
@@ -179,6 +194,9 @@ export class CookieService {
     }
 
     if (sessionData.url) {
+      if (!isURL(sessionData.url, { require_protocol: true, protocols: ['http', 'https'] })) {
+        throw new Error(`Invalid cookie session URL: ${sessionData.url}`);
+      }
       try {
         await page.goto(sessionData.url, { waitUntil: 'domcontentloaded' });
       } catch {

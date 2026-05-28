@@ -1,6 +1,9 @@
 import { Injectable, Scope, Optional, Inject } from '@nestjs/common';
 import { promises as fs } from 'fs';
 import { dirname } from 'path';
+import { isURL } from 'class-validator';
+import { sanitizeScreenshotPath } from '../utils/path.util';
+
 import type {
   Page,
   ScreenshotOptions,
@@ -547,9 +550,10 @@ export class BrowserActionService {
           }
 
           if (errorConfig.screenshot) {
-            const screenshotPath =
+            const screenshotPath = sanitizeScreenshotPath(
               errorConfig.screenshotPath ||
-              `${DEFAULT_ERROR_SCREENSHOT_FILENAME}-${Date.now()}.png`;
+              `${DEFAULT_ERROR_SCREENSHOT_FILENAME}-${Date.now()}.png`,
+            );
             await page.screenshot({ path: screenshotPath });
             result.screenshots?.push(screenshotPath);
           }
@@ -620,8 +624,8 @@ export class BrowserActionService {
       ),
     );
 
-    const maxRetries = action.options?.retry ?? 0;
-    const retryDelay = action.options?.retryDelay ?? 0;
+    const maxRetries = Math.min(action.options?.retry ?? 0, 100);
+    const retryDelay = Math.min(action.options?.retryDelay ?? 0, 300_000);
     for (let attempt = 0; ; attempt++) {
       try {
         await this.dispatchAction(page, action, value, context);
@@ -655,6 +659,9 @@ export class BrowserActionService {
           navOptions.waitUntil = action.options.waitUntil;
         if (action.options?.timeout)
           navOptions.timeout = action.options.timeout;
+        if (!isURL(value, { require_protocol: true, protocols: ['http', 'https'] })) {
+          throw new Error(`Invalid or disallowed URL: ${value}`);
+        }
         this.logger.debug(
           truncateLog(this.activeDebugLogMaxLength, `  navigate → ${value}`),
         );
@@ -672,7 +679,7 @@ export class BrowserActionService {
             `  wait ${Number(action.value) || 0}ms`,
           ),
         );
-        await delay(Number(action.value) || 0);
+        await delay(Math.min(Number(action.value) || 0, 300_000));
         break;
 
       case 'waitFor':
@@ -804,6 +811,9 @@ export class BrowserActionService {
           evalCode = `(${value})()`;
         } else {
           evalCode = value;
+        }
+        if (evalCode.length > 50_000) {
+          throw new Error('evaluate script exceeds maximum length of 50000 characters');
         }
 
         this.logger.debug(
@@ -1372,6 +1382,10 @@ export class BrowserActionService {
       let result: unknown = context;
 
       for (const key of keys) {
+        // Security: block prototype pollution keys
+        if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+          return '';
+        }
         // Handle array access like packages[0]
         const arrayMatch = key.match(/^(\w+)\[(\d+)\]$/);
         if (arrayMatch) {
