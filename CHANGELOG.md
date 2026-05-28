@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.13.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.12.0...v0.13.0) (2026-05-28)
+
+
+### Features
+
+* implement workflow validation and credential sanitization ([48f4a28](https://github.com/Hanivan/nestjs-browser-action/commit/48f4a28c736e418a0c47a647ca2df60ee9c7a415))
+
 # [0.12.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.11.0...v0.12.0) (2026-05-28)
 
 
