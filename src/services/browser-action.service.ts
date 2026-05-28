@@ -552,7 +552,7 @@ export class BrowserActionService {
           if (errorConfig.screenshot) {
             const screenshotPath = sanitizeScreenshotPath(
               errorConfig.screenshotPath ||
-              `${DEFAULT_ERROR_SCREENSHOT_FILENAME}-${Date.now()}.png`,
+                `${DEFAULT_ERROR_SCREENSHOT_FILENAME}-${Date.now()}.png`,
             );
             await page.screenshot({ path: screenshotPath });
             result.screenshots?.push(screenshotPath);
@@ -659,7 +659,12 @@ export class BrowserActionService {
           navOptions.waitUntil = action.options.waitUntil;
         if (action.options?.timeout)
           navOptions.timeout = action.options.timeout;
-        if (!isURL(value, { require_protocol: true, protocols: ['http', 'https'] })) {
+        if (
+          !isURL(value, {
+            require_protocol: true,
+            protocols: ['http', 'https'],
+          })
+        ) {
           throw new Error(`Invalid or disallowed URL: ${value}`);
         }
         this.logger.debug(
@@ -813,7 +818,9 @@ export class BrowserActionService {
           evalCode = value;
         }
         if (evalCode.length > 50_000) {
-          throw new Error('evaluate script exceeds maximum length of 50000 characters');
+          throw new Error(
+            'evaluate script exceeds maximum length of 50000 characters',
+          );
         }
 
         this.logger.debug(
@@ -1383,7 +1390,11 @@ export class BrowserActionService {
 
       for (const key of keys) {
         // Security: block prototype pollution keys
-        if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+        if (
+          key === '__proto__' ||
+          key === 'constructor' ||
+          key === 'prototype'
+        ) {
           return '';
         }
         // Handle array access like packages[0]

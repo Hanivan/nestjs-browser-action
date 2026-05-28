@@ -4,7 +4,6 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { isURL } from 'class-validator';
 
-
 import {
   BROWSER_ACTION_OPTIONS,
   DEFAULT_COOKIE_OPTIONS,
@@ -56,7 +55,10 @@ export class CookieService {
   private isSubPath(target: string, base: string): boolean {
     const resolvedTarget = path.resolve(target);
     const resolvedBase = path.resolve(base);
-    return resolvedTarget.startsWith(resolvedBase + path.sep) || resolvedTarget === resolvedBase;
+    return (
+      resolvedTarget.startsWith(resolvedBase + path.sep) ||
+      resolvedTarget === resolvedBase
+    );
   }
 
   /**
@@ -66,7 +68,9 @@ export class CookieService {
     const sanitized = this.sanitizeSessionName(sessionName);
     const dir = cookiesDir || this.cookiesDir;
     if (cookiesDir && !this.isSubPath(dir, this.cookiesDir)) {
-      throw new Error('cookiesDir must be within the configured cookies directory');
+      throw new Error(
+        'cookiesDir must be within the configured cookies directory',
+      );
     }
     return path.join(dir, `${sanitized}.json`);
   }
@@ -194,7 +198,12 @@ export class CookieService {
     }
 
     if (sessionData.url) {
-      if (!isURL(sessionData.url, { require_protocol: true, protocols: ['http', 'https'] })) {
+      if (
+        !isURL(sessionData.url, {
+          require_protocol: true,
+          protocols: ['http', 'https'],
+        })
+      ) {
         throw new Error(`Invalid cookie session URL: ${sessionData.url}`);
       }
       try {
