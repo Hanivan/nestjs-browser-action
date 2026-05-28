@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import { dirname } from 'path';
 import { isURL } from 'class-validator';
 import { sanitizeScreenshotPath } from '../utils/path.util';
+import { validateWorkflow } from '../validators/workflow.validator';
 
 import type {
   Page,
@@ -510,6 +511,9 @@ export class BrowserActionService {
     workflow: WorkflowDefinition,
     variables?: VariableContext,
   ): Promise<WorkflowResultTyped<T>> {
+    // Security: validate workflow before execution (fail fast)
+    validateWorkflow(workflow);
+
     this.activeDebugLogMaxLength =
       workflow.debugLogMaxLength ??
       this.moduleOptions?.debugLogMaxLength ??

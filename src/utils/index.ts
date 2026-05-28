@@ -3,6 +3,7 @@ export * from './dom.util';
 export * from './logger.util';
 export * from './path.util';
 export * from './regex.util';
+export * from './sanitize.util';
 export * from './string.util';
 export * from './truncate-log.util';
 export * from './cloak.loader';

@@ -18,6 +18,7 @@ import type {
   RemoteOptions,
 } from '../interfaces/browser-action-options';
 import type { LogLevel } from '@nestjs/common';
+import { sanitizeForLog } from '../utils/sanitize.util';
 import { LoggerWithLevel } from '../utils/logger.util';
 import { delay } from '../utils/delay.util';
 import { loadCloakPuppeteer } from '../utils/cloak.loader';
@@ -85,11 +86,11 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
     const remote = this.options.remote;
     if (remote?.browserURL) {
       this.logger.log(
-        `Browser mode: Remote CDP (browserURL: ${remote.browserURL})`,
+        `Browser mode: Remote CDP (browserURL: ${String(sanitizeForLog(remote.browserURL))})`,
       );
     } else if (remote?.browserWSEndpoint) {
       this.logger.log(
-        `Browser mode: Remote CDP (WebSocket: ${remote.browserWSEndpoint})`,
+        `Browser mode: Remote CDP (WebSocket: ${String(sanitizeForLog(remote.browserWSEndpoint))})`,
       );
     } else {
       this.logger.log('Browser mode: Local CloakBrowser (stealth Chromium)');

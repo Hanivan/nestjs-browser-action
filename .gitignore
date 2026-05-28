@@ -50,6 +50,7 @@ lerna-debug.log*
 docs/plans
 docs/superpowers
 docs/todos
+docs/security
 
 # Runtime data
 pids
@@ -59,3 +60,4 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+docs/security/audit-deferred-fixes.md
