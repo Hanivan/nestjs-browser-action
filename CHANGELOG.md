@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.14.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.13.1...v0.14.0) (2026-06-24)
+
+
+### Features
+
+* add container extraction, pagination, and scraping options ([f7136eb](https://github.com/Hanivan/nestjs-browser-action/commit/f7136ebbdc2d2a7dad9a05f1481c662ba0dc7b08))
+
 ## [0.13.1](https://github.com/Hanivan/nestjs-browser-action/compare/v0.13.0...v0.13.1) (2026-05-28)
 
 # [0.13.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.12.0...v0.13.0) (2026-05-28)
