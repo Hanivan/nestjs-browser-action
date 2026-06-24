@@ -30,7 +30,12 @@ import {
   ScrapeAllResult,
   WorkflowResultTyped,
   PipeConfig,
+  ContainerDescriptor,
+  ContainerScrapeResult,
+  PaginationDescriptor,
+  PaginationResult,
 } from '../interfaces/types';
+import { getRandomUserAgent } from '../utils/user-agent.util';
 import type { TlsFingerprint } from '../interfaces/tls-fingerprint';
 import type { BrowserActionOptions } from '../interfaces/browser-action-options';
 import { LoggerWithLevel } from '../utils/logger.util';
@@ -173,10 +178,15 @@ export class BrowserActionService {
     this.logger.debug(
       truncateLog(this.activeDebugLogMaxLength, `Scraping ${url}`),
     );
+    const cloak = options?.useRandomUserAgent
+      ? { ...options?.cloak, userAgent: getRandomUserAgent() }
+      : options?.cloak;
+
     const page = await this.pageService.navigateTo(
       url,
       this.buildNavOptions(options),
-      options?.cloak,
+      cloak,
+      options?.interceptResource,
     );
 
     const result: ScrapeResult = {};
@@ -228,9 +238,14 @@ export class BrowserActionService {
     return { selector: raw };
   }
 
-  private buildNavOptions(options?: ScraperOptions) {
+  private buildNavOptions(
+    options?: ScraperOptions,
+  ): import('./page.service').NavigateOptions | undefined {
     if (!options?.waitUntil && !options?.timeout) return undefined;
-    return { waitUntil: options.waitUntil, timeout: options.timeout };
+    return {
+      waitUntil: options?.waitUntil,
+      timeout: options?.timeout,
+    };
   }
 
   async scrapeAll<T extends SelectorMap>(
@@ -244,10 +259,15 @@ export class BrowserActionService {
         `Scraping all elements from ${url}`,
       ),
     );
+    const cloak = options?.useRandomUserAgent
+      ? { ...options?.cloak, userAgent: getRandomUserAgent() }
+      : options?.cloak;
+
     const page = await this.pageService.navigateTo(
       url,
       this.buildNavOptions(options),
-      options?.cloak,
+      cloak,
+      options?.interceptResource,
     );
 
     const result: ScrapeAllResult = {};
@@ -337,6 +357,73 @@ export class BrowserActionService {
 
     await this.pageService.closePage();
     return result;
+  }
+
+  async scrapeContainerFields<T = Record<string, unknown>>(
+    url: string,
+    descriptor: ContainerDescriptor<T>,
+    options?: ScraperOptions,
+  ): Promise<ContainerScrapeResult<T>> {
+    this.logger.debug(
+      truncateLog(
+        this.activeDebugLogMaxLength,
+        `Scraping container fields from ${url}`,
+      ),
+    );
+
+    const cloak = options?.useRandomUserAgent
+      ? { ...options?.cloak, userAgent: getRandomUserAgent() }
+      : options?.cloak;
+
+    let page: Page;
+    try {
+      page = await this.pageService.navigateTo(
+        url,
+        this.buildNavOptions(options),
+        cloak,
+        options?.interceptResource,
+      );
+    } catch (err) {
+      await this.pageService.closePage();
+      throw err;
+    }
+
+    try {
+      const raw = await this.executeContainerExtraction(
+        page,
+        descriptor as ContainerDescriptor,
+        options?.currentPage ?? 1,
+      );
+
+      // Apply pipes per field
+      const items = raw.items.map((item) => {
+        const out: Record<string, unknown> = {};
+        for (const key of Object.keys(item)) {
+          const val = item[key];
+          if (options?.pipes?.[key]) {
+            const pipes = this.getCachedPipeInstances(options.pipes[key]);
+            const toStr = (v: unknown) =>
+              typeof v === 'string' ? v : String(v as string);
+            out[key] = Array.isArray(val)
+              ? val.map((v) =>
+                  v == null
+                    ? null
+                    : this.cleansingService.cleanse(toStr(v), pipes),
+                )
+              : val == null
+                ? null
+                : this.cleansingService.cleanse(toStr(val), pipes);
+          } else {
+            out[key] = val;
+          }
+        }
+        return out as T;
+      });
+
+      return { items, pagination: raw.pagination };
+    } finally {
+      await this.pageService.closePage();
+    }
   }
 
   private async extractAllData(
@@ -1001,6 +1088,77 @@ export class BrowserActionService {
         });
         break;
 
+      case 'scrapeContainer': {
+        const o = action.options;
+        if (!o?.container || !o?.fields) {
+          throw new Error(
+            'scrapeContainer requires options.container and options.fields',
+          );
+        }
+        this.logger.debug(
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `  scrapeContainer container="${o.container}"`,
+          ),
+        );
+        const containerResult = await this.executeContainerExtraction(
+          page,
+          {
+            container: o.container,
+            fields: o.fields,
+            pagination: o.pagination,
+          },
+          o.currentPage ?? 1,
+        );
+        if (action.id) {
+          context[action.id] = containerResult.items;
+          if (containerResult.pagination) {
+            context[`${action.id}_pagination`] = containerResult.pagination;
+          }
+          this.logger.debug(
+            truncateLog(
+              this.activeDebugLogMaxLength,
+              `  scrapeContainer → id="${action.id}": ${containerResult.items.length} items`,
+            ),
+          );
+        }
+        break;
+      }
+
+      case 'extractPagination': {
+        const o = action.options;
+        if (!o?.container || !o?.linkSelector || !o?.labelSelector) {
+          throw new Error(
+            'extractPagination requires options.container, linkSelector, and labelSelector',
+          );
+        }
+        this.logger.debug(
+          truncateLog(
+            this.activeDebugLogMaxLength,
+            `  extractPagination container="${o.container}"`,
+          ),
+        );
+        const paginationResult = await this.resolvePagination(
+          page,
+          {
+            container: o.container,
+            linkSelector: o.linkSelector,
+            labelSelector: o.labelSelector,
+          },
+          o.currentPage ?? 1,
+        );
+        if (action.id) {
+          context[action.id] = paginationResult;
+          this.logger.debug(
+            truncateLog(
+              this.activeDebugLogMaxLength,
+              `  extractPagination → id="${action.id}": nextUrl=${paginationResult.nextUrl}`,
+            ),
+          );
+        }
+        break;
+      }
+
       default: {
         const exhaustiveCheck: never = action.action;
         throw new Error(`Unknown action type: ${String(exhaustiveCheck)}`);
@@ -1249,6 +1407,239 @@ export class BrowserActionService {
       {},
     );
     await delay(DEFAULT_SCROLL_DELAY_MS);
+  }
+
+  private async executeContainerExtraction(
+    page: Page,
+    descriptor: import('../interfaces/types').ContainerDescriptor,
+    currentPage = 1,
+  ): Promise<import('../interfaces/types').ContainerScrapeResult> {
+    const rawItems = await page.evaluate(
+      (
+        containerSel: string,
+        fieldDefs: Record<
+          string,
+          {
+            selector: string;
+            attribute?: string;
+            returnType?: string;
+            multiple?: boolean;
+            fallback?: string[];
+          }
+        >,
+      ) => {
+        const isXPath = (s: string) =>
+          s.trim().startsWith('//') || s.trim().startsWith('(');
+        const getContainerNodes = (sel: string): Element[] => {
+          if (isXPath(sel)) {
+            const res = document.evaluate(
+              sel,
+              document,
+              null,
+              XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+              null,
+            );
+            const nodes: Element[] = [];
+            for (let i = 0; i < res.snapshotLength; i++)
+              nodes.push(res.snapshotItem(i) as Element);
+            return nodes;
+          }
+          return Array.from(document.querySelectorAll(sel));
+        };
+        const extractOne = (
+          sel: string,
+          root: Element,
+          attr?: string,
+          returnType?: string,
+        ): string => {
+          let node: Element | Node | null = null;
+          if (isXPath(sel)) {
+            const res = document.evaluate(
+              sel,
+              root,
+              null,
+              XPathResult.FIRST_ORDERED_NODE_TYPE,
+              null,
+            );
+            node = res.singleNodeValue;
+          } else {
+            node = root.querySelector(sel);
+          }
+          if (!node) return '';
+          if (attr) return (node as Element).getAttribute?.(attr) ?? '';
+          if (returnType === 'html') return (node as Element).innerHTML ?? '';
+          return node.textContent?.trim() ?? '';
+        };
+        const extractMany = (
+          sel: string,
+          root: Element,
+          attr?: string,
+          returnType?: string,
+        ): string[] => {
+          let nodes: (Element | Node)[] = [];
+          if (isXPath(sel)) {
+            const res = document.evaluate(
+              sel,
+              root,
+              null,
+              XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+              null,
+            );
+            for (let i = 0; i < res.snapshotLength; i++)
+              nodes.push(res.snapshotItem(i) as Element);
+          } else {
+            nodes = Array.from(root.querySelectorAll(sel));
+          }
+          return nodes.map((n) => {
+            if (attr) return (n as Element).getAttribute?.(attr) ?? '';
+            if (returnType === 'html') return (n as Element).innerHTML ?? '';
+            return n.textContent?.trim() ?? '';
+          });
+        };
+        const extractField = (
+          root: Element,
+          fd: {
+            selector: string;
+            attribute?: string;
+            returnType?: string;
+            multiple?: boolean;
+            fallback?: string[];
+          },
+        ): string | string[] => {
+          const selectors = [fd.selector, ...(fd.fallback ?? [])];
+          for (const sel of selectors) {
+            const val = fd.multiple
+              ? extractMany(sel, root, fd.attribute, fd.returnType)
+              : extractOne(sel, root, fd.attribute, fd.returnType);
+            if (Array.isArray(val) ? val.length > 0 : val !== '') return val;
+          }
+          return fd.multiple ? [] : '';
+        };
+        return getContainerNodes(containerSel).map((node) => {
+          const item: Record<string, unknown> = {};
+          for (const [key, fd] of Object.entries(fieldDefs))
+            item[key] = extractField(node, fd);
+          return item;
+        });
+      },
+      descriptor.container,
+      descriptor.fields as Record<
+        string,
+        {
+          selector: string;
+          attribute?: string;
+          returnType?: string;
+          multiple?: boolean;
+          fallback?: string[];
+        }
+      >,
+    );
+
+    const items = rawItems;
+    let pagination: import('../interfaces/types').PaginationResult | undefined;
+    if (descriptor.pagination) {
+      pagination = await this.resolvePagination(
+        page,
+        descriptor.pagination,
+        currentPage,
+      );
+    }
+    return { items, pagination };
+  }
+
+  private async resolvePagination(
+    page: Page,
+    descriptor: PaginationDescriptor,
+    currentPage = 1,
+  ): Promise<PaginationResult> {
+    currentPage = Math.max(1, currentPage);
+    const rawPages = await page.evaluate(
+      (containerSel: string, linkSel: string, labelSel: string) => {
+        const getNode = (sel: string, root: Document | Element) => {
+          if (sel.trim().startsWith('//') || sel.trim().startsWith('(')) {
+            const res = document.evaluate(
+              sel,
+              root,
+              null,
+              XPathResult.FIRST_ORDERED_NODE_TYPE,
+              null,
+            );
+            return res.singleNodeValue as Element | null;
+          }
+          return root.querySelector(sel);
+        };
+        const getNodes = (sel: string, root: Element) => {
+          if (sel.trim().startsWith('//') || sel.trim().startsWith('(')) {
+            const res = document.evaluate(
+              sel,
+              root,
+              null,
+              XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+              null,
+            );
+            const nodes: Element[] = [];
+            for (let i = 0; i < res.snapshotLength; i++)
+              nodes.push(res.snapshotItem(i) as Element);
+            return nodes;
+          }
+          return Array.from(root.querySelectorAll(sel));
+        };
+
+        const container = getNode(containerSel, document);
+        if (!container) return [];
+
+        return getNodes(linkSel, container).map((el) => {
+          // Use labelSel relative to each link element to extract the label text
+          const isXPath = (s: string) =>
+            s.trim().startsWith('//') || s.trim().startsWith('(');
+          const labelNodes = isXPath(labelSel)
+            ? (() => {
+                const r = document.evaluate(
+                  labelSel,
+                  el,
+                  null,
+                  XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+                  null,
+                );
+                const ns: Element[] = [];
+                for (let i = 0; i < r.snapshotLength; i++)
+                  ns.push(r.snapshotItem(i) as Element);
+                return ns;
+              })()
+            : Array.from(el.querySelectorAll(labelSel));
+          const label =
+            labelNodes.length > 0
+              ? (labelNodes[0].textContent?.trim() ?? '')
+              : (el.textContent?.trim() ?? '');
+          return {
+            label,
+            url: el.getAttribute('href') ?? '',
+          };
+        });
+      },
+      descriptor.container,
+      descriptor.linkSelector,
+      descriptor.labelSelector,
+    );
+
+    const pages = (rawPages as Array<{ label: string; url: string }>).filter(
+      (p) => p.url,
+    );
+
+    const numericNext = pages
+      .filter(
+        (p) =>
+          !Number.isNaN(parseInt(p.label, 10)) &&
+          parseInt(p.label, 10) > currentPage,
+      )
+      .sort((a, b) => parseInt(a.label, 10) - parseInt(b.label, 10))[0];
+
+    const nextUrl =
+      numericNext?.url ??
+      pages.find((p) => ['next', '>'].includes(p.label.toLowerCase()))?.url ??
+      null;
+
+    return { pages, nextUrl };
   }
 
   private getCachedPipeInstances(config: PipeConfig[]): CleansingPipe[] {

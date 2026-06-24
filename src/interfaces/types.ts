@@ -84,9 +84,9 @@ export type ScrapeAllResult = Partial<Record<string, unknown[]>>;
  */
 export type ScraperOptions = {
   pipes?: PipeOptions;
-  /** Navigation wait condition passed to page.goto. */
+  /** Navigation wait condition passed to page.goto / page.setContent. */
   waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2';
-  /** Navigation timeout (ms) passed to page.goto. */
+  /** Navigation timeout (ms). */
   timeout?: number;
   /**
    * Per-call CloakBrowser override. When set, this call runs on a dedicated
@@ -94,6 +94,21 @@ export type ScraperOptions = {
    * closed when the call finishes. Ignored for remote (CDP) mode.
    */
   cloak?: CloakOptions;
+  /**
+   * When true, abort requests for stylesheet, image, media, and font resources.
+   * Scripts, XHR, and fetch remain enabled.
+   */
+  interceptResource?: boolean;
+  /**
+   * When true, pick a random Chrome 71+ user-agent string per call.
+   * Overrides cloak.userAgent for this call only.
+   */
+  useRandomUserAgent?: boolean;
+  /**
+   * Current page number, used by scrapeContainerFields() to resolve pagination.nextUrl.
+   * Default: 1.
+   */
+  currentPage?: number;
 };
 
 /**
@@ -181,6 +196,54 @@ export interface WorkflowResultTyped<T = Record<string, unknown>> {
   data: T;
   errors: string[];
   screenshots?: string[];
+}
+
+/**
+ * How to extract one named field from a container node.
+ * Selector is CSS or XPath (auto-detected by // or ( prefix), relative to the container node.
+ */
+export interface FieldDescriptor {
+  selector: string;
+  attribute?: string;
+  returnType?: 'text' | 'html';
+  multiple?: boolean;
+  fallback?: string[];
+}
+
+/**
+ * How to find pagination links on a page.
+ */
+export interface PaginationDescriptor {
+  container: string;
+  linkSelector: string;
+  labelSelector: string;
+}
+
+/**
+ * Resolved pagination state returned from extraction.
+ */
+export interface PaginationResult {
+  pages: Array<{ label: string; url: string }>;
+  nextUrl: string | null;
+}
+
+/**
+ * Full descriptor for scrapeContainerFields().
+ * `container` is CSS or XPath to each repeating root node.
+ * `fields` maps output key names to FieldDescriptor.
+ */
+export interface ContainerDescriptor<T = Record<string, unknown>> {
+  container: string;
+  fields: Record<string & keyof T, FieldDescriptor>;
+  pagination?: PaginationDescriptor;
+}
+
+/**
+ * Output of scrapeContainerFields().
+ */
+export interface ContainerScrapeResult<T = Record<string, unknown>> {
+  items: T[];
+  pagination?: PaginationResult;
 }
 
 /**

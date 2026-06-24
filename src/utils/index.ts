@@ -7,3 +7,4 @@ export * from './sanitize.util';
 export * from './string.util';
 export * from './truncate-log.util';
 export * from './cloak.loader';
+export * from './user-agent.util';

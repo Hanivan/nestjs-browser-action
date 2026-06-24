@@ -51,6 +51,8 @@ const VALID_ACTIONS = new Set<ActionType>([
   'clear',
   'waitForNetwork',
   'reload',
+  'scrapeContainer',
+  'extractPagination',
 ]);
 
 /** Default limits */
@@ -231,6 +233,85 @@ function validateAction(
         `${prefix}.value`,
         action.action,
         `wait value must be a number between 0 and ${opts.maxWaitMs}ms`,
+      );
+    }
+  }
+
+  if (action.action === 'scrapeContainer') {
+    const container = action.options?.container;
+    if (
+      !container ||
+      typeof container !== 'string' ||
+      container.trim() === ''
+    ) {
+      throw new WorkflowValidationError(
+        `${prefix}.options.container`,
+        action.action,
+        'scrapeContainer action requires a non-empty options.container selector',
+      );
+    }
+    const fields = action.options?.fields;
+    if (
+      !fields ||
+      typeof fields !== 'object' ||
+      Object.keys(fields).length === 0
+    ) {
+      throw new WorkflowValidationError(
+        `${prefix}.options.fields`,
+        action.action,
+        'scrapeContainer action requires a non-empty options.fields object',
+      );
+    }
+    for (const [fieldKey, fd] of Object.entries(fields)) {
+      if (
+        !fd ||
+        typeof (fd as { selector?: string }).selector !== 'string' ||
+        (fd as { selector: string }).selector.trim() === ''
+      ) {
+        throw new WorkflowValidationError(
+          `${prefix}.options.fields.${fieldKey}.selector`,
+          action.action,
+          `scrapeContainer field "${fieldKey}" requires a non-empty selector`,
+        );
+      }
+    }
+  }
+
+  if (action.action === 'extractPagination') {
+    const container = action.options?.container;
+    if (
+      !container ||
+      typeof container !== 'string' ||
+      container.trim() === ''
+    ) {
+      throw new WorkflowValidationError(
+        `${prefix}.options.container`,
+        action.action,
+        'extractPagination action requires a non-empty options.container selector',
+      );
+    }
+    const linkSelector = action.options?.linkSelector;
+    if (
+      !linkSelector ||
+      typeof linkSelector !== 'string' ||
+      linkSelector.trim() === ''
+    ) {
+      throw new WorkflowValidationError(
+        `${prefix}.options.linkSelector`,
+        action.action,
+        'extractPagination action requires a non-empty options.linkSelector',
+      );
+    }
+    const labelSelector = action.options?.labelSelector;
+    if (
+      !labelSelector ||
+      typeof labelSelector !== 'string' ||
+      labelSelector.trim() === ''
+    ) {
+      throw new WorkflowValidationError(
+        `${prefix}.options.labelSelector`,
+        action.action,
+        'extractPagination action requires a non-empty options.labelSelector',
       );
     }
   }

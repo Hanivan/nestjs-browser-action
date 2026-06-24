@@ -264,3 +264,116 @@ describe('validatePipeConfigs', () => {
     );
   });
 });
+
+describe('scrapeContainer action validation', () => {
+  it('should pass with valid scrapeContainer action', () => {
+    const workflow: WorkflowDefinition = {
+      version: '1.0',
+      actions: [
+        {
+          action: 'scrapeContainer',
+          id: 'items',
+          options: {
+            container: '//div[@class="item"]',
+            fields: {
+              title: { selector: './/h2' },
+              link: { selector: './/a', attribute: 'href' },
+            },
+          },
+        },
+      ],
+    };
+    expect(() => validateWorkflow(workflow)).not.toThrow();
+  });
+
+  it('should throw when scrapeContainer is missing options.container', () => {
+    const workflow: WorkflowDefinition = {
+      version: '1.0',
+      actions: [
+        {
+          action: 'scrapeContainer',
+          options: { fields: { title: { selector: './/h2' } } },
+        } as any,
+      ],
+    };
+    expect(() => validateWorkflow(workflow)).toThrow(WorkflowValidationError);
+    expect(() => validateWorkflow(workflow)).toThrow('container');
+  });
+
+  it('should throw when scrapeContainer has empty fields', () => {
+    const workflow: WorkflowDefinition = {
+      version: '1.0',
+      actions: [
+        {
+          action: 'scrapeContainer',
+          options: { container: '//div', fields: {} },
+        } as any,
+      ],
+    };
+    expect(() => validateWorkflow(workflow)).toThrow(WorkflowValidationError);
+    expect(() => validateWorkflow(workflow)).toThrow('fields');
+  });
+
+  it('should throw when a field has an empty selector', () => {
+    const workflow: WorkflowDefinition = {
+      version: '1.0',
+      actions: [
+        {
+          action: 'scrapeContainer',
+          options: { container: '//div', fields: { title: { selector: '' } } },
+        } as any,
+      ],
+    };
+    expect(() => validateWorkflow(workflow)).toThrow(WorkflowValidationError);
+    expect(() => validateWorkflow(workflow)).toThrow('selector');
+  });
+});
+
+describe('extractPagination action validation', () => {
+  it('should pass with valid extractPagination action', () => {
+    const workflow: WorkflowDefinition = {
+      version: '1.0',
+      actions: [
+        {
+          action: 'extractPagination',
+          id: 'pages',
+          options: {
+            container: '//ul[@class="pager"]',
+            linkSelector: './/a',
+            labelSelector: './/a',
+            currentPage: 1,
+          },
+        },
+      ],
+    };
+    expect(() => validateWorkflow(workflow)).not.toThrow();
+  });
+
+  it('should throw when extractPagination is missing options.container', () => {
+    const workflow: WorkflowDefinition = {
+      version: '1.0',
+      actions: [
+        {
+          action: 'extractPagination',
+          options: { linkSelector: './/a', labelSelector: './/a' },
+        } as any,
+      ],
+    };
+    expect(() => validateWorkflow(workflow)).toThrow(WorkflowValidationError);
+    expect(() => validateWorkflow(workflow)).toThrow('container');
+  });
+
+  it('should throw when extractPagination is missing linkSelector', () => {
+    const workflow: WorkflowDefinition = {
+      version: '1.0',
+      actions: [
+        {
+          action: 'extractPagination',
+          options: { container: '//ul', labelSelector: './/a' },
+        } as any,
+      ],
+    };
+    expect(() => validateWorkflow(workflow)).toThrow(WorkflowValidationError);
+    expect(() => validateWorkflow(workflow)).toThrow('linkSelector');
+  });
+});

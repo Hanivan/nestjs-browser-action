@@ -582,6 +582,7 @@ describe('BrowserActionService', () => {
         'https://example.com',
         undefined,
         cloak,
+        undefined,
       );
     });
 

@@ -3,7 +3,11 @@
  * Based on action-based scraping patterns
  */
 
-import type { PipeConfig } from './types';
+import type {
+  PipeConfig,
+  FieldDescriptor,
+  PaginationDescriptor,
+} from './types';
 import type { CloakOptions } from './browser-action-options';
 
 /**
@@ -38,7 +42,9 @@ export type ActionType =
   | 'keyPress' // Press keyboard key(s)
   | 'clear' // Clear input field value
   | 'waitForNetwork' // Wait for network idle
-  | 'reload'; // Reload the page
+  | 'reload' // Reload the page
+  | 'scrapeContainer' // Scrape container fields
+  | 'extractPagination'; // Extract pagination links
 
 /**
  * Condition for conditional action execution
@@ -71,6 +77,14 @@ export interface ActionOptions {
   as?: 'text' | 'html' | 'outerHtml' | 'attribute'; // Extract mode (default: 'text')
   attribute?: string; // Attribute name when as: 'attribute'
   waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2'; // For reload
+  // scrapeContainer options
+  container?: string;
+  fields?: Record<string, FieldDescriptor>;
+  pagination?: PaginationDescriptor;
+  // extractPagination options
+  linkSelector?: string;
+  labelSelector?: string;
+  currentPage?: number;
 }
 
 /**

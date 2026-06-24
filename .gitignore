@@ -51,6 +51,7 @@ docs/plans
 docs/superpowers
 docs/todos
 docs/security
+.superpowers
 
 # Runtime data
 pids

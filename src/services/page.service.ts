@@ -1,9 +1,14 @@
 import { Injectable, Scope } from '@nestjs/common';
-import type { Browser, Page, WaitForOptions } from 'puppeteer-core';
+import type { Browser, Page } from 'puppeteer-core';
 import { BrowserManagerService } from './browser-manager.service';
 import type { LogLevel } from '@nestjs/common';
 import { LoggerWithLevel } from '../utils/logger.util';
 import type { CloakOptions } from '../interfaces/browser-action-options';
+
+export interface NavigateOptions {
+  waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2';
+  timeout?: number;
+}
 
 @Injectable({ scope: Scope.TRANSIENT })
 export class PageService {
@@ -54,7 +59,7 @@ export class PageService {
 
   async navigateTo(
     url: string,
-    options?: WaitForOptions,
+    options?: NavigateOptions,
     cloak?: CloakOptions,
     interceptResource?: boolean,
   ): Promise<Page> {
@@ -71,11 +76,19 @@ export class PageService {
       await this.createPage(cloak, interceptResource);
     }
     this.logger.debug(`Navigating to ${url}`);
-    if (this.currentPage) {
-      await this.currentPage.goto(url, options);
-      return this.currentPage;
-    }
-    throw new Error('Failed to create page');
+    if (!this.currentPage) throw new Error('Failed to create page');
+
+    const gotoOptions: {
+      waitUntil?: NavigateOptions['waitUntil'];
+      timeout?: number;
+    } = {};
+    if (options?.waitUntil) gotoOptions.waitUntil = options.waitUntil;
+    if (options?.timeout !== undefined) gotoOptions.timeout = options.timeout;
+    await this.currentPage.goto(
+      url,
+      Object.keys(gotoOptions).length ? gotoOptions : undefined,
+    );
+    return this.currentPage;
   }
 
   async closePage(): Promise<void> {
