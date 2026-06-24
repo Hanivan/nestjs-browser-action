@@ -37,6 +37,8 @@ Key points:
 | `screenshot` | Take screenshot | Data |
 | `evaluate` | Execute JavaScript | Data |
 | `cleanse` | Cleanse extracted data with pipes | Data |
+| `scrapeContainer` | Extract structured list with optional pagination | Data |
+| `extractPagination` | Extract pagination links from the page | Data |
 | `saveCookies` | Save cookies to file | Cookie |
 | `loadCookies` | Load cookies from file | Cookie |
 | `clearCookies` | Clear all cookies | Cookie |
@@ -629,6 +631,127 @@ const workflow = {
 
 ---
 
+### scrapeContainer
+
+Extract a structured list of items from repeating container nodes on the current page. Stores items under `context[action.id]` and (if `pagination` is configured) pagination state under `context[action.id + '_pagination']`.
+
+```typescript
+{
+  id: 'products',
+  action: 'scrapeContainer',
+  options: {
+    container: '.product-card',     // CSS or XPath to each repeating node
+    fields: {
+      name:  { selector: 'h2.name' },
+      price: { selector: '.price' },
+      href:  { selector: 'a', attribute: 'href' },
+      tags:  { selector: '.tag', multiple: true },  // → string[]
+    },
+    pagination: {
+      container:     '.pagination',
+      linkSelector:  'a',
+      labelSelector: 'a',
+    },
+    currentPage: 1,   // Used to resolve pagination.nextUrl
+  },
+}
+```
+
+**Parameters (inside `options`):**
+- `container` (string): CSS or XPath selector for repeating root nodes (required)
+- `fields` (Record\<string, FieldDescriptor\>): Field extraction rules (required)
+  - `selector` (string): CSS or XPath relative to each container node
+  - `attribute` (string): Extract attribute instead of text
+  - `multiple` (boolean): Return `string[]` instead of a single string
+  - `fallback` (string[]): Alternative selectors if the primary yields empty
+- `pagination` (PaginationDescriptor): Optional — finds next-page links
+  - `container` (string): CSS selector for pagination wrapper
+  - `linkSelector` (string): CSS for anchor elements
+  - `labelSelector` (string): CSS for the element providing the page label text
+- `currentPage` (number): Current page number (default: 1) for `nextUrl` resolution
+
+**Result stored in context:**
+- `context[id]` → `T[]` — the extracted items array
+- `context[id + '_pagination']` → `{ pages: [{label, url}], nextUrl: string|null }` (only when `pagination` is set)
+
+**Example:**
+```typescript
+{
+  version: '1.0',
+  actions: [
+    {
+      id: 'products',
+      action: 'scrapeContainer',
+      options: {
+        container: '.product-card',
+        fields: {
+          name:  { selector: 'h2' },
+          price: { selector: '.price' },
+        },
+        pagination: { container: '.pager', linkSelector: 'a', labelSelector: 'a' },
+        currentPage: 1,
+      },
+    },
+  ],
+}
+// result.data.products         → [{ name, price }, ...]
+// result.data.products_pagination → { pages: [...], nextUrl: '...' }
+```
+
+---
+
+### extractPagination
+
+Extract pagination links from the page without scraping container fields. Stores a `PaginationResult` under `context[action.id]`.
+
+```typescript
+{
+  id: 'pages',
+  action: 'extractPagination',
+  options: {
+    container:     'nav.pagination',
+    linkSelector:  'a[href]',
+    labelSelector: 'a[href]',
+    currentPage:   3,   // currently on page 3 → nextUrl resolves to page 4
+  },
+}
+```
+
+**Parameters (inside `options`):**
+- `container` (string): CSS selector for the pagination wrapper element (required)
+- `linkSelector` (string): CSS for anchor elements with hrefs (required)
+- `labelSelector` (string): CSS for elements whose text is the page label (required)
+- `currentPage` (number): Current page number (default: 1)
+
+**Result stored in context:**
+- `context[id]` → `{ pages: Array<{ label: string; url: string }>, nextUrl: string | null }`
+
+**Example:**
+```typescript
+const result = await actionHelpers.scrapeWithActions(
+  'https://example.com/listings?page=3',
+  {
+    version: '1.0',
+    actions: [
+      {
+        id: 'paging',
+        action: 'extractPagination',
+        options: {
+          container:     'nav.pagination',
+          linkSelector:  'a[href]',
+          labelSelector: 'a[href]',
+          currentPage:   3,
+        },
+      },
+    ],
+  },
+);
+// result.data.paging.pages   → [{ label: '1', url: '...' }, ...]
+// result.data.paging.nextUrl → '...?page=4'
+```
+
+---
+
 ## Cookie Actions
 
 ### saveCookies
@@ -802,6 +925,14 @@ interface ActionOptions {
   as?: 'text' | 'html' | 'outerHtml' | 'attribute'; // Extract mode (default: 'text')
   attribute?: string;            // Attribute name when as: 'attribute'
   waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2'; // navigate / reload
+  // scrapeContainer options
+  container?: string;            // CSS/XPath container selector
+  fields?: Record<string, FieldDescriptor>; // Field extraction rules
+  pagination?: PaginationDescriptor; // Pagination config
+  // extractPagination options (also used by scrapeContainer)
+  linkSelector?: string;         // CSS for pagination link anchors
+  labelSelector?: string;        // CSS for pagination label elements
+  currentPage?: number;          // Current page number (default: 1)
 }
 ```
 

@@ -50,6 +50,45 @@ Execute workflow with multi-element extraction support (alias for `scrapeWithWor
 
 ---
 
+##### `scrapeContainerFields<T>(url, descriptor, options?): Promise<ContainerScrapeResult<T>>`
+
+Extract structured lists from a page using a container descriptor. Each node matched by `descriptor.container` is mapped to an object with the keys in `descriptor.fields`. Optionally resolves the next pagination URL.
+
+```typescript
+const { items, pagination } = await service.scrapeContainerFields<Product>(
+  'https://example.com/products',
+  {
+    container: '.product-card',         // CSS or XPath (auto-detected)
+    fields: {
+      name:  { selector: 'h2.name' },
+      price: { selector: '.price' },
+      img:   { selector: 'img', attribute: 'src' },
+      tags:  { selector: '.tag', multiple: true }, // → string[]
+    },
+    pagination: {
+      container:     '.pagination',
+      linkSelector:  'a',
+      labelSelector: 'a',
+    },
+  },
+  { currentPage: 1, interceptResource: true, useRandomUserAgent: true },
+);
+
+// items[0] = { name: '...', price: '...', img: '...', tags: [...] }
+// pagination = { pages: [{label, url},...], nextUrl: '...' } or undefined
+```
+
+**Parameters:**
+- `url` (string): Page URL to navigate to
+- `descriptor` (`ContainerDescriptor<T>`): Container and field definitions
+- `options` (`ScraperOptions`): Optional scrape options (`currentPage`, `interceptResource`, `useRandomUserAgent`, `waitUntil`, `timeout`, `cloak`)
+
+**Returns:** `Promise<ContainerScrapeResult<T>>`
+- `items` (`T[]`): Extracted list items
+- `pagination` (`PaginationResult | undefined`): Pagination state if `descriptor.pagination` is set
+
+---
+
 ##### `takeScreenshot(url, path, options?): Promise<Buffer>`
 
 Capture screenshot of web page.
@@ -320,16 +359,23 @@ interface ActionTarget {
 ```typescript
 type ActionType =
   | 'navigate'           // Go to URL
-  | 'wait'               // Delay in seconds
+  | 'wait'               // Delay in ms
   | 'waitFor'            // Wait for selector
+  | 'reload'             // Reload current page
+  | 'waitForNetwork'     // Wait for network idle
   | 'click'              // Click element
   | 'type'               // Type text
   | 'select'             // Select from dropdown
   | 'scroll'             // Scroll to element
+  | 'hover'              // Hover over element
+  | 'keyPress'           // Press keyboard key
+  | 'clear'              // Clear input field
   | 'extract'            // Extract data
   | 'screenshot'         // Take screenshot
   | 'evaluate'           // Run JavaScript
   | 'cleanse'            // Cleanse extracted data
+  | 'scrapeContainer'    // Extract structured list + pagination
+  | 'extractPagination'  // Extract pagination links only
   | 'saveCookies'        // Save cookies to file
   | 'loadCookies'        // Load cookies from file
   | 'clearCookies'       // Clear all cookies
@@ -451,8 +497,75 @@ interface TlsFingerprint {
 interface ScraperOptions {
   pipes?: PipeOptions;
   waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2'; // Navigation wait
-  timeout?: number;     // Navigation timeout (ms)
-  cloak?: CloakOptions; // Per-call stealth override (off-pool browser; not in remote mode)
+  timeout?: number;              // Navigation timeout (ms)
+  cloak?: CloakOptions;          // Per-call stealth override (off-pool browser; not in remote mode)
+  interceptResource?: boolean;   // Abort stylesheet/image/media/font requests (keeps script/XHR/fetch)
+  useRandomUserAgent?: boolean;  // Pick a random Chrome UA string per call (overrides cloak.userAgent)
+  currentPage?: number;          // Current page number for pagination resolution (default: 1)
+}
+```
+
+### FieldDescriptor
+
+Defines how to extract one named field from each container node.
+
+```typescript
+interface FieldDescriptor {
+  selector: string;        // CSS or XPath selector (relative to the container node)
+  attribute?: string;      // Extract attribute value instead of text content
+  returnType?: 'text' | 'html'; // What to extract (default: 'text')
+  multiple?: boolean;      // Return all matches as string[] instead of a single string
+  fallback?: string[];     // Alternative selectors tried if the primary yields empty
+}
+```
+
+XPath selectors are auto-detected: a string starting with `//` or `(` is treated as XPath; anything else is CSS.
+
+### PaginationDescriptor
+
+Defines where to find pagination links on the page.
+
+```typescript
+interface PaginationDescriptor {
+  container: string;      // CSS selector for the pagination wrapper element
+  linkSelector: string;   // CSS selector for anchor elements that contain hrefs
+  labelSelector: string;  // CSS selector for the element whose text is the page label
+}
+```
+
+### PaginationResult
+
+Resolved pagination state returned from `scrapeContainerFields()`.
+
+```typescript
+interface PaginationResult {
+  pages: Array<{ label: string; url: string }>; // All pagination links found
+  nextUrl: string | null; // URL of the next page, or null if on the last page
+}
+```
+
+`nextUrl` resolution: picks the lowest numeric page label greater than `currentPage`. Falls back to the first link whose label contains `next` or `>`.
+
+### ContainerDescriptor\<T\>
+
+Full descriptor passed to `scrapeContainerFields()`.
+
+```typescript
+interface ContainerDescriptor<T = Record<string, unknown>> {
+  container: string;                            // CSS or XPath to each repeating root node
+  fields: Record<string & keyof T, FieldDescriptor>; // Output key → extraction rule
+  pagination?: PaginationDescriptor;            // Optional pagination config
+}
+```
+
+### ContainerScrapeResult\<T\>
+
+Return type of `scrapeContainerFields()`.
+
+```typescript
+interface ContainerScrapeResult<T = Record<string, unknown>> {
+  items: T[];                      // Extracted list items
+  pagination?: PaginationResult;   // Present only when descriptor.pagination is set
 }
 ```
 

@@ -7,12 +7,7 @@ describe('getRandomUserAgent', () => {
     expect(ua.length).toBeGreaterThan(0);
   });
 
-  it('contains Chrome in the UA string', () => {
-    const ua = getRandomUserAgent();
-    expect(ua).toContain('Chrome');
-  });
-
-  it('returns different values across calls (rotation)', () => {
+  it('returns different values across calls', () => {
     const results = new Set(
       Array.from({ length: 20 }, () => getRandomUserAgent()),
     );

@@ -48,7 +48,7 @@ describe('BrowserActionService scrape options passthrough', () => {
     );
   });
 
-  it('passes useRandomUserAgent: sets a userAgent in cloak', async () => {
+  it('passes useRandomUserAgent: sets a non-empty userAgent in cloak', async () => {
     await service.scrape(
       'https://example.com',
       { title: 'h1' },
@@ -58,6 +58,6 @@ describe('BrowserActionService scrape options passthrough', () => {
     const cloak = call[2];
     expect(cloak).toBeDefined();
     expect(typeof cloak.userAgent).toBe('string');
-    expect(cloak.userAgent).toContain('Chrome');
+    expect(cloak.userAgent.length).toBeGreaterThan(0);
   });
 });

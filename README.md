@@ -2,7 +2,7 @@
 
 [![npm version](https://badge.fury.io/js/%40hanivanrizky%2Fnestjs-browser-action.svg)](https://www.npmjs.com/package/@hanivanrizky/nestjs-browser-action)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests: 322 passed](https://img.shields.io/badge/tests-322%20passed-brightgreen.svg)]()
+[![Tests: 337 passed](https://img.shields.io/badge/tests-337%20passed-brightgreen.svg)]()
 
 > **⚠️ Status: Experimental**
 >
@@ -13,7 +13,8 @@ A NestJS module that provides stealth browser automation (CloakBrowser + puppete
 ## Features
 
 - (・_・) **Browser Automation**: Declarative workflow-based browser automation
-- (☆^O^☆) **Data Scraping**: Single and multi-element scraping with CSS/XPath selectors
+- (☆^O^☆) **Data Scraping**: Single, multi-element, and container-based list scraping with CSS/XPath
+- (◕‿◕) **Pagination**: Automatic next-page resolution from container scrapes
 - (>_>) **Connection Pooling**: Efficient browser instance management
 - (♡˙︶˙♡) **Cookie Persistence**: Save/load browser sessions for authentication
 - (｡•̀ᴗ-)✧ **Data Cleansing**: 14 built-in transformation pipes
@@ -99,6 +100,7 @@ export class MyService {
 |--------|-------------|
 | [`scrape()`](./docs/methods/scrape.md) | Extract single elements |
 | [`scrapeAll()`](./docs/methods/scrape-all.md) | Extract multiple elements |
+| [`scrapeContainerFields()`](./docs/api-reference.md#scrapecontainerfields) | Extract structured lists with pagination |
 | [`scrapeWithWorkflow()`](./docs/methods/workflow.md) | Workflow-based automation |
 | [`scrapeAllWithWorkflow()`](./docs/methods/workflow.md) | Workflow with multi-element |
 | [`takeScreenshot()`](./docs/methods/screenshots.md) | Capture screenshots |
@@ -153,6 +155,36 @@ const workflow = {
 };
 
 const result = await this.actionHelpers.scrapeWithWorkflow(workflow);
+```
+
+### Container Extraction (lists + pagination)
+
+```typescript
+import type { ContainerDescriptor } from '@hanivanrizky/nestjs-browser-action';
+
+interface Product { name: string; price: string; }
+
+const descriptor: ContainerDescriptor<Product> = {
+  container: '.product-card',       // CSS or XPath — one node per item
+  fields: {
+    name:  { selector: 'h2.name' },
+    price: { selector: '.price' },
+  },
+  pagination: {
+    container:     '.pagination',
+    linkSelector:  'a',
+    labelSelector: 'a',
+  },
+};
+
+const { items, pagination } = await this.actionHelpers.scrapeContainerFields<Product>(
+  'https://example.com/products',
+  descriptor,
+  { currentPage: 1, interceptResource: true, useRandomUserAgent: true },
+);
+
+console.log(items);               // [{ name, price }, ...]
+console.log(pagination?.nextUrl); // URL of next page, or null
 ```
 
 ### With Data Cleansing
