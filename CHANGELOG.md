@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.15.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.14.0...v0.15.0) (2026-06-24)
+
+
+### Features
+
+* replace hardcoded UA array with user-agents package; update docs for v0.14.0 ([beb866b](https://github.com/Hanivan/nestjs-browser-action/commit/beb866bd4aba4d9d36f6fb2084ae806cf1785472))
+
 # [0.14.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.13.1...v0.14.0) (2026-06-24)
 
 
