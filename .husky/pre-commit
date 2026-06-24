@@ -1,2 +1,3 @@
 echo "Running linter..."
 pnpm lint
+git add -A
