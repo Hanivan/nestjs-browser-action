@@ -250,8 +250,31 @@ async evaluateWebsite<T = Record<string, unknown>>(
   cloak?: CloakOptions;
   interceptResource?: boolean;
   useRandomUserAgent?: boolean;
+  pagination?: PaginationOptions; // optional — accumulate results across pages
 }
 ```
+
+### `PaginationOptions`
+
+```typescript
+{
+  type: 'click-next' | 'load-more' | 'infinite-scroll' | 'url-increment';
+  selector?: string;       // CSS selector for next button / load-more / sentinel element
+  maxPages?: number;       // maximum pages to scrape (default: 10)
+  waitAfter?: number;      // ms to wait after each page action (default: 800)
+  // url-increment only:
+  urlTemplate?: string;    // URL template with {page} placeholder, e.g. 'https://site.com/page/{page}'
+  startPage?: number;      // page number to start url-increment from (default: 2)
+  // infinite-scroll only:
+  endSelector?: string;    // CSS selector — stop scrolling when this element appears
+}
+```
+
+**Strategies:**
+- `click-next`: clicks `selector` after each scrape, waits for navigation, stops when selector is gone
+- `load-more`: clicks `selector` after each scrape (no navigation), stops when selector hidden/gone
+- `infinite-scroll`: scrolls `selector` into view after each scrape, stops when item count stops growing or `endSelector` appears
+- `url-increment`: navigates `urlTemplate` with incrementing `{page}` values, stops when page yields no new items or `maxPages` is reached
 
 ### `PatternField`
 
@@ -285,10 +308,11 @@ async evaluateWebsite<T = Record<string, unknown>>(
 ```typescript
 interface EvaluateResult<T = Record<string, unknown>> {
   results: T[];
+  totalPages?: number; // set when pagination is used
 }
 ```
 
-Always returns an array. For flat (non-container) pages, `results` has one element.
+Always returns an array. For flat (non-container) pages, `results` has one element. When `pagination` is set, `results` accumulates items from all pages and `totalPages` reports how many pages were scraped.
 
 ## Routing Logic
 

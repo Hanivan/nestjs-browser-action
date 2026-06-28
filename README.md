@@ -10,7 +10,7 @@
   <a href="https://www.npmjs.com/package/@hanivanrizky/nestjs-browser-action" target="_blank"><img src="https://img.shields.io/npm/v/@hanivanrizky/nestjs-browser-action.svg" alt="NPM Version" /></a>
   <a href="https://www.npmjs.com/package/@hanivanrizky/nestjs-browser-action" target="_blank"><img src="https://img.shields.io/npm/l/@hanivanrizky/nestjs-browser-action.svg" alt="Package License" /></a>
   <a href="https://www.npmjs.com/package/@hanivanrizky/nestjs-browser-action" target="_blank"><img src="https://img.shields.io/npm/dm/@hanivanrizky/nestjs-browser-action.svg" alt="NPM Downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-363%20passed-brightgreen.svg" alt="Tests: 363 passed" />
+  <img src="https://img.shields.io/badge/tests-382%20passed-brightgreen.svg" alt="Tests: 382 passed" />
 </p>
 
 > **⚠️ Status: Experimental** — personal use only; API subject to change.

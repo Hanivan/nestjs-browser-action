@@ -11,7 +11,7 @@ Key points:
 - `options.retry` is capped at 100
 - `options.retryDelay`, `options.timeout`, `options.navigationTimeout` are capped at 300,000 ms
 - `options.delay` (keystroke delay) is capped at 60,000 ms
-- `navigate.value` must be a valid `http:` or `https:` URL
+- `navigate.value` must be a valid `http:` or `https:` URL, or a template variable (e.g. `${baseUrl}`) resolved at runtime
 - `screenshot.value` must not contain `..` or start with `/`
 - `evaluate.value` is limited to 50,000 characters
 - `wait.value` is capped at 300,000 ms

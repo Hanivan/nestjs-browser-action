@@ -377,6 +377,7 @@ describe('BrowserActionService.evaluateWebsite', () => {
       const mockPage = {
         $: jest.fn().mockResolvedValue(mockBtn),
         $x: jest.fn().mockResolvedValue([]),
+        waitForNavigation: jest.fn().mockResolvedValue(undefined),
       } as unknown as Page;
 
       pageService.navigateTo.mockResolvedValue(mockPage);
