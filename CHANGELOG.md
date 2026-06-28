@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.19.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.18.0...v0.19.0) (2026-06-28)
+
+
+### Features
+
+* pass ScraperOptions through evaluate, takeScreenshot, generatePDF, waitForSelector ([8772cbc](https://github.com/Hanivan/nestjs-browser-action/commit/8772cbc4ca1cf94e1563bfe9ef9abc25faab98e3))
+
 # [0.18.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.17.1...v0.18.0) (2026-06-28)
 
 
