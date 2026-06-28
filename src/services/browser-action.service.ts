@@ -88,11 +88,20 @@ export class BrowserActionService {
     url: string,
     path: string,
     options?: ScreenshotOptions,
+    scraperOptions?: ScraperOptions,
   ): Promise<Buffer> {
     this.logger.debug(
       truncateLog(this.activeDebugLogMaxLength, `Taking screenshot of ${url}`),
     );
-    const page = await this.pageService.navigateTo(url);
+    const cloak = scraperOptions?.useRandomUserAgent
+      ? { ...scraperOptions?.cloak, userAgent: getRandomUserAgent() }
+      : scraperOptions?.cloak;
+    const page = await this.pageService.navigateTo(
+      url,
+      this.buildNavOptions(scraperOptions),
+      cloak,
+      scraperOptions?.interceptResource,
+    );
     const result = await page.screenshot({ path, ...options });
     await this.pageService.closePage();
     return result as unknown as Buffer;
@@ -102,11 +111,20 @@ export class BrowserActionService {
     url: string,
     path: string,
     options?: PDFOptions,
+    scraperOptions?: ScraperOptions,
   ): Promise<Buffer> {
     this.logger.debug(
       truncateLog(this.activeDebugLogMaxLength, `Generating PDF for ${url}`),
     );
-    const page = await this.pageService.navigateTo(url);
+    const cloak = scraperOptions?.useRandomUserAgent
+      ? { ...scraperOptions?.cloak, userAgent: getRandomUserAgent() }
+      : scraperOptions?.cloak;
+    const page = await this.pageService.navigateTo(
+      url,
+      this.buildNavOptions(scraperOptions),
+      cloak,
+      scraperOptions?.interceptResource,
+    );
     const pdf = await page.pdf({ path, ...options });
     await this.pageService.closePage();
     return Buffer.from(pdf);
@@ -945,6 +963,7 @@ export class BrowserActionService {
     url: string,
     selector: string,
     timeout?: number,
+    scraperOptions?: ScraperOptions,
   ): Promise<Page> {
     this.logger.debug(
       truncateLog(
@@ -952,7 +971,15 @@ export class BrowserActionService {
         `Waiting for ${selector} on ${url}`,
       ),
     );
-    const page = await this.pageService.navigateTo(url);
+    const cloak = scraperOptions?.useRandomUserAgent
+      ? { ...scraperOptions?.cloak, userAgent: getRandomUserAgent() }
+      : scraperOptions?.cloak;
+    const page = await this.pageService.navigateTo(
+      url,
+      this.buildNavOptions(scraperOptions),
+      cloak,
+      scraperOptions?.interceptResource,
+    );
     await page.waitForSelector(selector, { timeout });
     return page;
   }
@@ -960,11 +987,20 @@ export class BrowserActionService {
   async evaluate<T = unknown>(
     url: string,
     script: string | (() => unknown),
+    options?: ScraperOptions,
   ): Promise<T> {
     this.logger.debug(
       truncateLog(this.activeDebugLogMaxLength, `Evaluating script on ${url}`),
     );
-    const page = await this.pageService.navigateTo(url);
+    const cloak = options?.useRandomUserAgent
+      ? { ...options?.cloak, userAgent: getRandomUserAgent() }
+      : options?.cloak;
+    const page = await this.pageService.navigateTo(
+      url,
+      this.buildNavOptions(options),
+      cloak,
+      options?.interceptResource,
+    );
     const result =
       typeof script === 'function'
         ? await page.evaluate(script)
