@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.18.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.17.1...v0.18.0) (2026-06-28)
+
+
+### Features
+
+* add lazyInit option to defer browser pool spawn until first use ([a0bb845](https://github.com/Hanivan/nestjs-browser-action/commit/a0bb845091fd8e77503762d5695d542a672ae233))
+
 ## [0.17.1](https://github.com/Hanivan/nestjs-browser-action/compare/v0.17.0...v0.17.1) (2026-06-28)
 
 
