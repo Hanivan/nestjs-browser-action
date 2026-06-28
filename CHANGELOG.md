@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.17.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.16.4...v0.17.0) (2026-06-28)
+
+
+### Features
+
+* add runnable examples, fix click-next navigation, allow template vars in navigate ([ddd96b0](https://github.com/Hanivan/nestjs-browser-action/commit/ddd96b075629ee3bf1a144e9582374d72969a470))
+
 ## [0.16.4](https://github.com/Hanivan/nestjs-browser-action/compare/v0.16.3...v0.16.4) (2026-06-28)
 
 
