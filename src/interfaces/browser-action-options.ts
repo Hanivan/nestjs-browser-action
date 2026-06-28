@@ -93,4 +93,13 @@ export interface BrowserActionOptions {
    * a builtin or another custom pipe throws at registration.
    */
   customPipes?: Record<string, new (...args: unknown[]) => CleansingPipe>;
+
+  /**
+   * When true, the browser pool is not pre-warmed on module init. The first
+   * browser is spawned on the first acquire() call (i.e. first evaluateWebsite /
+   * scrape call). Useful when the consuming app bootstraps but the scraper is
+   * not always needed.
+   * @default false
+   */
+  lazyInit?: boolean;
 }

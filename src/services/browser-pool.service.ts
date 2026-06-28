@@ -102,6 +102,14 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
       'Call app.enableShutdownHooks() in main.ts to ensure graceful browser cleanup on Ctrl+C',
     );
 
+    if (this.options.lazyInit) {
+      this.logger.log(
+        `Browser pool configured (min: ${this.minSize}, max: ${this.maxSize}) — lazy mode, browsers spawn on first use`,
+      );
+      this.startReaper();
+      return;
+    }
+
     this.logger.log(
       `Initializing browser pool (min: ${this.minSize}, max: ${this.maxSize})`,
     );

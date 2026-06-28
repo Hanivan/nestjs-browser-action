@@ -305,6 +305,12 @@ interface BrowserActionOptions {
   // Custom cleansing pipes, keyed by `type`. Registered on CleansingService at
   // startup so config-driven paths (scrape `pipes`, workflow `cleanse`) resolve them.
   customPipes?: Record<string, new () => CleansingPipe>;
+
+  // When true, skip the pool pre-warm on module init — browsers are spawned on the
+  // first acquire() call (first scrape / evaluateWebsite). Useful when the app
+  // bootstraps but the scraper is not always needed.
+  // @default false
+  lazyInit?: boolean;
 }
 ```
 
