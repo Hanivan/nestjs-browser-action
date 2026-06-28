@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.4](https://github.com/Hanivan/nestjs-browser-action/compare/v0.16.3...v0.16.4) (2026-06-28)
+
+
+### Bug Fixes
+
+* force new page when interceptResource state changes ([4c6445a](https://github.com/Hanivan/nestjs-browser-action/commit/4c6445a17047c88d8ae77b090116f90486aa190c))
+
 ## [0.16.3](https://github.com/Hanivan/nestjs-browser-action/compare/v0.16.2...v0.16.3) (2026-06-28)
 
 ## [0.16.2](https://github.com/Hanivan/nestjs-browser-action/compare/v0.16.1...v0.16.2) (2026-06-28)
