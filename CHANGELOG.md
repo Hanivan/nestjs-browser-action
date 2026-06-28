@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.2](https://github.com/Hanivan/nestjs-browser-action/compare/v0.16.1...v0.16.2) (2026-06-28)
+
+
+### Bug Fixes
+
+* treat .// and ./ as XPath selectors in isXPath detection ([94bea92](https://github.com/Hanivan/nestjs-browser-action/commit/94bea923cea6a2427c94cbcd5d02cc62fc4a03dd))
+
 ## [0.16.1](https://github.com/Hanivan/nestjs-browser-action/compare/v0.16.0...v0.16.1) (2026-06-28)
 
 
