@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.16.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.15.0...v0.16.0) (2026-06-28)
+
+
+### Features
+
+* add evaluateWebsite(), mirror xpath-parser API, replace decode-html with html-entities ([f83a0ce](https://github.com/Hanivan/nestjs-browser-action/commit/f83a0ceccd05e23c070be4c982619ec33ba4afa5))
+
 # [0.15.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.14.0...v0.15.0) (2026-06-24)
 
 
