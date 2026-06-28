@@ -71,7 +71,7 @@ export interface BrowserActionOptions {
   contextOptions?: BrowserContextOptions;
   pool?: PoolOptions;
   multiContext?: boolean;
-  logLevel?: LogLevel;
+  logLevel?: LogLevel | LogLevel[];
 
   /**
    * Maximum character length for debug log messages before truncation.

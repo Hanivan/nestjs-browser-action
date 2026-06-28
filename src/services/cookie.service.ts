@@ -34,7 +34,9 @@ export class CookieService {
       this.options.cookies?.cookiesDir ?? DEFAULT_COOKIE_OPTIONS.cookiesDir;
     this.logger = new LoggerWithLevel(
       CookieService.name,
-      this.options.logLevel || 'log',
+      (Array.isArray(this.options.logLevel)
+        ? this.options.logLevel[0]
+        : this.options.logLevel) || 'log',
     );
   }
 

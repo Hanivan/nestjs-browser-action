@@ -67,7 +67,9 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
   ) {
     this.logger = new LoggerWithLevel(
       BrowserPoolService.name,
-      options.logLevel || 'log',
+      (Array.isArray(options.logLevel)
+        ? options.logLevel[0]
+        : options.logLevel) || 'log',
     );
   }
 
