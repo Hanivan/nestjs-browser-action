@@ -106,7 +106,8 @@ describe('BrowserActionService - scrapeAll', () => {
     );
   });
 
-  it('should apply pipes to each element individually', async () => {
+  it('should apply CleanerStepRules to each element individually', async () => {
+    // scrapeAll() uses PipeEngine.apply() directly — no CleansingService mock needed
     const mockPage = {
       $$eval: jest
         .fn()
@@ -117,34 +118,18 @@ describe('BrowserActionService - scrapeAll', () => {
     (pageService.navigateTo as jest.Mock).mockResolvedValue(mockPage);
     (pageService.closePage as jest.Mock).mockResolvedValue(undefined);
 
-    const mockPipe = { exec: jest.fn((val: string) => val.trim()) };
-    (cleansingService.buildPipes as jest.Mock).mockReturnValue([mockPipe]);
-    (cleansingService.cleanse as jest.Mock).mockImplementation((val, pipes) =>
-      pipes.reduce((acc: any, pipe: any) => pipe.exec(acc), val),
-    );
-
     const result = await service.scrapeAll(
       'https://example.com',
-      {
-        titles: '.card h2',
-      },
-      {
-        pipes: {
-          titles: [{ type: 'trim' }],
-        },
-      },
+      { titles: '.card h2' },
+      { pipes: { titles: { trim: true } } },
     );
 
     expect(result).toEqual({
       titles: ['TITLE 1', 'TITLE 2', 'TITLE 3'],
     });
-    expect(cleansingService.buildPipes).toHaveBeenCalledWith([
-      { type: 'trim' },
-    ]);
-    expect(cleansingService.cleanse).toHaveBeenCalledTimes(3);
   });
 
-  it('should handle pipes that return non-string types (to-number)', async () => {
+  it('should apply custom pipes via CleanerStepRules (e.g. to-number)', async () => {
     const mockPage = {
       $$eval: jest.fn().mockResolvedValue(['29.99', '15.50', '99.00']),
     } as any;
@@ -152,31 +137,18 @@ describe('BrowserActionService - scrapeAll', () => {
     (pageService.navigateTo as jest.Mock).mockResolvedValue(mockPage);
     (pageService.closePage as jest.Mock).mockResolvedValue(undefined);
 
-    const mockToNumberPipe = {
-      exec: jest.fn((val: string) => parseFloat(val)),
-    };
-    (cleansingService.buildPipes as jest.Mock).mockReturnValue([
-      mockToNumberPipe,
-    ]);
-    (cleansingService.cleanse as jest.Mock).mockReturnValue(29.99);
-
     const result = await service.scrapeAll(
       'https://example.com',
-      {
-        prices: '.product-price',
-      },
+      { prices: '.product-price' },
       {
         pipes: {
-          prices: [{ type: 'to-number' }],
+          prices: { trim: true, custom: [{ type: 'to-number', decimals: 2 }] },
         },
       },
     );
 
-    expect(cleansingService.buildPipes).toHaveBeenCalledWith([
-      { type: 'to-number' },
-    ]);
-    expect(cleansingService.cleanse).toHaveBeenCalledTimes(3);
     expect(Array.isArray(result.prices)).toBe(true);
+    expect(result.prices).toHaveLength(3);
   });
 
   it('should return empty array when no elements found', async () => {

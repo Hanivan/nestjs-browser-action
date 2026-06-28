@@ -6,7 +6,7 @@ import { CleansingType } from '../enums/cleansing-type.enum';
  * Normalizes whitespace in strings
  */
 export class NormalizeWhitespacePipe extends CleansingPipe<string, string> {
-  type = CleansingType.NORMALIZE_WHITESPACE;
+  readonly type = CleansingType.NORMALIZE_WHITESPACE as const;
 
   @IsOptional()
   preserveTabs?: boolean;

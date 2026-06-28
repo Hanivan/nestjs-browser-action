@@ -1,39 +1,40 @@
-import { Exclude } from 'class-transformer';
 import { CleansingType } from '../enums/cleansing-type.enum';
 
 /**
- * Abstract base class for all cleansing pipes
- * Inspired by forum-crawler's PipeRule pattern
+ * Abstract base class for all cleansing pipes.
  *
  * @template TInput - Input type for the transformation
  * @template TOutput - Output type for the transformation
  */
 export abstract class CleansingPipe<TInput = unknown, TOutput = unknown> {
   /**
-   * Custom configuration (excluded from plain serialization)
-   * Allows pipes to carry runtime-only data
-   */
-  @Exclude({ toPlainOnly: true })
-  customConfig?: Record<string, unknown>;
-
-  /**
-   * Execute the transformation
+   * Execute the transformation.
    * @param value - Input value to transform
    * @returns Transformed value
    */
   abstract exec(value: TInput): TOutput;
 
   /**
-   * The type of this pipe for mapping purposes
+   * The type of this pipe for mapping purposes.
    */
-  abstract type: CleansingType | string;
+  readonly type?: CleansingType | string;
 
   /**
-   * Reverse the transformation (optional)
-   * @returns Original input value
-   * @throws Error if not implemented
+   * Optional reverse transformation. No-op by default.
+   * @param value - The value to reverse transform
+   * @returns The original value
    */
-  reverse?(): TInput {
-    throw new Error('Reverse transformation not implemented');
+  reverse(value: TOutput): TInput {
+    return value as unknown as TInput;
   }
 }
+
+/**
+ * Type for custom pipe instance
+ */
+export type CustomPipe = CleansingPipe;
+
+/**
+ * Map of custom pipe names to pipe instances
+ */
+export type CustomPipeMap = Record<string, CustomPipe>;

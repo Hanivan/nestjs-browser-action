@@ -15,7 +15,7 @@ import { DateTime } from 'luxon';
  *   'LL'       — returns a locale-aware long date, e.g. "December 25, 2023"
  */
 export class DateFormatPipe extends CleansingPipe<string | Date, string> {
-  type = CleansingType.DATE_FORMAT;
+  readonly type = CleansingType.DATE_FORMAT as const;
 
   @IsOptional()
   @IsString()

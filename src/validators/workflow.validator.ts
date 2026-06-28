@@ -182,9 +182,9 @@ function validateAction(
       }
     }
 
-    // Validate pipes for cleanse action
-    if (action.action === 'cleanse' && o.pipes) {
-      validatePipeConfigs(o.pipes, `${prefix}.options.pipes`);
+    // Validate custom pipes for cleanse action
+    if (action.action === 'cleanse' && o.pipes?.custom) {
+      validatePipeConfigs(o.pipes.custom, `${prefix}.options.pipes.custom`);
     }
   }
 

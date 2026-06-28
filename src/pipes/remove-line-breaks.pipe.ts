@@ -7,7 +7,7 @@ import { normalizeWhitespace } from '../utils/string.util';
  * Removes line breaks from strings
  */
 export class RemoveLineBreaksPipe extends CleansingPipe<string, string> {
-  type = CleansingType.REMOVE_LINE_BREAKS;
+  readonly type = CleansingType.REMOVE_LINE_BREAKS as const;
 
   @IsOptional()
   @IsBoolean()

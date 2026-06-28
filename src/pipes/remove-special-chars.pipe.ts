@@ -7,7 +7,7 @@ import { normalizeWhitespace } from '../utils/string.util';
  * Removes special characters from strings
  */
 export class RemoveSpecialCharsPipe extends CleansingPipe<string, string> {
-  type = CleansingType.REMOVE_SPECIAL_CHARS;
+  readonly type = CleansingType.REMOVE_SPECIAL_CHARS as const;
 
   @IsOptional()
   @IsString()

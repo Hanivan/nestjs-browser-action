@@ -9,7 +9,7 @@ export class RegexExtractPipe extends CleansingPipe<
   string,
   string | string[] | null
 > {
-  type = CleansingType.REGEX_EXTRACT;
+  readonly type = CleansingType.REGEX_EXTRACT as const;
 
   @IsOptional()
   @IsString()

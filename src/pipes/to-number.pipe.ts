@@ -6,7 +6,7 @@ import { CleansingType } from '../enums/cleansing-type.enum';
  * Convert strings to numbers with optional rounding
  */
 export class ToNumberPipe extends CleansingPipe<string, number> {
-  type = CleansingType.TO_NUMBER;
+  readonly type = CleansingType.TO_NUMBER as const;
 
   @IsOptional()
   @IsNumber()

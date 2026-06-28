@@ -6,11 +6,30 @@ Comprehensive data transformation pipes for cleansing and normalizing scraped da
 
 The pipe system provides a powerful, chainable way to transform scraped data:
 
-- (・_・) **14 Built-in Pipes:** Ready-to-use transformations
-- (>_>) **Chainable:** Combine multiple pipes in sequence
+- (・_・) **Built-in Pipes:** 30+ ready-to-use transformations (original + xpath-parser ports)
+- (>_>) **Chainable:** Combine multiple pipes in sequence via `CleanerStepRules`
 - (>_>) **Reusable:** Define once, use everywhere
 - (☆^O^☆) **Type-Safe:** Full TypeScript support
 - (｡•̀ᴗ-)✧ **Profiles:** Pre-configured pipe combinations
+
+## The `CleanerStepRules` Interface
+
+All pipe configuration is done through a single `CleanerStepRules` object:
+
+```typescript
+interface CleanerStepRules {
+  trim?: boolean;                          // trim leading/trailing whitespace
+  toLowerCase?: boolean;                   // convert to lowercase
+  toUpperCase?: boolean;                   // convert to uppercase
+  decode?: boolean;                        // decode HTML entities
+  replace?: Array<{ from: string; to: string }>;  // regex replace rules (applied globally)
+  merge?: boolean | 'with space' | 'with comma';  // merge array values
+  custom?: Array<Record<string, unknown>>; // custom pipe chain by type string
+}
+```
+
+`PipeEngine.apply(value, rules, url?)` runs the rules in this order:
+`decode → toLowerCase → toUpperCase → trim → replace[] → custom[] → collapse whitespace`
 
 ## Usage
 
@@ -27,20 +46,20 @@ const data = await this.actionHelpers.scrape(
   },
   {
     pipes: {
-      title: [
-        { type: CleansingType.TRIM },
-        { type: CleansingType.TO_LOWER_CASE },
-      ],
-      price: [
-        { type: CleansingType.REMOVE_CURRENCY_SYMBOL },
-        { type: CleansingType.TO_NUMBER },
-      ],
+      title: { trim: true, toLowerCase: true },
+      price: {
+        trim: true,
+        custom: [
+          { type: CleansingType.REMOVE_CURRENCY_SYMBOL, symbols: ['$', '€', '£'] },
+          { type: CleansingType.TO_NUMBER, decimals: 2 },
+        ],
+      },
     },
   }
 );
 ```
 
-### With Workflows
+### With Workflows (cleanse action)
 
 ```typescript
 const workflow = {
@@ -56,10 +75,26 @@ const workflow = {
       id: 'cleanTitle',
       value: '${rawTitle}',
       options: {
-        pipes: [
-          { type: CleansingType.TRIM },
-          { type: CleansingType.TO_UPPER_CASE },
-        ],
+        pipes: { trim: true, toUpperCase: true },
+      },
+    },
+    {
+      id: 'rawPrice',
+      action: 'extract' as const,
+      target: { type: 'css' as const, value: '.price' },
+    },
+    {
+      action: 'cleanse' as const,
+      id: 'cleanPrice',
+      value: '${rawPrice}',
+      options: {
+        pipes: {
+          trim: true,
+          custom: [
+            { type: CleansingType.REMOVE_CURRENCY_SYMBOL, symbols: ['$'] },
+            { type: CleansingType.TO_NUMBER, decimals: 2 },
+          ],
+        },
       },
     },
   ],
@@ -68,272 +103,209 @@ const workflow = {
 
 ### Direct with CleansingService
 
+`CleansingService.buildPipes()` + `cleanse()` is still available for custom pipe chains using the `PipeConfig[]` format:
+
 ```typescript
 import { CleansingService } from '@hanivanrizky/nestjs-browser-action';
 
 @Injectable()
 export class MyService {
-  constructor(
-    private readonly cleansingService: CleansingService,
-  ) {}
+  constructor(private readonly cleansingService: CleansingService) {}
 
-  async cleanText() {
+  cleanText() {
     const pipes = this.cleansingService.buildPipes([
       { type: CleansingType.TRIM },
       { type: CleansingType.NORMALIZE_WHITESPACE },
       { type: CleansingType.TO_LOWER_CASE },
     ]);
 
-    const result = this.cleansingService.cleanse(
-      '  HELLO    WORLD  ',
-      pipes
-    );  // "hello world"
+    return this.cleansingService.cleanse('  HELLO    WORLD  ', pipes);
+    // "hello world"
   }
 }
 ```
 
-## Built-in Pipes
-
-### Text Transformation
-
-#### TRIM
-Removes leading and trailing whitespace.
+Alternatively, use `PipeEngine` directly:
 
 ```typescript
-{ type: CleansingType.TRIM }
+import { PipeEngine } from '@hanivanrizky/nestjs-browser-action';
 
-'  Hello World  ' → 'Hello World'
-'   ' → ''
+const engine = new PipeEngine();
+const result = engine.apply('  HELLO    WORLD  ', { trim: true, toLowerCase: true });
+// "hello world"
+```
+
+## Built-in Pipes
+
+### Primitive rules (CleanerStepRules flags)
+
+| Rule | Type | Effect |
+|------|------|--------|
+| `trim` | `boolean` | Remove leading/trailing whitespace |
+| `toLowerCase` | `boolean` | Convert to lowercase |
+| `toUpperCase` | `boolean` | Convert to uppercase |
+| `decode` | `boolean` | Decode HTML entities (`&amp;` → `&`) |
+| `replace` | `CleanerRule[]` | Apply regex replacements globally |
+
+### Text Transformation (custom pipe types)
+
+#### TRIM
+```typescript
+{ type: CleansingType.TRIM }
+// '  Hello World  ' → 'Hello World'
 ```
 
 #### NORMALIZE_WHITESPACE
-Collapses multiple whitespace characters into single space.
-
 ```typescript
 { type: CleansingType.NORMALIZE_WHITESPACE }
-
-'Hello    World' → 'Hello World'
-'Text   with    spaces' → 'Text with spaces'
+// 'Hello    World' → 'Hello World'
 ```
 
 #### TO_LOWER_CASE
-Converts text to lowercase.
-
 ```typescript
 { type: CleansingType.TO_LOWER_CASE }
-
-'Hello World' → 'hello world'
-'HELLO' → 'hello'
+// 'Hello World' → 'hello world'
 ```
 
 #### TO_UPPER_CASE
-Converts text to uppercase.
-
 ```typescript
 { type: CleansingType.TO_UPPER_CASE }
-
-'Hello World' → 'HELLO WORLD'
-'hello' → 'HELLO'
+// 'hello world' → 'HELLO WORLD'
 ```
 
 #### SANITIZE_TEXT
-Removes dangerous HTML tags (script, iframe, form, etc.), event handler attributes (onclick, onerror, etc.), javascript: protocol links, and remaining HTML tags. Normalizes whitespace in the result.
-
+Removes dangerous HTML tags, event handlers, and `javascript:` links.
 ```typescript
 { type: CleansingType.SANITIZE_TEXT }
-
-'<script>alert(1)</script>Hello World' → 'Hello World'
-'<b onclick="evil()">Text</b>' → 'Text'
-'<p>Hello   World</p>' → 'Hello World'
+// '<script>alert(1)</script>Hello' → 'Hello'
 ```
 
 #### REMOVE_LINE_BREAKS
-Removes line breaks (`\n`, `\r\n`, `\r`).
-
 ```typescript
 { type: CleansingType.REMOVE_LINE_BREAKS }
-
-'Line 1\nLine 2\nLine 3' → 'Line 1Line 2Line 3'
-'Text\r\nWith\nBreaks' → 'TextWithBreaks'
+// 'Line 1\nLine 2' → 'Line 1Line 2'
 ```
 
 #### REMOVE_SPECIAL_CHARS
-Removes special characters (keeps alphanumeric and spaces).
-
 ```typescript
 { type: CleansingType.REMOVE_SPECIAL_CHARS }
-
-'Hello@#$ World!' → 'Hello World'
-'Price: $29.99' → 'Price 2999'
+// 'Hello@#$ World!' → 'Hello World'
 ```
 
 ### Number & Currency
 
 #### TO_NUMBER
-Converts string to number.
-
 ```typescript
-{ type: CleansingType.TO_NUMBER }
-
-'29.99' → 29.99
-'$100' → 100 (if preceded by remove-currency-symbol)
-'abc' → NaN
+{ type: CleansingType.TO_NUMBER, decimals: 2 }
+// '29.99' → 29.99
 ```
 
 #### REMOVE_CURRENCY_SYMBOL
-Removes common currency symbols.
-
 ```typescript
-{ type: CleansingType.REMOVE_CURRENCY_SYMBOL }
-
-'$29.99' → '29.99'
-'€50.00' → '50.00'
-'¥1000' → '1000'
-'USD 25.00' → 'USD 25.00'
+{ type: CleansingType.REMOVE_CURRENCY_SYMBOL, symbols: ['$', '€', '£', '¥'] }
+// '$29.99' → '29.99'
 ```
 
 ### Regular Expressions
 
 #### REGEX_REPLACE
-Replace text matching regex pattern.
-
 ```typescript
 {
   type: CleansingType.REGEX_REPLACE,
-  pattern: '\\d+',   // Regex pattern
-  replacement: '',   // Replacement string
-  flags: 'g',        // Regex flags (default: 'g'). Use 'gi' for case-insensitive, '' for first match only
+  pattern: '\\d+',
+  replacement: '',
+  flags: 'g',   // default 'g'; use 'gi' for case-insensitive, '' for first match only
 }
-
-'Price: $29.99' → 'Price: $'  // flags: 'g' removes all digits
-'Hello WORLD' → 'Hello Earth' // flags: 'gi' for case-insensitive replace
-'test test test' → 'x test test' // flags: '' replaces first match only
+// 'Price: $29.99' → 'Price: $'
 ```
 
 #### REGEX_EXTRACT
-Extract text matching regex pattern.
-
 ```typescript
 {
   type: CleansingType.REGEX_EXTRACT,
-  pattern: '\\d+',      // Regex pattern
+  pattern: '\\d+',
 }
-
-'Price: $29.99' → '29'
-'Order #12345 confirmed' → '12345'
-'a1b2c3' → ['1', '2', '3'] (global pattern returns all matches)
+// 'Order #12345 confirmed' → '12345'
 ```
 
 ### Date Formatting
 
 #### DATE_FORMAT
-Parse and reformat dates using [Luxon](https://moment.github.io/luxon/#/formatting) format tokens.
-
 ```typescript
 {
   type: CleansingType.DATE_FORMAT,
-  format: 'yyyy-MM-dd',  // Output format (Luxon tokens)
-  timezone: 'UTC',       // Optional
-  locale: 'en',          // Optional
+  format: 'yyyy-MM-dd',
+  timezone: 'UTC',   // optional
+  locale: 'en',      // optional
 }
-
-'January 15, 2024' → '2024-01-15'
-'15/01/2024' → '2024-01-15'
+// 'January 15, 2024' → '2024-01-15'
 ```
 
-Special `format` values: `'relative'` → `"2 hours ago"`, `'X'` → Unix timestamp seconds, `'LL'` → locale-aware long date.
+Special `format` values: `'relative'` → `"2 hours ago"`, `'X'` → Unix timestamp, `'LL'` → locale long date.
 
 ### Advanced
 
 #### ALT_FLAG
-Alternative fallback pipe - executes fallback pipes if primary result is empty/null/undefined.
-
+Alternative fallback pipe — executes fallback pipes if primary result is empty/null/undefined.
 ```typescript
 {
   type: CleansingType.ALT_FLAG,
-  primaryPipes: [
-    { type: CleansingType.REGEX_EXTRACT, pattern: '\\d+' },
-  ],
-  fallbackPipes: [
-    { type: CleansingType.TRIM },
-  ],
-  fallbackOn: 'empty',  // 'empty' | 'null' | 'undefined' | 'all'
+  primaryPipes: [{ type: CleansingType.REGEX_EXTRACT, pattern: '\\d+' }],
+  fallbackPipes: [{ type: CleansingType.TRIM }],
+  fallbackOn: 'empty',   // 'empty' | 'null' | 'undefined' | 'all'
 }
-
-'Price: $29.99' → '29'       // Primary extracts digits
-'No price available' → 'No price available'  // Fallback to trim
 ```
 
-## Parameters
+### Ported from xpath-parser
 
-Some pipes accept parameters as flat fields on the config object:
+| Type string | Description |
+|-------------|-------------|
+| `num-normalize` | Normalize number strings |
+| `url-resolve` | Resolve relative URLs |
+| `extract-email` | Extract email address |
+| `regex` | Apply regex replacement rules |
+| `parse-as-url` | Parse URL (uses `baseUrl` if set) |
+| `clean-html` | Strip HTML via libxmljs2 |
+| `regex-extraction` | Regex extraction |
+| `regex-extraction--page` | Regex extraction (page context) |
+| `regex-extraction--url` | Regex extraction (URL context) |
+| `regex-replace-x` | Regex replace (xpath variant) |
+| `regex-replace--page` | Regex replace (page context) |
+| `regex-replace--url` | Regex replace (URL context) |
+| `extract-url-params` | Extract URL query params |
+| `media-filter` | Filter media URLs |
+| `query-append` | Append query string params |
+| `json-path` | JSONPath extraction |
+| `query-remover` | Remove query params |
+| `query-remover--page` | Remove query params (page context) |
+| `query-remover--url` | Remove query params (URL context) |
+| `date-format-special` | Special date format handling |
+
+## PipeConfig parameters (for custom[] entries)
 
 ```typescript
-interface PipeConfig {
-  type: CleansingType;
+// Each entry in CleanerStepRules.custom is a plain object with a required `type` field:
+{
+  type: string;               // required — must match a PIPE_REGISTRY key
+  // ... pipe-specific fields (flat on the object, not nested under params):
   pattern?: string;           // REGEX_REPLACE, REGEX_EXTRACT
   replacement?: string;       // REGEX_REPLACE
-  flags?: string;             // REGEX_REPLACE — 'g' (default), 'gi', 'i', '' etc.
+  flags?: string;             // REGEX_REPLACE
   format?: string;            // DATE_FORMAT
   timezone?: string;          // DATE_FORMAT
   locale?: string;            // DATE_FORMAT
-  primaryPipes?: PipeConfig[];   // ALT_FLAG
-  fallbackPipes?: PipeConfig[];  // ALT_FLAG
-  fallbackOn?: 'empty' | 'null' | 'undefined' | 'all';  // ALT_FLAG
-  [key: string]: unknown;     // allows additional custom fields
-}
-```
-
-### Regex Replace Parameters
-
-```typescript
-{
-  type: CleansingType.REGEX_REPLACE,
-  pattern: '\\s+',   // Pattern to match
-  replacement: '-',  // Replacement string
-  flags: 'g',        // Regex flags — 'g' (default), 'gi', 'i', '' etc.
-}
-```
-
-### Regex Extract Parameters
-
-```typescript
-{
-  type: CleansingType.REGEX_EXTRACT,
-  pattern: '[A-Z0-9]+',     // Pattern to extract
-}
-```
-
-### Date Format Parameters
-
-```typescript
-{
-  type: CleansingType.DATE_FORMAT,
-  format: 'yyyy-MM-dd',     // Output date format (Luxon tokens: yyyy=year, MM=month, dd=day)
-  timezone: 'UTC',          // Optional timezone (e.g. 'America/New_York')
-  locale: 'en',             // Optional locale for output formatting
-}
-```
-
-Common Luxon tokens: `yyyy` year · `MM` month · `dd` day · `HH` hour · `mm` minute · `ss` second.
-Special values: `'relative'` · `'X'` (Unix seconds) · `'LL'` (locale long date).
-
-### Alt Flag Parameters
-
-```typescript
-{
-  type: CleansingType.ALT_FLAG,
-  primaryPipes: [...],
-  fallbackPipes: [...],
-  fallbackOn: 'empty',        // When to use fallback
+  symbols?: string[];         // REMOVE_CURRENCY_SYMBOL
+  decimals?: number;          // TO_NUMBER
+  primaryPipes?: object[];    // ALT_FLAG
+  fallbackPipes?: object[];   // ALT_FLAG
+  fallbackOn?: string;        // ALT_FLAG
+  [key: string]: unknown;     // any pipe-specific field
 }
 ```
 
 ## Predefined Profiles
 
-Pre-configured pipe combinations for common use cases.
-
-### Usage
+Pre-configured `CleanerStepRules` for common use cases:
 
 ```typescript
 import { CleansingProfile } from '@hanivanrizky/nestjs-browser-action';
@@ -342,162 +314,98 @@ const result = await this.cleansingService.cleanseWithProfile(
   '  $29.99  ',
   CleansingProfile.PRICE
 );
-// Result: 29.99
 ```
 
 ### Available Profiles
 
-#### PRICE
-Cleanses price strings with currency symbols and converts to number.
-
-```typescript
-CleansingProfile.PRICE
-
-'  $29.99  ' → 29.99
-'€15.50' → 15.50
-```
-
-**Pipes used:**
-1. Trim
-2. Remove currency symbol
-3. Remove special characters
-4. To number
-
-#### PHONE
-Cleanses phone number formats.
-
-```typescript
-CleansingProfile.PHONE
-
-'+1 (555) 123-4567' → '+15551234567'
-'(555) 123-4567' → '5551234567'
-```
-
-#### EMAIL
-Cleanses and normalizes email addresses.
-
-```typescript
-CleansingProfile.EMAIL
-
-'  user@EXAMPLE.com  ' → 'user@example.com'
-```
-
-#### DATE
-Parses and formats dates.
-
-```typescript
-CleansingProfile.DATE
-
-'January 15, 2024' → '2024-01-15'
-'15/01/2024' → '2024-01-15'
-```
-
-#### CURRENCY
-Handles currency symbols and formatting.
-
-```typescript
-CleansingProfile.CURRENCY
-
-'$29.99' → '29.99'
-'€1,234.56' → '1234.56'
-```
-
-## Chaining Pipes
-
-Pipes execute in sequence, output of one becomes input of next:
-
-```typescript
-const pipes = [
-  { type: CleansingType.TRIM },                      // '  HELLO  '
-  { type: CleansingType.NORMALIZE_WHITESPACE },     // ' HELLO'
-  { type: CleansingType.TO_LOWER_CASE },             // 'hello'
-];
-
-const result = this.cleansingService.cleanse(
-  '  HELLO    WORLD  ',
-  pipes
-);  // 'hello world'
-```
+| Profile | Input example | Output |
+|---------|--------------|--------|
+| `PRICE` | `'  $29.99  '` | `'29.99'` |
+| `PHONE` | `'+1 (555) 123-4567'` | `'+15551234567'` |
+| `EMAIL` | `'  User@EXAMPLE.com  '` | `'user@example.com'` |
+| `DATE` | `'January 15, 2024'` | `'2024-01-15'` |
+| `CURRENCY` | `'$29.99'` | `'29.99'` |
 
 ## Creating Custom Pipes
 
-Create a custom pipe by extending `CleansingPipe` and implementing `exec()` plus a unique `type` string:
+Extend `CleansingPipe` and implement `exec()` plus a unique `type` string:
 
 ```typescript
 import { CleansingPipe } from '@hanivanrizky/nestjs-browser-action';
 
 export class ShoutPipe extends CleansingPipe<string, string> {
   type = 'shout';
-
-  exec (value: string): string {
+  exec(value: string): string {
     return String(value).toUpperCase();
   }
 }
 ```
 
-Register it so config-driven paths (`scrape` `pipes`, workflow `cleanse` actions, `buildPipes`) can resolve the `type`. Two ways:
+Register it so it's resolvable by type string:
 
-**1. Declaratively, via module options (registered at startup):**
-
+**Via module options (startup):**
 ```typescript
 BrowserActionModule.forRoot({
   customPipes: { shout: ShoutPipe },
 });
 ```
 
-**2. Programmatically, via `CleansingService`:**
-
+**Via CleansingService (programmatic):**
 ```typescript
-constructor(private readonly cleansing: CleansingService) {
-  this.cleansing.registerPipe('shout', ShoutPipe);
-  // or bulk: this.cleansing.registerPipes({ shout: ShoutPipe });
-}
+this.cleansingService.registerPipe('shout', ShoutPipe);
+// or bulk:
+this.cleansingService.registerPipes({ shout: ShoutPipe, other: OtherPipe });
 ```
 
-Registration throws if the `type` clashes with a builtin or an already-registered custom pipe.
+**Via PipeEngine (per-instance):**
+```typescript
+const engine = new PipeEngine();
+engine.register('shout', ShoutPipe);
+engine.apply('hello', { custom: [{ type: 'shout' }] }); // 'HELLO'
+```
+
+Registration silently overwrites an existing type (no throw).
 
 Once registered, use it like any builtin:
 
 ```typescript
-{ pipes: { title: [{ type: 'shout' }] } }
+// In scrape():
+{ pipes: { title: { custom: [{ type: 'shout' }] } } }
+
+// In workflow cleanse action:
+{ options: { pipes: { custom: [{ type: 'shout' }] } } }
 ```
 
 ## Security
 
-### Safe Property Assignment
-
-`buildPipes()` uses a whitelist of safe properties when copying config fields to pipe instances. It blocks overwriting the `exec` and `type` properties, preventing arbitrary code execution through crafted pipe configs.
-
 ### ReDoS Prevention
 
-Regex pipes (`REGEX_REPLACE`, `REGEX_EXTRACT`) validate their `pattern` against a ReDoS check. Patterns with nested quantifiers like `(a+)+` or `(a*)*` are rejected before compilation.
-
-### Nesting Depth Limit
-
-`buildPipes()` enforces a maximum nesting depth of 10 for `ALT_FLAG` `primaryPipes` and `fallbackPipes`. Deeper nesting throws a `WorkflowValidationError`.
+Regex pipes (`REGEX_REPLACE`, `REGEX_EXTRACT`) validate `pattern` against a ReDoS check. Patterns with nested quantifiers like `(a+)+` are rejected before compilation.
 
 ### Validation
 
-Pipe configs are validated by `validatePipeConfigs()` when used in workflows. This checks:
-- `type` is present and is a string
+Pipe configs are validated by `validatePipeConfigs()` when used in workflows:
+- `type` must be present and a string
 - `pattern` (if present) passes the ReDoS check
-- Nested `primaryPipes` and `fallbackPipes` are validated recursively
+- Nested `primaryPipes`/`fallbackPipes` are validated recursively
 
 ## Examples
 
 ### E-commerce Price Cleansing
 
 ```typescript
-const price = await this.actionHelpers.scrape(
+const { price } = await this.actionHelpers.scrape(
   'https://shop.example.com/product',
   { price: '.product-price' },
   {
     pipes: {
-      price: [
-        { type: CleansingType.TRIM },
-        { type: CleansingType.REMOVE_CURRENCY_SYMBOL },
-        { type: CleansingType.TO_NUMBER },
-      ],
+      price: {
+        trim: true,
+        custom: [
+          { type: CleansingType.REMOVE_CURRENCY_SYMBOL, symbols: ['$', '€', '£'] },
+          { type: CleansingType.TO_NUMBER, decimals: 2 },
+        ],
+      },
     },
   }
 );
@@ -506,92 +414,97 @@ const price = await this.actionHelpers.scrape(
 ### Text Normalization
 
 ```typescript
-const text = await this.actionHelpers.scrape(
+const { content } = await this.actionHelpers.scrape(
   url,
   { content: '.content' },
   {
     pipes: {
-      content: [
-        { type: CleansingType.TRIM },
-        { type: CleansingType.NORMALIZE_WHITESPACE },
-        { type: CleansingType.REMOVE_LINE_BREAKS },
-        { type: CleansingType.SANITIZE_TEXT },
-      ],
+      content: {
+        trim: true,
+        custom: [
+          { type: CleansingType.REMOVE_LINE_BREAKS },
+          { type: CleansingType.NORMALIZE_WHITESPACE },
+          { type: CleansingType.SANITIZE_TEXT },
+        ],
+      },
     },
   }
 );
 ```
 
-### URL Extraction
+### URL List Extraction
 
 ```typescript
-const urls = await this.actionHelpers.scrapeAll(
+const { links } = await this.actionHelpers.scrapeAll(
   url,
   { links: 'a[href]' },
   {
     pipes: {
-      links: [
-        { type: CleansingType.TRIM },
-        {
-          type: CleansingType.REGEX_EXTRACT,
-          pattern: '^/products/[\\w-]+',
-        },
-      ],
+      links: {
+        trim: true,
+        custom: [
+          { type: CleansingType.REGEX_EXTRACT, pattern: '^/products/[\\w-]+' },
+        ],
+      },
     },
   }
 );
 ```
 
-### Conditional Data Cleaning
+### Regex Replace via replace rule
 
 ```typescript
-const data = await this.actionHelpers.scrape(
+const { text } = await this.actionHelpers.scrape(
   url,
-  { price: '.price' },
+  { text: '.content' },
   {
     pipes: {
-      price: [
-        // Try to extract digits
-        {
-          type: CleansingType.ALT_FLAG,
-          primaryPipes: [
-            { type: CleansingType.REGEX_EXTRACT, pattern: '\\d+\\.\\d{2}' },
-          ],
-          // Fallback: just trim and remove currency
-          fallbackPipes: [
-            { type: CleansingType.TRIM },
-            { type: CleansingType.REMOVE_CURRENCY_SYMBOL },
-          ],
-          fallbackOn: 'empty',
-        },
-      ],
+      text: {
+        trim: true,
+        replace: [
+          { from: '\\s+', to: ' ' },    // collapse whitespace
+          { from: '[^\\w ]', to: '' },   // strip non-word chars
+        ],
+        toLowerCase: true,
+      },
     },
   }
 );
 ```
 
-## Performance
+### Workflow: extract then cleanse
 
-- **Pipe Caching:** Pipe instances are cached for reuse
-- **Efficient Chaining:** Minimal overhead per pipe
-- **Lazy Evaluation:** Pipes only execute when data is extracted
+```typescript
+const result = await this.actionHelpers.scrapeWithWorkflow(
+  'https://example.com',
+  {
+    version: '1.0',
+    actions: [
+      { id: 'rawPrice', action: 'extract', target: { type: 'css', value: '.price' } },
+      {
+        id: 'price',
+        action: 'cleanse',
+        value: '${rawPrice}',
+        options: {
+          pipes: {
+            trim: true,
+            custom: [
+              { type: CleansingType.REMOVE_CURRENCY_SYMBOL, symbols: ['$'] },
+              { type: CleansingType.TO_NUMBER, decimals: 2 },
+            ],
+          },
+        },
+      },
+    ],
+  }
+);
+// result.data.price → 29.99 (as string from PipeEngine; cast to Number() if needed)
+```
 
-## Best Practices
-
-1. **Order matters:** Place expensive operations last
-2. **Validate first:** Use regex to validate before conversion
-3. **Use profiles:** Leverage predefined profiles for common patterns
-4. **Handle edge cases:** Use alt-flag for conditional logic
-5. **Test pipes:** Verify output with various input formats
-
-## Related Methods
+## Related
 
 - [`scrape()`](../methods/scrape.md) - With pipe options
 - [`scrapeAll()`](../methods/scrape-all.md) - Multi-element with pipes
 - [`CleansingService`](../api-reference.md#cleansingservice) - Direct pipe usage
 - [Workflow Actions](../workflow-actions.md#cleanse-action) - Cleanse in workflows
-
-## See Also
-
-- [CleansingType Enum](../api-reference.md#cleansingtype) - All pipe types
-- [Profiles Reference](./profiles.md) - Predefined profiles
+- [CleansingType Enum](../api-reference.md#cleansingtype) - All pipe type strings

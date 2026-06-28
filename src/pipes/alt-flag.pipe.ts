@@ -6,7 +6,7 @@ import { CleansingType } from '../enums/cleansing-type.enum';
  * Alternative fallback pipe that tries primary, then fallback if result is empty/null/undefined
  */
 export class AltFlagPipe extends CleansingPipe<unknown, unknown> {
-  type = CleansingType.ALT_FLAG;
+  readonly type = CleansingType.ALT_FLAG as const;
 
   @IsArray()
   primaryPipes: CleansingPipe[];

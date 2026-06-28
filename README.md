@@ -1,54 +1,73 @@
 # @hanivanrizky/nestjs-browser-action
 
-[![npm version](https://badge.fury.io/js/%40hanivanrizky%2Fnestjs-browser-action.svg)](https://www.npmjs.com/package/@hanivanrizky/nestjs-browser-action)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests: 337 passed](https://img.shields.io/badge/tests-337%20passed-brightgreen.svg)]()
+<p align="center">
+  <a href="http://nestjs.com/" target="_blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
+</p>
 
-> **⚠️ Status: Experimental**
->
-> This project is currently in **experimental** stage and intended for **personal use only**. The API is subject to change, and production use is not recommended.
+<p align="center">A NestJS module for stealth browser automation using CloakBrowser + puppeteer-core with support for proxy rotation, connection pooling, cookie persistence, and flexible data extraction.</p>
 
-A NestJS module that provides stealth browser automation (CloakBrowser + puppeteer-core) with configurable options, connection pooling, and data cleansing capabilities.
+<p align="center">
+  <a href="https://www.npmjs.com/package/@hanivanrizky/nestjs-browser-action" target="_blank"><img src="https://img.shields.io/npm/v/@hanivanrizky/nestjs-browser-action.svg" alt="NPM Version" /></a>
+  <a href="https://www.npmjs.com/package/@hanivanrizky/nestjs-browser-action" target="_blank"><img src="https://img.shields.io/npm/l/@hanivanrizky/nestjs-browser-action.svg" alt="Package License" /></a>
+  <a href="https://www.npmjs.com/package/@hanivanrizky/nestjs-browser-action" target="_blank"><img src="https://img.shields.io/npm/dm/@hanivanrizky/nestjs-browser-action.svg" alt="NPM Downloads" /></a>
+  <img src="https://img.shields.io/badge/tests-363%20passed-brightgreen.svg" alt="Tests: 363 passed" />
+</p>
+
+> **⚠️ Status: Experimental** — personal use only; API subject to change.
+
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Documentation](#documentation)
+- [Quick Examples](#quick-examples)
+- [Development](#development)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Features
 
-- (・_・) **Browser Automation**: Declarative workflow-based browser automation
-- (☆^O^☆) **Data Scraping**: Single, multi-element, and container-based list scraping with CSS/XPath
-- (◕‿◕) **Pagination**: Automatic next-page resolution from container scrapes
-- (>_>) **Connection Pooling**: Efficient browser instance management
-- (♡˙︶˙♡) **Cookie Persistence**: Save/load browser sessions for authentication
-- (｡•̀ᴗ-)✧ **Data Cleansing**: 14 built-in transformation pipes
-- (°_°)! **Shadow DOM**: Support for web components
-- (^_^) **Type-Safe**: Full TypeScript support with generics
-- (^^) **Remote Chrome**: Connect to remote Chrome instances via CDP (browserURL/browserWSEndpoint)
-- (•̀ᴗ•́) **Stealth**: Local launches use CloakBrowser stealth Chromium (proxy, humanize, geoip, timezone/locale spoofing)
-- (⌐■_■) **TLS Fingerprint**: Capture the browser's own TLS/HTTP handshake (ja3/ja4, ciphers, http2 akamai, headers)
+- **(☆^O^☆) Pattern-Based Extraction**: Define extraction patterns with `PatternField` — API-compatible with `nestjs-xpath-parser`
+- **(.\_.) Container Extraction**: Extract lists of items from repeating DOM nodes with pagination
+- **(>\_<) Workflow Automation**: Declarative step-by-step browser automation (navigate, click, fill, extract, screenshot…)
+- **(・\_・) Data Cleaning Pipes**: 33 built-in transformations (trim, case, replace, decode HTML, number, regex, jsonpath, clean-html…)
+- **(☆^O^☆) Custom Pipes**: Extensible pipe registry — `PIPE_REGISTRY['my-type'] = MyPipe`
+- **(>\_<) Connection Pooling**: Efficient browser instance reuse with configurable min/max/idle/acquire timeouts
+- **(.\_.) Cookie Persistence**: Save/load browser sessions for authentication flows
+- **(o_o) Stealth**: CloakBrowser Chromium with proxy, humanize, geoip, timezone/locale spoofing, and anti-detect flags
+- **(.\_.) Remote Chrome**: Connect to remote Chrome instances via CDP (browserURL / browserWSEndpoint)
+- **(>\_<) TLS Fingerprint**: Capture the browser's own TLS/HTTP handshake (ja3/ja4, ciphers, http2 akamai, headers) for use with `nestjs-xpath-parser`'s CycleTLS engine
+- **(☆^O^☆) TypeScript Generics**: Full generic type support for type-safe results
+- **(o_o) Fully Tested**: 363 tests across 37 suites
 
 ## Installation
 
-### From npm
-
 ```bash
-npm install @hanivanrizky/nestjs-browser-action
+pnpm add @hanivanrizky/nestjs-browser-action
 # or
 yarn add @hanivanrizky/nestjs-browser-action
 # or
-pnpm add @hanivanrizky/nestjs-browser-action
-```
-
-### From GitHub
-
-```bash
-npm install https://github.com/Hanivan/nestjs-browser-action.git
-# or
-pnpm add https://github.com/Hanivan/nestjs-browser-action.git
-# or using SSH
-pnpm add git@github.com:Hanivan/nestjs-browser-action.git
+npm install @hanivanrizky/nestjs-browser-action
 ```
 
 ## Quick Start
 
-### 1. Configure Module
+### Import the Module
+
+**Basic usage:**
+
+```typescript
+import { Module } from '@nestjs/common';
+import { BrowserActionModule } from '@hanivanrizky/nestjs-browser-action';
+
+@Module({
+  imports: [BrowserActionModule.forRoot()],
+})
+export class AppModule {}
+```
+
+**With pool and cookie options:**
 
 ```typescript
 import { Module } from '@nestjs/common';
@@ -58,335 +77,260 @@ import { BrowserActionModule } from '@hanivanrizky/nestjs-browser-action';
   imports: [
     BrowserActionModule.forRoot({
       pool: { min: 2, max: 10 },
-      cookies: { enabled: true },
+      cookies: { enabled: true, cookiesDir: './cookies' },
+      logLevel: 'log',
     }),
   ],
 })
 export class AppModule {}
 ```
 
-### 2. Inject Service
+**Async configuration:**
+
+```typescript
+import { Module } from '@nestjs/common';
+import { BrowserActionModule } from '@hanivanrizky/nestjs-browser-action';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot(),
+    BrowserActionModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        pool: {
+          min: configService.get<number>('POOL_MIN', 2),
+          max: configService.get<number>('POOL_MAX', 10),
+        },
+        cloak: {
+          proxy: { server: configService.get<string>('PROXY_URL', '') },
+        },
+        logLevel: configService.get<string>('LOG_LEVEL', 'log'),
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+### Inject the Service
 
 ```typescript
 import { Injectable } from '@nestjs/common';
 import { BrowserActionService } from '@hanivanrizky/nestjs-browser-action';
 
 @Injectable()
-export class MyService {
-  constructor(
-    private readonly actionHelpers: BrowserActionService,
-  ) {}
+export class YourService {
+  constructor(private readonly browserAction: BrowserActionService) {}
 
-  async scrapeData() {
-    const result = await this.actionHelpers.scrape(
-      'https://example.com',
-      {
-        title: 'h1',
-        description: 'meta[name="description"]@content',
-      }
-    );
+  async scrapeProducts() {
+    const result = await this.browserAction.evaluateWebsite({
+      url: 'https://www.scrapingcourse.com/ecommerce/',
+      patterns: [
+        {
+          key: 'container',
+          patternType: 'css',
+          returnType: 'text',
+          patterns: ['.product'],
+          meta: { isContainer: true },
+        },
+        {
+          key: 'name',
+          patternType: 'css',
+          returnType: 'text',
+          patterns: ['h2.woocommerce-loop-product__title'],
+          pipes: { trim: true },
+        },
+        {
+          key: 'price',
+          patternType: 'css',
+          returnType: 'text',
+          patterns: ['.price'],
+          pipes: { trim: true },
+        },
+      ],
+    });
 
-    console.log(result.title);       // "Example Domain"
-    console.log(result.description); // "This domain is for use in..."
+    return result.results;
   }
 }
 ```
 
 ## Documentation
 
-### (^_^) Method Documentation
+### Features
 
-| Method | Description |
-|--------|-------------|
-| [`scrape()`](./docs/methods/scrape.md) | Extract single elements |
-| [`scrapeAll()`](./docs/methods/scrape-all.md) | Extract multiple elements |
-| [`scrapeContainerFields()`](./docs/api-reference.md#scrapecontainerfields) | Extract structured lists with pagination |
-| [`scrapeWithWorkflow()`](./docs/methods/workflow.md) | Workflow-based automation |
-| [`scrapeAllWithWorkflow()`](./docs/methods/workflow.md) | Workflow with multi-element |
-| [`takeScreenshot()`](./docs/methods/screenshots.md) | Capture screenshots |
-| [`generatePDF()`](./docs/methods/screenshots.md) | Generate PDFs |
-| [`captureTlsFingerprint()`](./docs/api-reference.md#capturetlsfingerprintpath-url-promisetlsfingerprint) | Capture browser's TLS/HTTP fingerprint |
-| [Browser & Page Control](./docs/methods/browser-control.md) | Low-level control |
+- [Pattern-Based Extraction](docs/methods/scrape.md#evaluatewebsite---unified-xpath-parser-compatible-api) - `evaluateWebsite()` with `PatternField` patterns
+- [Container-Based Extraction](docs/methods/scrape.md#evaluatewebsite---unified-xpath-parser-compatible-api) - Extract lists with `meta.isContainer`
+- [Data Cleaning Pipes](docs/features/pipes.md) - Transform extracted data with pipes
+- [Cookie Management](docs/features/cookies.md) - Session persistence
+- [Workflow Actions](docs/methods/workflow.md) - Declarative step-by-step automation
 
-### (☆^O^☆) Feature Guides
+### Reference
 
-| Feature | Description |
-|---------|-------------|
-| [Cookie Management](./docs/features/cookies.md) | Session persistence |
-| [Pipe System](./docs/features/pipes.md) | Data transformation |
-| [Workflow Actions](./docs/workflow-actions.md) | All action types reference |
-
-### (^_^) API Reference
-
-- [API Reference](./docs/api-reference.md) - Complete API documentation
-- [Configuration](./docs/api-reference.md#configuration) - All options
-- [Types](./docs/api-reference.md#types) - TypeScript interfaces
+- [API Reference](docs/api-reference.md) - Complete service API documentation
+- [Workflow Actions Reference](docs/workflow-actions.md) - All action types
+- [Browser & Page Control](docs/methods/browser-control.md) - Low-level control
 
 ## Quick Examples
 
-### Simple Scraping
+### Simple Product Scraping
 
 ```typescript
-const data = await this.actionHelpers.scrape('https://example.com', {
-  title: 'h1',
-  price: '.price',
+interface Product {
+  name: string;
+  price: string;
+}
+
+const result = await browserAction.evaluateWebsite<Product>({
+  url: 'https://example.com/products',
+  patterns: [
+    {
+      key: 'container',
+      patternType: 'css',
+      returnType: 'text',
+      patterns: ['.product-card'],
+      meta: { isContainer: true },
+    },
+    {
+      key: 'name',
+      patternType: 'css',
+      returnType: 'text',
+      patterns: ['h2.name'],
+      pipes: { trim: true },
+    },
+    {
+      key: 'price',
+      patternType: 'css',
+      returnType: 'text',
+      patterns: ['.price'],
+      pipes: {
+        trim: true,
+        replace: [{ from: '$', to: '' }],
+      },
+    },
+  ],
 });
 ```
 
-### Multi-Element Scraping
+### Article Extraction with Fallbacks
 
 ```typescript
-const data = await this.actionHelpers.scrapeAll('https://example.com', {
-  titles: '.card h2',
-  links: '.card a',
+const result = await browserAction.evaluateWebsite({
+  url: 'https://example.com/article',
+  patterns: [
+    {
+      key: 'title',
+      patternType: 'css',
+      returnType: 'text',
+      patterns: ['meta[property="og:title"]'],
+      meta: {
+        alterPattern: ['h1', 'title'],
+      },
+      pipes: { trim: true },
+    },
+    {
+      key: 'description',
+      patternType: 'css',
+      returnType: 'text',
+      patterns: ['meta[name="description"]'],
+      pipes: { trim: true, decode: true },
+    },
+  ],
+});
+```
+
+### XPath Extraction
+
+```typescript
+const result = await browserAction.evaluateWebsite({
+  url: 'https://example.com/sitemap.xml',
+  patterns: [
+    {
+      key: 'container',
+      patternType: 'xpath',
+      returnType: 'text',
+      patterns: ['//url'],
+      meta: { isContainer: true },
+    },
+    {
+      key: 'loc',
+      patternType: 'xpath',
+      returnType: 'text',
+      patterns: ['.//loc/text()'],
+    },
+  ],
 });
 ```
 
 ### Workflow Automation
 
 ```typescript
-const workflow = {
-  version: '1.0' as const,
+const result = await browserAction.scrapeWithWorkflow({
+  version: '1.0',
   actions: [
-    { action: 'navigate' as const, value: 'https://example.com' },
-    { id: 'title', action: 'extract' as const, target: { type: 'css' as const, value: 'h1' } },
-    { action: 'click' as const, target: { type: 'css' as const, value: '#button' } },
+    { action: 'navigate', value: 'https://example.com/login' },
+    { action: 'fill', target: { type: 'css', value: '#username' }, value: 'user' },
+    { action: 'fill', target: { type: 'css', value: '#password' }, value: 'pass' },
+    { action: 'click', target: { type: 'css', value: '[type=submit]' } },
+    { action: 'saveCookies', value: 'user-session', options: { overwrite: true } },
+    { id: 'title', action: 'extract', target: { type: 'css', value: 'h1' } },
   ],
-};
-
-const result = await this.actionHelpers.scrapeWithWorkflow(workflow);
-```
-
-### Container Extraction (lists + pagination)
-
-```typescript
-import type { ContainerDescriptor } from '@hanivanrizky/nestjs-browser-action';
-
-interface Product { name: string; price: string; }
-
-const descriptor: ContainerDescriptor<Product> = {
-  container: '.product-card',       // CSS or XPath — one node per item
-  fields: {
-    name:  { selector: 'h2.name' },
-    price: { selector: '.price' },
-  },
-  pagination: {
-    container:     '.pagination',
-    linkSelector:  'a',
-    labelSelector: 'a',
-  },
-};
-
-const { items, pagination } = await this.actionHelpers.scrapeContainerFields<Product>(
-  'https://example.com/products',
-  descriptor,
-  { currentPage: 1, interceptResource: true, useRandomUserAgent: true },
-);
-
-console.log(items);               // [{ name, price }, ...]
-console.log(pagination?.nextUrl); // URL of next page, or null
-```
-
-### With Data Cleansing
-
-```typescript
-import { CleansingType } from '@hanivanrizky/nestjs-browser-action';
-
-const data = await this.actionHelpers.scrape('https://example.com', {
-  price: '.price',
-}, {
-  pipes: {
-    price: [
-      { type: CleansingType.REMOVE_CURRENCY_SYMBOL },
-      { type: CleansingType.TO_NUMBER },
-    ],
-  },
 });
 ```
 
-### Cookie Persistence
-
-```typescript
-const workflow = {
-  version: '1.0' as const,
-  actions: [
-    { action: 'loadCookies' as const, value: 'user-session', onError: 'skip' as const },
-    { action: 'navigate' as const, value: 'https://example.com/dashboard' },
-    { action: 'saveCookies' as const, value: 'user-session', options: { overwrite: true } },
-  ],
-};
-```
-
 ### Stealth (CloakBrowser)
-
-Local browsers launch through CloakBrowser stealth Chromium. Configure anti-detect
-features via the `cloak` option:
 
 ```typescript
 BrowserActionModule.forRoot({
   cloak: {
     proxy: { server: 'http://host:port', username: 'user', password: 'pass' },
-    humanize: true,                 // human-like mouse/typing
-    geoip: true,                    // spoof geolocation from proxy IP
-    timezone: 'America/New_York',   // spoof timezone
-    locale: 'en-US',                // spoof locale
-    stealthArgs: true,              // anti-detect Chromium flags
-    extensionPaths: ['/path/ext'],  // load unpacked extensions
-    userDataDir: './profile',       // persistent profile (launchPersistentContext)
-    launchOptions: { headless: true, args: ['--no-sandbox'] }, // raw puppeteer-core passthrough
+    humanize: true,
+    geoip: true,
+    timezone: 'America/New_York',
+    locale: 'en-US',
+    stealthArgs: true,
   },
   pool: { min: 2, max: 5 },
 })
 ```
 
-`launchOptions` (top-level) is also forwarded to CloakBrowser's `launchOptions`
-passthrough for backward compatibility. `cloak` is ignored when `remote` is set
-(remote uses plain CDP connect).
+### TLS Fingerprint Capture
 
-**Per-call cloak override (proxy/UA rotation):** pass `cloak` per request to launch a
-dedicated off-pool browser with its own stealth config — useful for rotating proxies or
-fingerprints across requests. Not supported in remote CDP mode.
+Capture the browser's own TLS fingerprint for use with `nestjs-xpath-parser`'s CycleTLS engine:
 
 ```typescript
-// scrape / scrapeAll
-await actions.scrape(url, { title: 'h1' }, {
-  cloak: { proxy: { server: 'http://rotating-proxy:8080' } },
-});
-
-// workflow
-await actions.scrapeWithWorkflow(url, {
-  version: '1.0',
-  cloak: { proxy: { server: 'http://rotating-proxy:8080' } },
-  actions: [...],
-});
-```
-
-### Remote Chrome Connection
-
-Connect to remote Chrome instances via Chrome DevTools Protocol (CDP):
-
-```typescript
-BrowserActionModule.forRoot({
-  remote: {
-    browserURL: 'http://localhost:9222',  // Or use browserWSEndpoint
-    retryMax: 3,                          // Connection retry attempts
-    retryDelay: 1000,                     // Delay between retries (ms)
-  },
-  pool: { min: 2, max: 5 },
-})
-```
-
-**Using browserWSEndpoint:**
-
-```typescript
-BrowserActionModule.forRoot({
-  remote: {
-    browserWSEndpoint: 'ws://localhost:9222/devtools/page/abc123',
-  },
-})
-```
-
-**Remote-first priority:** When both `remote` and `launchOptions` are provided, remote connection takes precedence.
-
-**See:** [Remote Chrome Configuration](./docs/api-reference.md#remote-chrome-configuration) for details.
-
-## Services
-
-| Service | Description |
-|---------|-------------|
-| **BrowserActionService** | High-level automation methods (scrape, screenshot, PDF, workflows) |
-| **BrowserManagerService** | Browser pool management |
-| **PageService** | Page lifecycle and navigation |
-| **CookieService** | Cookie persistence |
-| **CleansingService** | Data cleansing with pipes |
-
-## Configuration
-
-### Basic Configuration
-
-```typescript
-BrowserActionModule.forRoot({
-  pool: {
-    min: 2,
-    max: 10,
-    idleTimeoutMs: 30000,    // reap idle browsers down to min (0 disables)
-    acquireTimeoutMs: 30000, // reject acquire() if none free in time (0 waits forever)
-    strategy: 'round-robin',
-  },
-  cookies: {
-    enabled: true,
-    cookiesDir: './cookies',
-  },
-  logLevel: 'log',
-})
-```
-
-### All Options
-
-See [Configuration Reference](./docs/api-reference.md#configuration) for complete options.
-
-## Type Safety
-
-Full TypeScript support with generics:
-
-```typescript
-// Type-safe selectors
-interface ProductSelectors {
-  title: string;
-  price: number;
-}
-
-const result = await this.actionHelpers.scrape<ProductSelectors>(url, {
-  title: 'h1',
-  price: '.price',
-});
-
-// Type-safe workflow results
-const workflow = await this.actionHelpers.scrapeWithWorkflow<{
-  title: string;
-  price: number;
-}>(url, workflow);
+const fingerprint = await browserAction.captureTlsFingerprint('./fingerprint.json');
+// fingerprint.json can be passed to ScraperHtmlModule.forRoot({ fingerprint: './fingerprint.json' })
 ```
 
 ## Development
 
-### Scripts
-
 ```bash
+# Install dependencies
+pnpm install
+
 # Build
 pnpm build
 
-# Run tests
+# Test
 pnpm test
+pnpm test:cov
 
-# Lint code
+# Lint
 pnpm lint
-
-# Format code
 pnpm format
 ```
 
-### Git Hooks
+## Contributing
 
-- **Pre-commit**: Runs ESLint
-- **Pre-push**: Runs build and tests
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/yourusername/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/yourusername/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-MIT
-
-## Support
-
-For issues and questions, please use [GitHub Issues](https://github.com/Hanivan/nestjs-browser-action/issues).
-
-## Examples
-
-Check out the test project for complete examples: [test-browser-action](https://github.com/Hanivan/test-browser-action)
-
----
-
-**Documentation:**
-- [Methods](./docs/methods) - Method-specific guides
-- [Features](./docs/features) - Feature guides
-- [API Reference](./docs/api-reference.md) - Complete API
-- [Workflow Actions](./docs/workflow-actions.md) - Action reference
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

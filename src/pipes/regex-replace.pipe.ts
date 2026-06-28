@@ -6,7 +6,7 @@ import { CleansingType } from '../enums/cleansing-type.enum';
  * Replaces text using regex patterns
  */
 export class RegexReplacePipe extends CleansingPipe<string, string> {
-  type = CleansingType.REGEX_REPLACE;
+  readonly type = CleansingType.REGEX_REPLACE as const;
 
   @IsOptional()
   @IsString()

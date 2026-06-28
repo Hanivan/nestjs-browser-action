@@ -7,7 +7,7 @@ import { normalizeWhitespace } from '../utils/string.util';
  * Sanitizes text by removing HTML tags and XSS vulnerabilities
  */
 export class SanitizeTextPipe extends CleansingPipe<string, string> {
-  type = CleansingType.SANITIZE_TEXT;
+  readonly type = CleansingType.SANITIZE_TEXT as const;
 
   private static readonly TAG_PAIR_REGEXES: RegExp[] = [
     'script',

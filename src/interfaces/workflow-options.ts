@@ -4,9 +4,9 @@
  */
 
 import type {
-  PipeConfig,
   FieldDescriptor,
   PaginationDescriptor,
+  CleanerStepRules,
 } from './types';
 import type { CloakOptions } from './browser-action-options';
 
@@ -72,7 +72,7 @@ export interface ActionOptions {
   navigationTimeout?: number; // Timeout for navigation wait
   overwrite?: boolean; // Overwrite existing file (for saveCookies action)
   metadata?: Record<string, unknown>; // Additional metadata (for saveCookies action)
-  pipes?: PipeConfig[]; // Pipes for cleanse action
+  pipes?: CleanerStepRules; // Pipes for cleanse action
   multiple?: boolean; // Extract all matching elements as array
   as?: 'text' | 'html' | 'outerHtml' | 'attribute'; // Extract mode (default: 'text')
   attribute?: string; // Attribute name when as: 'attribute'

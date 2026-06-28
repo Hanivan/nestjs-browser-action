@@ -222,3 +222,139 @@ console.log(data.nonexistent);  // undefined (no error thrown)
 - [Pipe Documentation](../features/pipes.md)
 - [Workflow Actions](../workflow-actions.md)
 - [XPath Guide](../features/xpath.md)
+
+---
+
+# evaluateWebsite() - Unified xpath-parser-compatible API
+
+Drop-in compatible with `nestjs-xpath-parser`'s `EvaluateOptions` / `PatternField` shape. Developers can switch between the two libraries with zero API changes.
+
+## Signature
+
+```typescript
+async evaluateWebsite<T = Record<string, unknown>>(
+  options: EvaluateOptions,
+): Promise<EvaluateResult<T>>
+```
+
+## Parameters
+
+### `options: EvaluateOptions`
+
+```typescript
+{
+  url: string;               // required — page to scrape
+  patterns: PatternField[];  // field definitions (see below)
+  waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2';
+  timeout?: number;
+  cloak?: CloakOptions;
+  interceptResource?: boolean;
+  useRandomUserAgent?: boolean;
+}
+```
+
+### `PatternField`
+
+```typescript
+{
+  key: string;                          // output field name
+  patternType: 'css' | 'xpath';        // selector language
+  returnType: 'text' | 'rawHTML' | 'html'; // rawHTML is an alias for html
+  patterns: string[];                   // [0] = primary, [1..n] = fallbacks
+  meta?: PatternMeta;
+  pipes?: CleanerStepRules;            // same object as CleanerStepRules from pipe-engine
+}
+```
+
+### `PatternMeta`
+
+```typescript
+{
+  isContainer?: boolean;     // marks this pattern as the container selector
+  multiple?: boolean | string;
+  multiline?: boolean;
+  alterPattern?: string[];   // extra fallback selectors (appended after patterns[1..n])
+  isPage?: boolean;
+  pageUrlKey?: string;
+  pageTextKey?: string;
+}
+```
+
+## Return Type
+
+```typescript
+interface EvaluateResult<T = Record<string, unknown>> {
+  results: T[];
+}
+```
+
+Always returns an array. For flat (non-container) pages, `results` has one element.
+
+## Routing Logic
+
+| Condition | Path | Returns |
+|-----------|------|---------|
+| Any pattern has `meta.isContainer: true` | `scrapeContainerFields()` | `results: items[]` |
+| No container pattern | `scrape()` | `results: [singleObject]` |
+
+## Examples
+
+### Flat page extraction
+
+```typescript
+import {
+  BrowserActionService,
+  EvaluateOptions,
+} from '@hanivanrizky/nestjs-browser-action';
+
+const options: EvaluateOptions = {
+  url: 'https://example.com/product',
+  patterns: [
+    { key: 'title', patternType: 'css', returnType: 'text', patterns: ['h1'] },
+    {
+      key: 'price',
+      patternType: 'css',
+      returnType: 'text',
+      patterns: ['.price'],
+      pipes: { trim: true },
+    },
+  ],
+};
+
+const { results } = await service.evaluateWebsite(options);
+// results[0] = { title: 'Product Name', price: '$29.99' }
+```
+
+### Container / list extraction
+
+```typescript
+const options: EvaluateOptions = {
+  url: 'https://example.com/products',
+  patterns: [
+    {
+      key: 'container',
+      patternType: 'css',
+      returnType: 'text',
+      patterns: ['.product-card'],
+      meta: { isContainer: true },
+    },
+    {
+      key: 'name',
+      patternType: 'css',
+      returnType: 'text',
+      patterns: ['h2', 'h3'],            // h3 is fallback
+      meta: { alterPattern: ['.title'] }, // additional fallback
+    },
+    {
+      key: 'price',
+      patternType: 'css',
+      returnType: 'text',
+      patterns: ['.price'],
+      pipes: { trim: true },
+    },
+  ],
+};
+
+const { results } = await service.evaluateWebsite(options);
+// results = [{ name: 'Item A', price: '$10' }, { name: 'Item B', price: '$20' }, ...]
+```

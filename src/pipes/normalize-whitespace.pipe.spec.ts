@@ -54,16 +54,16 @@ describe('NormalizeWhitespacePipe', () => {
   });
 
   it('should handle null input', () => {
-    expect(pipe.exec(null)).toBeNull();
+    expect(pipe.exec(null as unknown as string)).toBeNull();
   });
 
   it('should handle undefined input', () => {
-    expect(pipe.exec(undefined)).toBeUndefined();
+    expect(pipe.exec(undefined as unknown as string)).toBeUndefined();
   });
 
   it('should handle non-string input', () => {
-    expect(pipe.exec(123)).toBe(123);
-    expect(pipe.exec({})).toEqual({});
+    expect(pipe.exec(123 as unknown as string)).toBe(123);
+    expect(pipe.exec({} as unknown as string)).toEqual({});
   });
 
   it('should preserve Unicode whitespace handling', () => {

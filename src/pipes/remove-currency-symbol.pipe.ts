@@ -6,7 +6,7 @@ import { CleansingType } from '../enums/cleansing-type.enum';
  * Removes currency symbols from strings
  */
 export class RemoveCurrencySymbolPipe extends CleansingPipe<string, string> {
-  type = CleansingType.REMOVE_CURRENCY_SYMBOL;
+  readonly type = CleansingType.REMOVE_CURRENCY_SYMBOL as const;
 
   // $€£¥₩₹₽₴₺₼₾៛₭₮₲₱₡¢₵
   private static readonly CURRENCY_REGEX = /[$€£¥₩₹₽₴₺₼₾៛₭₮₲₱₡¢₵]/g;

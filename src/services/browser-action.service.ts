@@ -15,7 +15,7 @@ import type {
 import { PageService } from './page.service';
 import { CookieService } from './cookie.service';
 import { CleansingService } from './cleansing.service';
-import { CleansingPipe } from '../pipes/cleansing-pipe';
+import { PipeEngine } from '../pipes/pipe-engine';
 import type {
   WorkflowDefinition,
   WorkflowAction,
@@ -29,11 +29,14 @@ import {
   ScrapeResult,
   ScrapeAllResult,
   WorkflowResultTyped,
-  PipeConfig,
   ContainerDescriptor,
   ContainerScrapeResult,
   PaginationDescriptor,
   PaginationResult,
+  EvaluateOptions,
+  EvaluateResult,
+  PipeOptions,
+  FieldDescriptor,
 } from '../interfaces/types';
 import { getRandomUserAgent } from '../utils/user-agent.util';
 import type { TlsFingerprint } from '../interfaces/tls-fingerprint';
@@ -56,7 +59,7 @@ import {
 @Injectable({ scope: Scope.TRANSIENT })
 export class BrowserActionService {
   private readonly logger: LoggerWithLevel;
-  private readonly pipeCache = new Map<string, CleansingPipe[]>();
+  private readonly pipeEngine = new PipeEngine();
   private activeDebugLogMaxLength: number;
 
   constructor(
@@ -206,14 +209,13 @@ export class BrowserActionService {
               )
             : await evalOne(selector, (el) => el.textContent);
 
-          if (options?.pipes?.[key]) {
-            const pipeInstances = this.getCachedPipeInstances(
-              options.pipes[key],
-            );
-            result[key] = this.cleansingService.cleanse(value, pipeInstances);
-          } else {
-            result[key] = value;
-          }
+          result[key] = options?.pipes?.[key]
+            ? this.pipeEngine.apply(
+                typeof value === 'string' ? value : String(value ?? ''),
+                options.pipes[key],
+                url,
+              )
+            : value;
         } catch (err) {
           this.logger.warn(
             `Failed to scrape '${key}' (${rawSelector}): ${err instanceof Error ? err.message : String(err)}`,
@@ -338,11 +340,8 @@ export class BrowserActionService {
           }
 
           if (options?.pipes?.[key]) {
-            const pipeInstances = this.getCachedPipeInstances(
-              options.pipes[key],
-            );
             (result as ScrapeResult)[key] = values.map((value) =>
-              this.cleansingService.cleanse(value, pipeInstances),
+              this.pipeEngine.apply(value, options.pipes![key], url),
             );
           } else {
             (result as ScrapeResult)[key] = values;
@@ -401,18 +400,17 @@ export class BrowserActionService {
         for (const key of Object.keys(item)) {
           const val = item[key];
           if (options?.pipes?.[key]) {
-            const pipes = this.getCachedPipeInstances(options.pipes[key]);
             const toStr = (v: unknown) =>
               typeof v === 'string' ? v : String(v as string);
             out[key] = Array.isArray(val)
               ? val.map((v) =>
                   v == null
                     ? null
-                    : this.cleansingService.cleanse(toStr(v), pipes),
+                    : this.pipeEngine.apply(toStr(v), options.pipes![key], url),
                 )
               : val == null
                 ? null
-                : this.cleansingService.cleanse(toStr(val), pipes);
+                : this.pipeEngine.apply(toStr(val), options.pipes[key], url);
           } else {
             out[key] = val;
           }
@@ -424,6 +422,72 @@ export class BrowserActionService {
     } finally {
       await this.pageService.closePage();
     }
+  }
+
+  async evaluateWebsite<T = Record<string, unknown>>(
+    options: EvaluateOptions,
+  ): Promise<EvaluateResult<T>> {
+    const { url, patterns, ...scraperOptions } = options;
+
+    if (!url) {
+      throw new Error('evaluateWebsite requires a url');
+    }
+
+    const containerPattern = patterns.find((p) => p.meta?.isContainer);
+
+    if (containerPattern) {
+      const fieldPatterns = patterns.filter(
+        (p) => !p.meta?.isContainer && !p.meta?.isPage,
+      );
+
+      const fields = Object.fromEntries(
+        fieldPatterns.map((p) => [
+          p.key,
+          {
+            selector: p.patterns[0],
+            returnType:
+              p.returnType === 'rawHTML'
+                ? 'html'
+                : p.returnType === 'html'
+                  ? 'html'
+                  : 'text',
+            multiple: !!p.meta?.multiple,
+            fallback: [...p.patterns.slice(1), ...(p.meta?.alterPattern ?? [])],
+          } satisfies FieldDescriptor,
+        ]),
+      );
+
+      const descriptor: ContainerDescriptor<T> = {
+        container: containerPattern.patterns[0],
+        fields: fields as Record<string & keyof T, FieldDescriptor>,
+      };
+
+      const pipeMap: PipeOptions = Object.fromEntries(
+        fieldPatterns.filter((p) => p.pipes).map((p) => [p.key, p.pipes!]),
+      );
+
+      const { items } = await this.scrapeContainerFields<T>(url, descriptor, {
+        ...scraperOptions,
+        pipes: pipeMap,
+      });
+
+      return { results: items };
+    }
+
+    const selectors = Object.fromEntries(
+      patterns.map((p) => [p.key, p.patterns[0]]),
+    );
+
+    const pipes: PipeOptions = Object.fromEntries(
+      patterns.filter((p) => p.pipes).map((p) => [p.key, p.pipes!]),
+    );
+
+    const rawResult = await this.scrape(url, selectors, {
+      ...scraperOptions,
+      pipes,
+    });
+
+    return { results: [rawResult as T] };
   }
 
   private async extractAllData(
@@ -932,27 +996,24 @@ export class BrowserActionService {
       }
 
       case 'cleanse': {
-        const pipes = action.options?.pipes || [];
+        const pipes = action.options?.pipes;
 
-        if (pipes.length === 0) {
-          throw new Error('cleanse action requires at least one pipe');
+        if (!pipes) {
+          throw new Error('cleanse action requires pipes');
         }
 
         const valueKey = String(action.value || '');
-        const pipeInstances = this.getCachedPipeInstances(pipes);
         const rawValue = this.resolveRawValue(valueKey, context);
         this.logger.debug(
           truncateLog(
             this.activeDebugLogMaxLength,
-            `  cleanse raw: ${JSON.stringify(rawValue)} pipes: [${pipes.map((p) => p.type).join(', ')}]`,
+            `  cleanse raw: ${JSON.stringify(rawValue)}`,
           ),
         );
 
         const cleanedValue = Array.isArray(rawValue)
-          ? rawValue.map((item) =>
-              this.cleansingService.cleanse(String(item), pipeInstances),
-            )
-          : this.cleansingService.cleanse(String(rawValue), pipeInstances);
+          ? rawValue.map((item) => this.pipeEngine.apply(String(item), pipes))
+          : this.pipeEngine.apply(String(rawValue), pipes);
 
         if (action.id) {
           context[action.id] = cleanedValue;
@@ -1640,14 +1701,6 @@ export class BrowserActionService {
       null;
 
     return { pages, nextUrl };
-  }
-
-  private getCachedPipeInstances(config: PipeConfig[]): CleansingPipe[] {
-    const cacheKey = JSON.stringify(config);
-    if (!this.pipeCache.has(cacheKey)) {
-      this.pipeCache.set(cacheKey, this.cleansingService.buildPipes(config));
-    }
-    return this.pipeCache.get(cacheKey)!;
   }
 
   private validateSelector(key: string, selector: string): void {

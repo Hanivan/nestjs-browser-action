@@ -53,6 +53,7 @@
   "scripts": {
     "build": "nest build",
     "prepublishOnly": "npm run build",
+    "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
@@ -67,6 +68,9 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "cloakbrowser": "^0.3.30",
+    "html-entities": "^2.6.0",
+    "jsonpath-plus": "^10.4.0",
+    "libxmljs2": "^0.37.0",
     "luxon": "^3.7.2",
     "puppeteer-core": "^24.38.0",
     "user-agents": "^2.1.99"

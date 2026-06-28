@@ -1,4 +1,5 @@
 allowBuilds:
   '@nestjs/core': true
+  libxmljs2: true
   puppeteer: true
   unrs-resolver: true

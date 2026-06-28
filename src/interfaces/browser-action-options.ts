@@ -92,5 +92,5 @@ export interface BrowserActionOptions {
    * workflow `cleanse` actions) can resolve these types. A type clashing with
    * a builtin or another custom pipe throws at registration.
    */
-  customPipes?: Record<string, new () => CleansingPipe>;
+  customPipes?: Record<string, new (...args: unknown[]) => CleansingPipe>;
 }

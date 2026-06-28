@@ -5,6 +5,7 @@
 
 import { CleansingType } from '../enums/cleansing-type.enum';
 import type { CloakOptions } from './browser-action-options';
+import type { CleanerStepRules } from '../pipes/pipe-engine';
 
 /**
  * Pipe configuration interface
@@ -37,16 +38,18 @@ export interface PipeConfig {
 export type SelectorMap = Record<string, string>;
 
 /**
- * Pipe configuration options - maps selector names to pipe arrays
+ * Pipe configuration options - maps selector names to CleanerStepRules
  * Used in scrape() and scrapeAll() methods
  *
  * @example
  * const pipeOptions: PipeOptions = {
- *   title: [{ type: CleansingType.TRIM }, { type: CleansingType.TO_LOWER_CASE }],
- *   price: [{ type: CleansingType.TO_NUMBER }],
+ *   title: { trim: true, toLowerCase: true },
+ *   price: { custom: [{ type: 'num-normalize' }] },
  * };
  */
-export type PipeOptions = Record<string, PipeConfig[]>;
+export type PipeOptions = Record<string, CleanerStepRules>;
+
+export type { CleanerStepRules };
 
 /**
  * Scraping result with single elements - each selector maps to a single value
@@ -78,7 +81,8 @@ export type ScrapeAllResult = Partial<Record<string, unknown[]>>;
  * @example
  * const options: ScraperOptions = {
  *   pipes: {
- *     title: [{ type: CleansingType.TRIM }],
+ *     title: { trim: true },
+ *     price: { custom: [{ type: 'num-normalize' }] },
  *   },
  * };
  */
@@ -244,6 +248,53 @@ export interface ContainerDescriptor<T = Record<string, unknown>> {
 export interface ContainerScrapeResult<T = Record<string, unknown>> {
   items: T[];
   pagination?: PaginationResult;
+}
+
+/**
+ * Metadata for a PatternField — mirrors xpath-parser's PatternMeta exactly.
+ */
+export interface PatternMeta {
+  multiple?: boolean | string;
+  multiline?: boolean;
+  alterPattern?: string[];
+  isContainer?: boolean;
+  isPage?: boolean;
+  pageUrlKey?: string;
+  pageTextKey?: string;
+}
+
+/**
+ * Single field definition — mirrors xpath-parser's PatternField.
+ * patternType 'css' is browser-action-specific; 'xpath' is shared with xpath-parser.
+ * returnType 'rawHTML' is the xpath-parser spelling; 'html' is accepted as an alias.
+ */
+export interface PatternField {
+  key: string;
+  patternType: 'xpath' | 'css';
+  returnType: 'text' | 'rawHTML' | 'html';
+  patterns: string[];
+  meta?: PatternMeta;
+  pipes?: CleanerStepRules;
+}
+
+/**
+ * Input to evaluateWebsite() — mirrors xpath-parser's EvaluateOptions.
+ */
+export interface EvaluateOptions {
+  url?: string;
+  patterns: PatternField[];
+  waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2';
+  timeout?: number;
+  cloak?: CloakOptions;
+  interceptResource?: boolean;
+  useRandomUserAgent?: boolean;
+}
+
+/**
+ * Output of evaluateWebsite() — mirrors xpath-parser's return shape.
+ */
+export interface EvaluateResult<T = Record<string, unknown>> {
+  results: T[];
 }
 
 /**

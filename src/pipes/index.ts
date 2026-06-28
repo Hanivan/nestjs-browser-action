@@ -1,4 +1,6 @@
 export * from './cleansing-pipe';
+export * from './pipe-registry';
+// original browser-action pipes
 export * from './trim.pipe';
 export * from './to-number.pipe';
 export * from './to-lower-case.pipe';
@@ -13,3 +15,19 @@ export * from './remove-currency-symbol.pipe';
 export * from './remove-special-chars.pipe';
 export * from './alt-flag.pipe';
 export * from './profiles';
+// xpath-parser pipes
+export * from './number-normalize.pipe';
+export * from './url-resolve.pipe';
+export * from './extract-email.pipe';
+export * from './regex.pipe';
+export * from './parse-as-url.pipe';
+export * from './clean-html.pipe';
+export * from './regex-extraction.pipe';
+export * from './regex-replace-x.pipe';
+export * from './extract-url-params.pipe';
+export * from './media-filter.pipe';
+export * from './query-append.pipe';
+export * from './json-path.pipe';
+export * from './query-remover.pipe';
+export * from './date-format-special.pipe';
+export * from './pipe-engine';

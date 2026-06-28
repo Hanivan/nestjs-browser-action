@@ -7,7 +7,9 @@ import { CleansingService } from './cleansing.service';
 import { TLS_CAPTURE_URL } from '../constants/browser-action.constants';
 
 jest.mock('fs', () => ({
+  ...jest.requireActual<typeof import('fs')>('fs'),
   promises: {
+    ...jest.requireActual<typeof import('fs')>('fs').promises,
     mkdir: jest.fn().mockResolvedValue(undefined),
     writeFile: jest.fn().mockResolvedValue(undefined),
   },

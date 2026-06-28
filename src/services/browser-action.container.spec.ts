@@ -106,20 +106,16 @@ describe('BrowserActionService.scrapeContainerFields', () => {
     expect(result.items).toEqual([]);
   });
 
-  it('applies pipes to extracted field values', async () => {
+  it('applies CleanerStepRules pipes to extracted field values', async () => {
+    // scrapeContainerFields uses PipeEngine.apply() directly — no CleansingService needed
     mockPage.evaluate.mockResolvedValue([{ title: '  hello  ' }]);
-    (mockCleansingService.buildPipes as jest.Mock).mockReturnValue([
-      { transform: (v: string) => v.trim() },
-    ]);
-    (mockCleansingService.cleanse as jest.Mock).mockReturnValue('hello');
 
     const result = await service.scrapeContainerFields(
       'https://example.com',
       { container: '//div', fields: { title: { selector: './/a' } } },
-      { pipes: { title: [{ type: 'trim' }] } },
+      { pipes: { title: { trim: true } } },
     );
 
-    expect(mockCleansingService.cleanse).toHaveBeenCalled();
     expect(result.items[0]).toEqual({ title: 'hello' });
   });
 });

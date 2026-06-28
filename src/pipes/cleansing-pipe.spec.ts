@@ -41,7 +41,7 @@ describe('CleansingPipe', () => {
     expect(pipe.reverse()).toBe('  hello  ');
   });
 
-  it('should throw error if reverse not implemented', () => {
+  it('should return value as-is if reverse not overridden', () => {
     class TestPipe extends CleansingPipe<string, string> {
       type = CleansingType.TRIM;
       exec(value: string): string {
@@ -50,8 +50,6 @@ describe('CleansingPipe', () => {
     }
 
     const pipe = new TestPipe();
-    expect(() => pipe.reverse?.()).toThrow(
-      'Reverse transformation not implemented',
-    );
+    expect(pipe.reverse('hello')).toBe('hello');
   });
 });

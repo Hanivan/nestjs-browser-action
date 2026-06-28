@@ -45,143 +45,76 @@ describe('BrowserActionService - Integration Tests', () => {
   });
 
   describe('scrape with cleansing', () => {
-    it('should apply cleansing pipes to scraped data', async () => {
+    // scrape() now uses PipeEngine.apply() directly — CleansingService.buildPipes/cleanse
+    // are not called for scrape(). Tests use real CleanerStepRules objects.
+
+    it('should apply CleanerStepRules pipes to scraped data', async () => {
       const url = 'https://example.com';
-      const selectors = {
-        price: '.price',
-        name: '.name',
-      };
+      const selectors = { price: '.price', name: '.name' };
 
       const cleansingOptions: ScrapeCleansingOptions = {
         pipes: {
-          price: [
-            { type: CleansingType.REMOVE_CURRENCY_SYMBOL },
-            { type: CleansingType.TRIM },
-            { type: CleansingType.TO_NUMBER },
-          ],
+          price: {
+            trim: true,
+            custom: [
+              { type: CleansingType.REMOVE_CURRENCY_SYMBOL, symbols: ['$'] },
+            ],
+          },
         },
       };
 
-      // Mock page navigation and element evaluation
       const mockPage = {
         $eval: jest
           .fn()
-          .mockReturnValueOnce('$ 29.99') // price
-          .mockReturnValueOnce('  Product Name  '), // name
+          .mockReturnValueOnce('$ 29.99')
+          .mockReturnValueOnce('  Product Name  '),
       } as any;
 
       (pageService.navigateTo as jest.Mock).mockResolvedValue(mockPage);
       (pageService.closePage as jest.Mock).mockResolvedValue(undefined);
 
-      // Mock cleansing service
-      const mockPipeInstances = [
-        { exec: jest.fn((val: string) => val.replace('$', '')) }, // REMOVE_CURRENCY_SYMBOL
-        { exec: jest.fn((val: string) => val.trim()) }, // TRIM
-        { exec: jest.fn((val: string) => parseFloat(val)) }, // TO_NUMBER
-      ];
-
-      (cleansingService.buildPipes as jest.Mock).mockReturnValue(
-        mockPipeInstances,
-      );
-      (cleansingService.cleanse as jest.Mock).mockImplementation(
-        (value, pipes) => {
-          // Simulate the cleanse method reducing through pipes
-          return pipes.reduce(
-            (result: any, pipe: any) => pipe.exec(result),
-            value,
-          );
-        },
-      );
-
       const result = await service.scrape(url, selectors, cleansingOptions);
 
-      expect(result).toEqual({
-        price: 29.99,
-        name: '  Product Name  ',
-      });
-
-      // Verify buildPipes was called with the config
-      expect(cleansingService.buildPipes).toHaveBeenCalledWith([
-        { type: CleansingType.REMOVE_CURRENCY_SYMBOL },
-        { type: CleansingType.TRIM },
-        { type: CleansingType.TO_NUMBER },
-      ]);
-
-      // Verify cleanse was called with value and pipe instances
-      expect(cleansingService.cleanse).toHaveBeenCalledWith(
-        '$ 29.99',
-        mockPipeInstances,
-      );
-
-      // Verify it was only called once (for price only)
-      expect(cleansingService.cleanse).toHaveBeenCalledTimes(1);
+      expect(result.price).toBe('29.99');
+      expect(result.name).toBe('  Product Name  '); // no pipe → unchanged
     });
 
     it('should handle missing elements gracefully with cleansing', async () => {
       const url = 'https://example.com';
-      const selectors = {
-        existing: '.exists',
-        missing: '.missing',
-      };
+      const selectors = { existing: '.exists', missing: '.missing' };
 
       const cleansingOptions: ScrapeCleansingOptions = {
-        pipes: {
-          existing: [{ type: CleansingType.TRIM }],
-        },
+        pipes: { existing: { trim: true } },
       };
 
-      // Mock page navigation and element evaluation
       const mockPage = {
         $eval: jest
           .fn()
-          .mockReturnValueOnce('  exists  ') // existing
+          .mockReturnValueOnce('  exists  ')
           .mockImplementationOnce(() => {
             throw new Error('Element not found');
-          }), // missing
+          }),
       } as any;
 
       (pageService.navigateTo as jest.Mock).mockResolvedValue(mockPage);
       (pageService.closePage as jest.Mock).mockResolvedValue(undefined);
 
-      // Mock cleansing service
-      const mockTrimPipe = { exec: jest.fn((val: string) => val.trim()) };
-      (cleansingService.buildPipes as jest.Mock).mockReturnValue([
-        mockTrimPipe,
-      ]);
-      (cleansingService.cleanse as jest.Mock).mockImplementation(
-        (value, pipes) => {
-          return pipes.reduce(
-            (result: any, pipe: any) => pipe.exec(result),
-            value,
-          );
-        },
-      );
-
       const result = await service.scrape(url, selectors, cleansingOptions);
 
-      expect(result).toEqual({
-        existing: 'exists',
-        missing: undefined,
-      });
+      expect(result.existing).toBe('exists');
+      expect(result.missing).toBeUndefined();
     });
 
-    it('should handle multiple pipes per field', async () => {
+    it('should handle multiple CleanerStepRules per field', async () => {
       const url = 'https://example.com';
-      const selectors = {
-        text: '.text',
-      };
+      const selectors = { text: '.text' };
 
       const cleansingOptions: ScrapeCleansingOptions = {
         pipes: {
-          text: [
-            { type: CleansingType.TRIM },
-            { type: CleansingType.NORMALIZE_WHITESPACE },
-            { type: CleansingType.TO_LOWER_CASE },
-          ],
+          text: { trim: true, toLowerCase: true },
         },
       };
 
-      // Mock page navigation and element evaluation
       const mockPage = {
         $eval: jest.fn().mockReturnValueOnce('  Hello   WORLD  '),
       } as any;
@@ -189,43 +122,15 @@ describe('BrowserActionService - Integration Tests', () => {
       (pageService.navigateTo as jest.Mock).mockResolvedValue(mockPage);
       (pageService.closePage as jest.Mock).mockResolvedValue(undefined);
 
-      // Mock cleansing service to handle all pipes at once
-      const mockPipes = [
-        { exec: jest.fn((val: string) => val.trim()) },
-        { exec: jest.fn((val: string) => val.replace(/\s+/g, ' ')) },
-        { exec: jest.fn((val: string) => val.toLowerCase()) },
-      ];
-      (cleansingService.buildPipes as jest.Mock).mockReturnValue(mockPipes);
-      (cleansingService.cleanse as jest.Mock).mockImplementation(
-        (value, pipes) => {
-          return pipes.reduce(
-            (result: any, pipe: any) => pipe.exec(result),
-            value,
-          );
-        },
-      );
-
       const result = await service.scrape(url, selectors, cleansingOptions);
 
-      expect(result).toEqual({
-        text: 'hello world',
-      });
-
-      // Verify buildPipes was called with all pipe configs
-      expect(cleansingService.buildPipes).toHaveBeenCalledWith([
-        { type: CleansingType.TRIM },
-        { type: CleansingType.NORMALIZE_WHITESPACE },
-        { type: CleansingType.TO_LOWER_CASE },
-      ]);
+      expect(result.text).toBe('hello world');
     });
 
     it('should work without cleansing options', async () => {
       const url = 'https://example.com';
-      const selectors = {
-        text: '.text',
-      };
+      const selectors = { text: '.text' };
 
-      // Mock page navigation and element evaluation
       const mockPage = {
         $eval: jest.fn().mockReturnValueOnce('raw text'),
       } as any;
@@ -235,12 +140,7 @@ describe('BrowserActionService - Integration Tests', () => {
 
       const result = await service.scrape(url, selectors);
 
-      expect(result).toEqual({
-        text: 'raw text',
-      });
-
-      // Verify cleansing was not called when no options provided
-      expect(cleansingService.cleanse).not.toHaveBeenCalled();
+      expect(result).toEqual({ text: 'raw text' });
     });
   });
 });
