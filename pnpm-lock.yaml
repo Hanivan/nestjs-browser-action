@@ -15,8 +15,8 @@ importers:
         specifier: ^0.15.1
         version: 0.15.1
       cloakbrowser:
-        specifier: ^0.3.30
-        version: 0.3.30(mmdb-lib@3.0.2)(puppeteer-core@24.38.0)(socks-proxy-agent@10.0.0)
+        specifier: ^0.4.4
+        version: 0.4.4(mmdb-lib@3.0.2)(puppeteer-core@24.38.0)(socks-proxy-agent@10.0.0)
       html-entities:
         specifier: ^2.6.0
         version: 2.6.0
@@ -1658,8 +1658,8 @@ packages:
     resolution: {integrity: sha512-BSeNnyus75C4//NQ9gQt1/csTXyo/8Sb+afLAkzAptFuMsod9HFokGNudZpi/oQV73hnVK+sR+5PVRMd+Dr7YQ==}
     engines: {node: '>=12'}
 
-  cloakbrowser@0.3.30:
-    resolution: {integrity: sha512-e7kDZzOmqRn9VOFskTDLU6rFqj+TYj68942XFqs2m+CC5G8yHwkHhitjMQJaI/c5Zvl7Aez/kf1JjO/b3VqYaA==}
+  cloakbrowser@0.4.4:
+    resolution: {integrity: sha512-QXFwNjoeOh0qKLBypf7WM2b1220v3jqW2cCzW3JMqwC50zYz59Ng+VKfrKP2aPsrp21XRTWfrdVs1uJdw/AKUQ==}
     engines: {node: '>=20.0.0'}
     hasBin: true
     peerDependencies:
@@ -5823,7 +5823,7 @@ snapshots:
       strip-ansi: 6.0.1
       wrap-ansi: 7.0.0
 
-  cloakbrowser@0.3.30(mmdb-lib@3.0.2)(puppeteer-core@24.38.0)(socks-proxy-agent@10.0.0):
+  cloakbrowser@0.4.4(mmdb-lib@3.0.2)(puppeteer-core@24.38.0)(socks-proxy-agent@10.0.0):
     dependencies:
       tar: 7.5.15
     optionalDependencies:

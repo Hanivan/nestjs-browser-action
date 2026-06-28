@@ -67,7 +67,7 @@
   "dependencies": {
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
-    "cloakbrowser": "^0.3.30",
+    "cloakbrowser": "^0.4.4",
     "html-entities": "^2.6.0",
     "jsonpath-plus": "^10.4.0",
     "libxmljs2": "^0.37.0",
