@@ -1,5 +1,7 @@
 # Changelog
 
+## [0.16.3](https://github.com/Hanivan/nestjs-browser-action/compare/v0.16.2...v0.16.3) (2026-06-28)
+
 ## [0.16.2](https://github.com/Hanivan/nestjs-browser-action/compare/v0.16.1...v0.16.2) (2026-06-28)
 
 
