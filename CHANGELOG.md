@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.1](https://github.com/Hanivan/nestjs-browser-action/compare/v0.17.0...v0.17.1) (2026-06-28)
+
+
+### Bug Fixes
+
+* gracefully handle externally closed tabs during pagination and page cleanup ([14f23cd](https://github.com/Hanivan/nestjs-browser-action/commit/14f23cdb44fe441a40dfa7adfeb1c49a4f32cb4d))
+
 # [0.17.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.16.4...v0.17.0) (2026-06-28)
 
 
