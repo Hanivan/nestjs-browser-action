@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.1](https://github.com/Hanivan/nestjs-browser-action/compare/v0.16.0...v0.16.1) (2026-06-28)
+
+
+### Bug Fixes
+
+* accept LogLevel array in BrowserActionOptions.logLevel ([080aaf6](https://github.com/Hanivan/nestjs-browser-action/commit/080aaf61fd197aeb0cc6ab57c74a6f6bcf799888))
+
 # [0.16.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.15.0...v0.16.0) (2026-06-28)
 
 
