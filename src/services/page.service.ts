@@ -16,6 +16,7 @@ export class PageService {
   private currentBrowser?: Browser;
   private currentPage?: Page;
   private dedicated = false;
+  private intercepting = false;
 
   constructor(private readonly browserManager: BrowserManagerService) {
     this.logger = new LoggerWithLevel(
@@ -38,6 +39,7 @@ export class PageService {
       this.dedicated = false;
     }
     this.currentPage = await this.currentBrowser.newPage();
+    this.intercepting = !!interceptResource;
     if (interceptResource) {
       await this.enableResourceInterception(this.currentPage);
     }
@@ -68,7 +70,8 @@ export class PageService {
     const needsNewPage =
       !this.currentPage ||
       (cloak !== undefined && !this.dedicated) ||
-      (cloak === undefined && this.dedicated);
+      (cloak === undefined && this.dedicated) ||
+      !!interceptResource !== this.intercepting;
     if (needsNewPage && this.currentPage) {
       await this.closePage();
     }
@@ -105,6 +108,7 @@ export class PageService {
       this.currentBrowser = undefined;
       this.dedicated = false;
     }
+    this.intercepting = false;
   }
 
   getCurrentPage(): Page | undefined {
