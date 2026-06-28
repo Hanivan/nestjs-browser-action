@@ -56,5 +56,9 @@ export function evaluateXPathFirst(
  */
 export function isXPathSelector(selector: string): boolean {
   const trimmed = selector.trim();
-  return trimmed.startsWith('//') || trimmed.startsWith('(');
+  return (
+    trimmed.startsWith('//') ||
+    trimmed.startsWith('(') ||
+    trimmed.startsWith('./')
+  );
 }

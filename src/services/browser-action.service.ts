@@ -1490,7 +1490,9 @@ export class BrowserActionService {
         >,
       ) => {
         const isXPath = (s: string) =>
-          s.trim().startsWith('//') || s.trim().startsWith('(');
+          s.trim().startsWith('//') ||
+          s.trim().startsWith('(') ||
+          s.trim().startsWith('./');
         const getContainerNodes = (sel: string): Element[] => {
           if (isXPath(sel)) {
             const res = document.evaluate(
@@ -1617,7 +1619,11 @@ export class BrowserActionService {
     const rawPages = await page.evaluate(
       (containerSel: string, linkSel: string, labelSel: string) => {
         const getNode = (sel: string, root: Document | Element) => {
-          if (sel.trim().startsWith('//') || sel.trim().startsWith('(')) {
+          if (
+            sel.trim().startsWith('//') ||
+            sel.trim().startsWith('(') ||
+            sel.trim().startsWith('./')
+          ) {
             const res = document.evaluate(
               sel,
               root,
@@ -1630,7 +1636,11 @@ export class BrowserActionService {
           return root.querySelector(sel);
         };
         const getNodes = (sel: string, root: Element) => {
-          if (sel.trim().startsWith('//') || sel.trim().startsWith('(')) {
+          if (
+            sel.trim().startsWith('//') ||
+            sel.trim().startsWith('(') ||
+            sel.trim().startsWith('./')
+          ) {
             const res = document.evaluate(
               sel,
               root,
@@ -1652,7 +1662,9 @@ export class BrowserActionService {
         return getNodes(linkSel, container).map((el) => {
           // Use labelSel relative to each link element to extract the label text
           const isXPath = (s: string) =>
-            s.trim().startsWith('//') || s.trim().startsWith('(');
+            s.trim().startsWith('//') ||
+            s.trim().startsWith('(') ||
+            s.trim().startsWith('./');
           const labelNodes = isXPath(labelSel)
             ? (() => {
                 const r = document.evaluate(
