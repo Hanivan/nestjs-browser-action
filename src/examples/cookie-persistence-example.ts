@@ -1,5 +1,7 @@
-import { BrowserActionModule } from '@hanivanrizky/nestjs-browser-action';
-import type { WorkflowDefinition } from '@hanivanrizky/nestjs-browser-action';
+import { NestFactory } from '@nestjs/core';
+import { Module } from '@nestjs/common';
+import { BrowserActionModule, BrowserActionService } from '../index';
+import type { WorkflowDefinition } from '../index';
 
 /**
  * Example: Login workflow with cookie persistence
@@ -20,27 +22,33 @@ export const loginWorkflow: WorkflowDefinition = {
       onError: 'skip',
     },
 
-    // Check if we're already logged in
+    // Check if we're already logged in (presence of welcome span)
     {
       action: 'waitFor',
-      target: { type: 'css', value: '.user-profile' },
+      target: { type: 'css', value: 'span.text-lg.font-semibold' },
       options: { timeout: 5000 },
-      condition: { ifExists: { type: 'css', value: '.user-profile' } },
+      condition: {
+        ifExists: { type: 'css', value: 'span.text-lg.font-semibold' },
+      },
       onError: 'skip',
     },
 
     // If not logged in, navigate to login page
     {
       action: 'navigate',
-      value: 'https://example.com/login',
-      condition: { unlessExists: { type: 'css', value: '.user-profile' } },
+      value: 'https://www.scrapingcourse.com/login',
+      condition: {
+        unlessExists: { type: 'css', value: 'span.text-lg.font-semibold' },
+      },
     },
 
     // Wait for login form
     {
       action: 'waitFor',
       target: { type: 'css', value: '#email' },
-      condition: { unlessExists: { type: 'css', value: '.user-profile' } },
+      condition: {
+        unlessExists: { type: 'css', value: 'span.text-lg.font-semibold' },
+      },
     },
 
     // Fill in email
@@ -49,7 +57,9 @@ export const loginWorkflow: WorkflowDefinition = {
       target: { type: 'css', value: '#email' },
       value: '${email}',
       options: { scrollTo: true },
-      condition: { unlessExists: { type: 'css', value: '.user-profile' } },
+      condition: {
+        unlessExists: { type: 'css', value: 'span.text-lg.font-semibold' },
+      },
     },
 
     // Fill in password
@@ -58,7 +68,9 @@ export const loginWorkflow: WorkflowDefinition = {
       target: { type: 'css', value: '#password' },
       value: '${password}',
       options: { scrollTo: true },
-      condition: { unlessExists: { type: 'css', value: '.user-profile' } },
+      condition: {
+        unlessExists: { type: 'css', value: 'span.text-lg.font-semibold' },
+      },
     },
 
     // Click login button
@@ -66,15 +78,19 @@ export const loginWorkflow: WorkflowDefinition = {
       action: 'click',
       target: { type: 'css', value: 'button[type="submit"]' },
       options: { scrollTo: true, waitForNavigation: true },
-      condition: { unlessExists: { type: 'css', value: '.user-profile' } },
+      condition: {
+        unlessExists: { type: 'css', value: 'span.text-lg.font-semibold' },
+      },
     },
 
     // Wait for successful login
     {
       action: 'waitFor',
-      target: { type: 'css', value: '.user-profile' },
+      target: { type: 'css', value: 'span.text-lg.font-semibold' },
       options: { timeout: 10000 },
-      condition: { unlessExists: { type: 'css', value: '.user-profile' } },
+      condition: {
+        unlessExists: { type: 'css', value: 'span.text-lg.font-semibold' },
+      },
     },
 
     // Save session for future use
@@ -88,14 +104,16 @@ export const loginWorkflow: WorkflowDefinition = {
           loginMethod: 'email',
         },
       },
-      condition: { unlessExists: { type: 'css', value: '.user-profile' } },
+      condition: {
+        unlessExists: { type: 'css', value: 'span.text-lg.font-semibold' },
+      },
     },
 
-    // Extract user data (works whether we just logged in or reused session)
+    // Extract welcome text (e.g. "Welcome, Scraper!")
     {
       id: 'username',
       action: 'extract',
-      target: { type: 'css', value: '.user-profile .username' },
+      target: { type: 'css', value: 'span.text-lg.font-semibold' },
     },
   ],
   onError: {
@@ -105,13 +123,11 @@ export const loginWorkflow: WorkflowDefinition = {
   },
 };
 
-/**
- * Example: Module configuration
- */
-export const moduleConfig = {
+@Module({
   imports: [
     BrowserActionModule.forRoot({
-      launchOptions: { headless: true },
+      launchOptions: { headless: process.env.HEADLESS !== 'false' },
+      pool: { min: 1, max: 1 },
       cookies: {
         enabled: true,
         cookiesDir: './storage/cookies',
@@ -119,19 +135,20 @@ export const moduleConfig = {
       },
     }),
   ],
-};
+})
+class AppModule {}
 
 /**
  * Example: Usage in a service
  */
 export async function runLoginWorkflow(
-  actionHelpers: any,
+  actionHelpers: BrowserActionService,
   email: string,
   password: string,
 ) {
-  const result = await actionHelpers.scrapeWithActions<{
+  const result = await actionHelpers.scrapeWithWorkflow<{
     username: string;
-  }>('https://example.com', loginWorkflow, {
+  }>('https://www.scrapingcourse.com/', loginWorkflow, {
     email,
     password,
   });
@@ -140,4 +157,18 @@ export async function runLoginWorkflow(
   console.log('Username:', result.data.username);
 
   return result;
+}
+
+if (require.main === module) {
+  void (async () => {
+    const app = await NestFactory.createApplicationContext(AppModule, {
+      logger: false,
+    });
+    const service = await app.resolve(BrowserActionService);
+    try {
+      await runLoginWorkflow(service, 'admin@example.com', 'password');
+    } finally {
+      await app.close();
+    }
+  })();
 }

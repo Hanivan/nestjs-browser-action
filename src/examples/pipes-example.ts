@@ -8,34 +8,49 @@
  * matching a key in PIPE_REGISTRY.
  */
 
+import { NestFactory } from '@nestjs/core';
+import { Module } from '@nestjs/common';
 import {
+  BrowserActionModule,
   BrowserActionService,
-  ActionHelpersService,
   CleansingService,
   PipeEngine,
   CleansingPipe,
   CleansingType,
   CleansingProfile,
   PIPE_REGISTRY,
-} from '@hanivanrizky/nestjs-browser-action';
-import type { CleanerStepRules } from '@hanivanrizky/nestjs-browser-action';
+} from '../index';
+import type { CleanerStepRules } from '../index';
+
+@Module({
+  imports: [
+    BrowserActionModule.forRoot({
+      launchOptions: { headless: process.env.HEADLESS !== 'false' },
+      pool: { min: 1, max: 1 },
+    }),
+  ],
+})
+class AppModule {}
 
 // ─── 1. scrape() with per-field CleanerStepRules ─────────────────────────────
 
 async function scrapeWithPipes(service: BrowserActionService) {
   const data = await service.scrape(
-    'https://example.com/product',
+    'https://www.scrapingcourse.com/ecommerce/product/abominable-hoodie/',
     {
-      price: '.price',
-      title: 'h1',
-      description: '.description',
+      price: '.product-price',
+      title: 'h1.product_title',
+      description: '.woocommerce-product-details__short-description p',
     },
     {
       pipes: {
         price: {
           trim: true,
           custom: [
-            { type: CleansingType.REMOVE_CURRENCY_SYMBOL, symbols: ['$', '€', '£', '¥'] },
+            {
+              type: CleansingType.REMOVE_CURRENCY_SYMBOL,
+              symbols: ['$', '€', '£', '¥'],
+            },
             { type: CleansingType.REMOVE_SPECIAL_CHARS },
             { type: CleansingType.TO_NUMBER, decimals: 2 },
           ],
@@ -53,8 +68,8 @@ async function scrapeWithPipes(service: BrowserActionService) {
     },
   );
 
-  console.log('price:', data.price);       // e.g. "29.99"
-  console.log('title:', data.title);       // e.g. "blue sneakers"
+  console.log('price:', data.price); // e.g. "29.99"
+  console.log('title:', data.title); // e.g. "blue sneakers"
   console.log('description:', data.description);
 }
 
@@ -62,8 +77,8 @@ async function scrapeWithPipes(service: BrowserActionService) {
 
 async function scrapeAllWithPipes(service: BrowserActionService) {
   const data = await service.scrapeAll(
-    'https://example.com/products',
-    { prices: '.product-card .price' },
+    'https://www.scrapingcourse.com/ecommerce/',
+    { prices: 'li[data-products="item"] .product-price' },
     {
       pipes: {
         prices: {
@@ -81,16 +96,16 @@ async function scrapeAllWithPipes(service: BrowserActionService) {
 
 // ─── 3. Workflow cleanse action ───────────────────────────────────────────────
 
-async function workflowCleanse(actionHelpers: ActionHelpersService) {
-  const result = await actionHelpers.scrapeWithActions(
-    'https://example.com/product',
+async function workflowCleanse(actionHelpers: BrowserActionService) {
+  const result = await actionHelpers.scrapeWithWorkflow(
+    'https://www.scrapingcourse.com/ecommerce/product/abominable-hoodie/',
     {
       version: '1.0',
       actions: [
         {
           id: 'rawPrice',
           action: 'extract',
-          target: { type: 'css', value: '.price' },
+          target: { type: 'css', value: '.product-price' },
         },
         {
           id: 'price',
@@ -109,7 +124,7 @@ async function workflowCleanse(actionHelpers: ActionHelpersService) {
         {
           id: 'rawTitle',
           action: 'extract',
-          target: { type: 'css', value: 'h1' },
+          target: { type: 'css', value: 'h1.product_title' },
         },
         {
           id: 'title',
@@ -123,22 +138,23 @@ async function workflowCleanse(actionHelpers: ActionHelpersService) {
     },
   );
 
-  console.log('price:', result.data.price);   // "29.99"
-  console.log('title:', result.data.title);   // "blue sneakers"
+  console.log('price:', result.data.price); // "29.99"
+  console.log('title:', result.data.title); // "blue sneakers"
 }
 
 // ─── 4. Workflow cleanse — array value (maps over each element) ───────────────
 
-async function workflowCleanseArray(actionHelpers: ActionHelpersService) {
-  const result = await actionHelpers.scrapeWithActions(
-    'https://example.com/shop',
+async function workflowCleanseArray(actionHelpers: BrowserActionService) {
+  const result = await actionHelpers.scrapeWithWorkflow(
+    'https://www.scrapingcourse.com/ecommerce/',
     {
       version: '1.0',
       actions: [
         {
           id: 'rawTags',
           action: 'evaluate',
-          value: "() => [...document.querySelectorAll('.tag')].map(el => el.textContent)",
+          value:
+            "() => [...document.querySelectorAll('.product-name')].map(el => el.textContent)",
         },
         {
           id: 'tags',
@@ -162,7 +178,10 @@ function pipeEngineDirectUsage() {
   const engine = new PipeEngine();
 
   // primitive rules
-  const clean = engine.apply('  HELLO WORLD  ', { trim: true, toLowerCase: true });
+  const clean = engine.apply('  HELLO WORLD  ', {
+    trim: true,
+    toLowerCase: true,
+  });
   console.log(clean); // 'hello world'
 
   // replace rules
@@ -174,17 +193,19 @@ function pipeEngineDirectUsage() {
   // custom pipe
   const price = engine.apply('$29.99', {
     trim: true,
-    custom: [
-      { type: CleansingType.REMOVE_CURRENCY_SYMBOL, symbols: ['$'] },
-    ],
+    custom: [{ type: CleansingType.REMOVE_CURRENCY_SYMBOL, symbols: ['$'] }],
   });
   console.log(price); // '29.99'
 
   // with baseUrl for URL-aware pipes (e.g. parse-as-url)
-  const url = engine.apply('/products/123', {
-    custom: [{ type: 'parse-as-url' }],
-  }, 'https://example.com');
-  console.log(url); // 'https://example.com/products/123'
+  const url = engine.apply(
+    '/ecommerce/product/abominable-hoodie/',
+    {
+      custom: [{ type: 'parse-as-url' }],
+    },
+    'https://www.scrapingcourse.com',
+  );
+  console.log(url); // 'https://www.scrapingcourse.com/ecommerce/product/abominable-hoodie/'
 }
 
 // ─── 6. CleansingService — buildPipes / cleanse (PipeConfig[] format) ─────────
@@ -203,10 +224,16 @@ function cleansingServiceUsage(cleansingService: CleansingService) {
 // ─── 7. Using predefined cleansing profiles ──────────────────────────────────
 
 function cleansingProfiles(cleansingService: CleansingService) {
-  const price = cleansingService.cleanseWithProfile('  $29.99  ', CleansingProfile.PRICE);
+  const price = cleansingService.cleanseWithProfile(
+    '  $29.99  ',
+    CleansingProfile.PRICE,
+  );
   console.log(price); // '29.99'
 
-  const email = cleansingService.cleanseWithProfile('  User@EXAMPLE.com  ', CleansingProfile.EMAIL);
+  const email = cleansingService.cleanseWithProfile(
+    '  User@EXAMPLE.com  ',
+    CleansingProfile.EMAIL,
+  );
   console.log(email); // 'user@example.com'
 }
 
@@ -214,7 +241,9 @@ function cleansingProfiles(cleansingService: CleansingService) {
 
 class ExclamationPipe extends CleansingPipe<string, string> {
   type = 'exclaim';
-  exec(value: string): string { return `${String(value)}!`; }
+  exec(value: string): string {
+    return `${String(value)}!`;
+  }
 }
 
 function registerCustomPipe(cleansingService: CleansingService) {
@@ -244,7 +273,10 @@ function registerViaPipeRegistry() {
 const priceRules: CleanerStepRules = {
   trim: true,
   custom: [
-    { type: CleansingType.REMOVE_CURRENCY_SYMBOL, symbols: ['$', '€', '£', '¥'] },
+    {
+      type: CleansingType.REMOVE_CURRENCY_SYMBOL,
+      symbols: ['$', '€', '£', '¥'],
+    },
     { type: CleansingType.TO_NUMBER, decimals: 2 },
   ],
 };
@@ -253,8 +285,8 @@ const titleRules: CleanerStepRules = { trim: true, toLowerCase: true };
 
 async function reuseRules(service: BrowserActionService) {
   const product = await service.scrape(
-    'https://example.com/product/1',
-    { price: '.price', title: 'h1' },
+    'https://www.scrapingcourse.com/ecommerce/product/abominable-hoodie/',
+    { price: '.product-price', title: 'h1' },
     { pipes: { price: priceRules, title: titleRules } },
   );
   console.log(product);
@@ -264,8 +296,8 @@ async function reuseRules(service: BrowserActionService) {
 
 async function decodeHtmlEntities(service: BrowserActionService) {
   const data = await service.scrape(
-    'https://example.com',
-    { text: '.encoded' },
+    'https://www.scrapingcourse.com/ecommerce/',
+    { text: 'h1.page-title' },
     {
       pipes: {
         text: { decode: true, trim: true },
@@ -276,17 +308,28 @@ async function decodeHtmlEntities(service: BrowserActionService) {
   console.log(data.text);
 }
 
-export {
-  scrapeWithPipes,
-  scrapeAllWithPipes,
-  workflowCleanse,
-  workflowCleanseArray,
-  pipeEngineDirectUsage,
-  cleansingServiceUsage,
-  cleansingProfiles,
-  registerCustomPipe,
-  registerOnPipeEngine,
-  registerViaPipeRegistry,
-  reuseRules,
-  decodeHtmlEntities,
-};
+if (require.main === module) {
+  void (async () => {
+    const app = await NestFactory.createApplicationContext(AppModule, {
+      logger: false,
+    });
+    const service = await app.resolve(BrowserActionService);
+    const cleansing = app.get(CleansingService);
+    try {
+      await scrapeWithPipes(service);
+      await scrapeAllWithPipes(service);
+      await workflowCleanse(service);
+      await workflowCleanseArray(service);
+      pipeEngineDirectUsage();
+      cleansingServiceUsage(cleansing);
+      cleansingProfiles(cleansing);
+      registerCustomPipe(cleansing);
+      registerOnPipeEngine();
+      registerViaPipeRegistry();
+      await reuseRules(service);
+      await decodeHtmlEntities(service);
+    } finally {
+      await app.close();
+    }
+  })();
+}

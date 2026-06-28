@@ -278,6 +278,35 @@ export interface PatternField {
 }
 
 /**
+ * Pagination strategy type for evaluateWebsite().
+ */
+export type PaginationType =
+  | 'click-next'
+  | 'load-more'
+  | 'infinite-scroll'
+  | 'url-increment';
+
+/**
+ * Pagination configuration for evaluateWebsite().
+ */
+export interface PaginationOptions {
+  type: PaginationType;
+  /** click-next / load-more: selector for the button/link to click.
+   *  infinite-scroll: optional selector for a sentinel element to scroll to (omit = scroll to bottom). */
+  selector?: string;
+  /** infinite-scroll: selector for an "end of list" marker — stops when visible. */
+  endSelector?: string;
+  /** url-increment: URL template with {page} placeholder, e.g. "https://site.com/list?page={page}" */
+  urlTemplate?: string;
+  /** url-increment: first page number substituted into urlTemplate. Default: 2. */
+  startPage?: number;
+  /** Safety cap — max pagination iterations. Default: 10. */
+  maxPages?: number;
+  /** ms to wait after each pagination action before re-scraping. Default: 800. */
+  waitAfter?: number;
+}
+
+/**
  * Input to evaluateWebsite() — mirrors xpath-parser's EvaluateOptions.
  */
 export interface EvaluateOptions {
@@ -288,6 +317,7 @@ export interface EvaluateOptions {
   cloak?: CloakOptions;
   interceptResource?: boolean;
   useRandomUserAgent?: boolean;
+  pagination?: PaginationOptions;
 }
 
 /**
@@ -295,6 +325,7 @@ export interface EvaluateOptions {
  */
 export interface EvaluateResult<T = Record<string, unknown>> {
   results: T[];
+  totalPages?: number;
 }
 
 /**

@@ -61,6 +61,8 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:examples": "./scripts/run-examples.sh",
+    "test:examples:headed": "HEADLESS=false ./scripts/run-examples.sh",
     "release": "release-it",
     "prepare": "husky"
   },

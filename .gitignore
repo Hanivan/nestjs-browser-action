@@ -52,6 +52,7 @@ docs/superpowers
 docs/todos
 docs/security
 .superpowers
+**/**.png
 
 # Runtime data
 pids

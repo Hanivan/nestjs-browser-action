@@ -193,7 +193,9 @@ function validateAction(
 
   if (action.action === 'navigate' && val !== undefined) {
     const url = String(val);
+    // Skip validation for template variables — resolved at runtime
     if (
+      !url.includes('${') &&
       !isURL(url, { require_protocol: true, protocols: opts.allowedProtocols })
     ) {
       throw new WorkflowValidationError(

@@ -37,6 +37,7 @@ import {
   EvaluateResult,
   PipeOptions,
   FieldDescriptor,
+  PaginationOptions,
 } from '../interfaces/types';
 import { getRandomUserAgent } from '../utils/user-agent.util';
 import type { TlsFingerprint } from '../interfaces/tls-fingerprint';
@@ -427,7 +428,7 @@ export class BrowserActionService {
   async evaluateWebsite<T = Record<string, unknown>>(
     options: EvaluateOptions,
   ): Promise<EvaluateResult<T>> {
-    const { url, patterns, ...scraperOptions } = options;
+    const { url, patterns, pagination, ...scraperOptions } = options;
 
     if (!url) {
       throw new Error('evaluateWebsite requires a url');
@@ -435,59 +436,333 @@ export class BrowserActionService {
 
     const containerPattern = patterns.find((p) => p.meta?.isContainer);
 
-    if (containerPattern) {
-      const fieldPatterns = patterns.filter(
-        (p) => !p.meta?.isContainer && !p.meta?.isPage,
+    if (!containerPattern) {
+      if (pagination) {
+        throw new Error(
+          'pagination requires a container pattern (meta.isContainer: true)',
+        );
+      }
+      const selectors = Object.fromEntries(
+        patterns.map((p) => [p.key, p.patterns[0]]),
       );
+      const pipes: PipeOptions = Object.fromEntries(
+        patterns.filter((p) => p.pipes).map((p) => [p.key, p.pipes!]),
+      );
+      const rawResult = await this.scrape(url, selectors, {
+        ...scraperOptions,
+        pipes,
+      });
+      return { results: [rawResult as T] };
+    }
 
-      const fields = Object.fromEntries(
-        fieldPatterns.map((p) => [
-          p.key,
-          {
-            selector: p.patterns[0],
-            returnType:
-              p.returnType === 'rawHTML'
+    const fieldPatterns = patterns.filter(
+      (p) => !p.meta?.isContainer && !p.meta?.isPage,
+    );
+
+    const fields = Object.fromEntries(
+      fieldPatterns.map((p) => [
+        p.key,
+        {
+          selector: p.patterns[0],
+          returnType:
+            p.returnType === 'rawHTML'
+              ? 'html'
+              : p.returnType === 'html'
                 ? 'html'
-                : p.returnType === 'html'
-                  ? 'html'
-                  : 'text',
-            multiple: !!p.meta?.multiple,
-            fallback: [...p.patterns.slice(1), ...(p.meta?.alterPattern ?? [])],
-          } satisfies FieldDescriptor,
-        ]),
-      );
+                : 'text',
+          multiple: !!p.meta?.multiple,
+          fallback: [...p.patterns.slice(1), ...(p.meta?.alterPattern ?? [])],
+        } satisfies FieldDescriptor,
+      ]),
+    );
 
-      const descriptor: ContainerDescriptor<T> = {
-        container: containerPattern.patterns[0],
-        fields: fields as Record<string & keyof T, FieldDescriptor>,
-      };
+    const descriptor: ContainerDescriptor<T> = {
+      container: containerPattern.patterns[0],
+      fields: fields as Record<string & keyof T, FieldDescriptor>,
+    };
 
-      const pipeMap: PipeOptions = Object.fromEntries(
-        fieldPatterns.filter((p) => p.pipes).map((p) => [p.key, p.pipes!]),
-      );
+    const pipeMap: PipeOptions = Object.fromEntries(
+      fieldPatterns.filter((p) => p.pipes).map((p) => [p.key, p.pipes!]),
+    );
 
+    if (!pagination) {
       const { items } = await this.scrapeContainerFields<T>(url, descriptor, {
         ...scraperOptions,
         pipes: pipeMap,
       });
-
       return { results: items };
     }
 
-    const selectors = Object.fromEntries(
-      patterns.map((p) => [p.key, p.patterns[0]]),
-    );
+    // --- Paginated path ---
+    const scraperOpts = { ...scraperOptions, pipes: pipeMap };
 
-    const pipes: PipeOptions = Object.fromEntries(
-      patterns.filter((p) => p.pipes).map((p) => [p.key, p.pipes!]),
-    );
+    if (pagination.type === 'url-increment') {
+      const template = pagination.urlTemplate ?? url;
+      const startPage = pagination.startPage ?? 2;
 
-    const rawResult = await this.scrape(url, selectors, {
-      ...scraperOptions,
-      pipes,
-    });
+      const { items: page1Items } = await this.scrapeContainerFields<T>(
+        url,
+        descriptor,
+        scraperOpts,
+      );
 
-    return { results: [rawResult as T] };
+      const { items: restItems, pages: restPages } =
+        await this.paginateUrlIncrement<T>(
+          template,
+          async (pageUrl) => {
+            const { items } = await this.scrapeContainerFields<T>(
+              pageUrl,
+              descriptor,
+              scraperOpts,
+            );
+            return items;
+          },
+          pagination,
+          startPage,
+        );
+
+      return {
+        results: [...page1Items, ...restItems],
+        totalPages: 1 + restPages,
+      };
+    }
+
+    // For click-next, load-more, infinite-scroll: open a single page and keep it open
+    const cloak = scraperOpts.useRandomUserAgent
+      ? { ...scraperOpts.cloak, userAgent: getRandomUserAgent() }
+      : scraperOpts.cloak;
+
+    let page: Page;
+    try {
+      page = await this.pageService.navigateTo(
+        url,
+        this.buildNavOptions(scraperOpts),
+        cloak,
+        scraperOpts.interceptResource,
+      );
+    } catch (err) {
+      await this.pageService.closePage();
+      throw err;
+    }
+
+    try {
+      const containerFn = async (p: Page): Promise<T[]> => {
+        const raw = await this.executeContainerExtraction(
+          p,
+          descriptor as ContainerDescriptor,
+          1,
+        );
+        return raw.items.map((item) => {
+          const out: Record<string, unknown> = {};
+          for (const key of Object.keys(item)) {
+            const val = item[key];
+            if (pipeMap[key]) {
+              const toStr = (v: unknown) =>
+                typeof v === 'string' ? v : String(v as string);
+              out[key] = Array.isArray(val)
+                ? val.map((v) =>
+                    v == null
+                      ? null
+                      : this.pipeEngine.apply(toStr(v), pipeMap[key], url),
+                  )
+                : val == null
+                  ? null
+                  : this.pipeEngine.apply(toStr(val), pipeMap[key], url);
+            } else {
+              out[key] = val;
+            }
+          }
+          return out as T;
+        });
+      };
+
+      if (pagination.type === 'click-next') {
+        const { items, pages } = await this.paginateClickNext<T>(
+          page,
+          containerFn,
+          pagination,
+        );
+        return { results: items, totalPages: pages };
+      } else if (pagination.type === 'load-more') {
+        const { items, pages } = await this.paginateLoadMore<T>(
+          page,
+          containerFn,
+          pagination,
+        );
+        return { results: items, totalPages: pages };
+      } else {
+        const { items, pages } = await this.paginateInfiniteScroll<T>(
+          page,
+          containerFn,
+          pagination,
+        );
+        return { results: items, totalPages: pages };
+      }
+    } finally {
+      await this.pageService.closePage();
+    }
+  }
+
+  /**
+   * Find a single element by CSS selector or XPath expression.
+   * Returns an ElementHandle cast to Element so callers can call .click()
+   * and other Element methods.
+   */
+  private async findPaginationElement(
+    page: Page,
+    selector: string,
+  ): Promise<ElementHandle<Element> | null> {
+    if (!isXPathSelector(selector)) {
+      return page.$(selector);
+    }
+    // XPath: use the legacy $x interface if present (for mocks/older versions),
+    // otherwise fall back to evaluateHandle.
+    const pageWithX = page as unknown as {
+      $x?: (s: string) => Promise<ElementHandle<Element>[]>;
+    };
+    if (typeof pageWithX.$x === 'function') {
+      const results = await pageWithX.$x(selector);
+      return results[0] ?? null;
+    }
+    const handle = await page
+      .evaluateHandle((sel: string) => {
+        const res = document.evaluate(
+          sel,
+          document,
+          null,
+          XPathResult.FIRST_ORDERED_NODE_TYPE,
+          null,
+        );
+        return res.singleNodeValue as Element | null;
+      }, selector)
+      .then((h) => h.asElement() as ElementHandle<Element> | null);
+    return handle;
+  }
+
+  private async paginateClickNext<T>(
+    page: Page,
+    containerFn: (page: Page) => Promise<T[]>,
+    opts: PaginationOptions,
+  ): Promise<{ items: T[]; pages: number }> {
+    const max = opts.maxPages ?? 10;
+    const wait = opts.waitAfter ?? 800;
+    const all: T[] = [];
+    let pages = 0;
+
+    for (let i = 0; i < max; i++) {
+      const items = await containerFn(page);
+      all.push(...items);
+      pages++;
+
+      if (!opts.selector) break;
+      const btn = await this.findPaginationElement(page, opts.selector);
+      if (!btn) break;
+
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
+        btn.click(),
+      ]);
+      await delay(wait);
+    }
+
+    return { items: all, pages };
+  }
+
+  private async paginateLoadMore<T>(
+    page: Page,
+    containerFn: (page: Page) => Promise<T[]>,
+    opts: PaginationOptions,
+  ): Promise<{ items: T[]; pages: number }> {
+    const max = opts.maxPages ?? 10;
+    const wait = opts.waitAfter ?? 800;
+    let previousCount = 0;
+    let clicks = 0;
+
+    for (let i = 0; i < max; i++) {
+      const items = await containerFn(page);
+      if (items.length === previousCount) {
+        return { items, pages: clicks + 1 };
+      }
+      previousCount = items.length;
+
+      if (!opts.selector) break;
+      const btn = await this.findPaginationElement(page, opts.selector);
+      if (!btn) break;
+
+      await btn.click();
+      clicks++;
+      await delay(wait);
+    }
+
+    const finalItems = await containerFn(page);
+    return { items: finalItems, pages: clicks + 1 };
+  }
+
+  private async paginateInfiniteScroll<T>(
+    page: Page,
+    containerFn: (page: Page) => Promise<T[]>,
+    opts: PaginationOptions,
+  ): Promise<{ items: T[]; pages: number }> {
+    const max = opts.maxPages ?? 10;
+    const wait = opts.waitAfter ?? 800;
+    let previousCount = 0;
+    let scrolls = 0;
+
+    for (let i = 0; i < max; i++) {
+      const items = await containerFn(page);
+
+      if (opts.endSelector) {
+        const endEl = await this.findPaginationElement(page, opts.endSelector);
+        if (endEl) return { items, pages: scrolls + 1 };
+      }
+
+      if (items.length === previousCount) return { items, pages: scrolls + 1 };
+      previousCount = items.length;
+
+      if (opts.selector) {
+        const sentinel = await this.findPaginationElement(page, opts.selector);
+        if (sentinel) {
+          await page.evaluate((el) => el.scrollIntoView(), sentinel);
+        } else {
+          await page.evaluate(() =>
+            window.scrollTo(0, document.body.scrollHeight),
+          );
+        }
+      } else {
+        await page.evaluate(() =>
+          window.scrollTo(0, document.body.scrollHeight),
+        );
+      }
+
+      scrolls++;
+      await delay(wait);
+    }
+
+    const finalItems = await containerFn(page);
+    return { items: finalItems, pages: scrolls + 1 };
+  }
+
+  private async paginateUrlIncrement<T>(
+    urlTemplate: string,
+    containerFn: (url: string) => Promise<T[]>,
+    opts: PaginationOptions,
+    startPage: number,
+  ): Promise<{ items: T[]; pages: number }> {
+    const max = opts.maxPages ?? 10;
+    const wait = opts.waitAfter ?? 800;
+    const all: T[] = [];
+    let pagesScraped = 0;
+
+    for (let p = startPage; p < startPage + max; p++) {
+      const url = urlTemplate.replace('{page}', String(p));
+      const items = await containerFn(url);
+      if (items.length === 0) break;
+      all.push(...items);
+      pagesScraped++;
+      if (p < startPage + max - 1) await delay(wait);
+    }
+
+    return { items: all, pages: pagesScraped };
   }
 
   private async extractAllData(

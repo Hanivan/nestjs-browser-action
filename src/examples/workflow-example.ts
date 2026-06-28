@@ -1,13 +1,25 @@
 /**
- * Comprehensive example of scrapeWithActions workflow system
+ * Comprehensive example of scrapeWithWorkflow workflow system
  * This demonstrates all supported action types and features
  */
 
-import { ActionHelpersService } from '@hanivanrizky/nestjs-browser-action';
-import type { WorkflowDefinition } from '@hanivanrizky/nestjs-browser-action';
+import { NestFactory } from '@nestjs/core';
+import { Module } from '@nestjs/common';
+import { BrowserActionModule, BrowserActionService } from '../index';
+import type { WorkflowDefinition } from '../index';
+
+@Module({
+  imports: [
+    BrowserActionModule.forRoot({
+      launchOptions: { headless: process.env.HEADLESS !== 'false' },
+      pool: { min: 1, max: 1 },
+    }),
+  ],
+})
+class AppModule {}
 
 // Example 1: Simple data extraction
-async function simpleExtraction(actionHelpers: ActionHelpersService) {
+async function simpleExtraction(actionHelpers: BrowserActionService) {
   const workflow: WorkflowDefinition = {
     version: '1.0',
     actions: [
@@ -28,16 +40,16 @@ async function simpleExtraction(actionHelpers: ActionHelpersService) {
     ],
   };
 
-  const result = await actionHelpers.scrapeWithActions<{
+  const result = await actionHelpers.scrapeWithWorkflow<{
     title: string;
     description: string;
-  }>('https://example.com', workflow);
+  }>('https://www.scrapingcourse.com/ecommerce/', workflow);
 
   console.log('Simple extraction result:', result.data);
 }
 
 // Example 2: Form automation with variable interpolation
-async function formAutomation(actionHelpers: ActionHelpersService) {
+async function formAutomation(actionHelpers: BrowserActionService) {
   const workflow: WorkflowDefinition = {
     version: '1.0',
     actions: [
@@ -83,18 +95,18 @@ async function formAutomation(actionHelpers: ActionHelpersService) {
     },
   };
 
-  const result = await actionHelpers.scrapeWithActions<{
+  const result = await actionHelpers.scrapeWithWorkflow<{
     firstResult: string;
-  }>('https://example.com', workflow, {
-    baseUrl: 'https://example.com/search',
-    searchQuery: 'NestJS browser automation',
+  }>('https://www.scrapingcourse.com/ecommerce/', workflow, {
+    baseUrl: 'https://www.scrapingcourse.com/ecommerce/?s=hoodie',
+    searchQuery: 'hoodie',
   });
 
   console.log('Form automation result:', result.data);
 }
 
 // Example 3: Complex workflow with conditional actions
-async function conditionalWorkflow(actionHelpers: ActionHelpersService) {
+async function conditionalWorkflow(actionHelpers: BrowserActionService) {
   const workflow: WorkflowDefinition = {
     version: '1.0',
     actions: [
@@ -137,18 +149,18 @@ async function conditionalWorkflow(actionHelpers: ActionHelpersService) {
     ],
   };
 
-  const result = await actionHelpers.scrapeWithActions<{
+  const result = await actionHelpers.scrapeWithWorkflow<{
     mainHeading: string;
     pageContent: string;
-  }>('https://example.com', workflow, {
-    baseUrl: 'https://example.com',
+  }>('https://www.scrapingcourse.com/ecommerce/', workflow, {
+    baseUrl: 'https://www.scrapingcourse.com/ecommerce/',
   });
 
   console.log('Conditional workflow result:', result.data);
 }
 
 // Example 4: XPath selectors
-async function xpathSelectors(actionHelpers: ActionHelpersService) {
+async function xpathSelectors(actionHelpers: BrowserActionService) {
   const workflow: WorkflowDefinition = {
     version: '1.0',
     actions: [
@@ -169,16 +181,16 @@ async function xpathSelectors(actionHelpers: ActionHelpersService) {
     ],
   };
 
-  const result = await actionHelpers.scrapeWithActions<{
+  const result = await actionHelpers.scrapeWithWorkflow<{
     titleByXPath: string;
     allParagraphs: string;
-  }>('https://example.com', workflow);
+  }>('https://www.scrapingcourse.com/ecommerce/', workflow);
 
   console.log('XPath selectors result:', result.data);
 }
 
 // Example 5: JavaScript evaluation
-async function javascriptEvaluation(actionHelpers: ActionHelpersService) {
+async function javascriptEvaluation(actionHelpers: BrowserActionService) {
   const workflow: WorkflowDefinition = {
     version: '1.0',
     actions: [
@@ -204,17 +216,17 @@ async function javascriptEvaluation(actionHelpers: ActionHelpersService) {
     ],
   };
 
-  const result = await actionHelpers.scrapeWithActions<{
+  const result = await actionHelpers.scrapeWithWorkflow<{
     pageHeight: number;
     linkCount: number;
     currentUrl: string;
-  }>('https://example.com', workflow);
+  }>('https://www.scrapingcourse.com/ecommerce/', workflow);
 
   console.log('JavaScript evaluation result:', result.data);
 }
 
 // Example 6: Screenshot and debugging
-async function screenshotDebugging(actionHelpers: ActionHelpersService) {
+async function screenshotDebugging(actionHelpers: BrowserActionService) {
   const workflow: WorkflowDefinition = {
     version: '1.0',
     actions: [
@@ -238,17 +250,17 @@ async function screenshotDebugging(actionHelpers: ActionHelpersService) {
     ],
   };
 
-  const result = await actionHelpers.scrapeWithActions<{
+  const result = await actionHelpers.scrapeWithWorkflow<{
     title: string;
-  }>('https://example.com', workflow, {
-    baseUrl: 'https://example.com',
+  }>('https://www.scrapingcourse.com/ecommerce/', workflow, {
+    baseUrl: 'https://www.scrapingcourse.com/ecommerce/',
   });
 
   console.log('Screenshot debugging result:', result.data);
 }
 
 // Example 7: Dropdown selection
-async function dropdownSelection(actionHelpers: ActionHelpersService) {
+async function dropdownSelection(actionHelpers: BrowserActionService) {
   const workflow: WorkflowDefinition = {
     version: '1.0',
     actions: [
@@ -278,11 +290,11 @@ async function dropdownSelection(actionHelpers: ActionHelpersService) {
     ],
   };
 
-  const result = await actionHelpers.scrapeWithActions<{}>(
-    'https://example.com',
+  const result = await actionHelpers.scrapeWithWorkflow<{}>(
+    'https://www.scrapingcourse.com/ecommerce/',
     workflow,
     {
-      baseUrl: 'https://example.com/form',
+      baseUrl: 'https://www.scrapingcourse.com/ecommerce/',
       countryCode: 'US',
     },
   );
@@ -291,7 +303,7 @@ async function dropdownSelection(actionHelpers: ActionHelpersService) {
 }
 
 // Example 8: Shadow DOM support (if needed)
-async function shadowDOMSupport(actionHelpers: ActionHelpersService) {
+async function shadowDOMSupport(actionHelpers: BrowserActionService) {
   const workflow: WorkflowDefinition = {
     version: '1.0',
     actions: [
@@ -320,17 +332,17 @@ async function shadowDOMSupport(actionHelpers: ActionHelpersService) {
     ],
   };
 
-  const result = await actionHelpers.scrapeWithActions<{
+  const result = await actionHelpers.scrapeWithWorkflow<{
     shadowContent: string;
-  }>('https://example.com', workflow, {
-    baseUrl: 'https://example.com',
+  }>('https://www.scrapingcourse.com/ecommerce/', workflow, {
+    baseUrl: 'https://www.scrapingcourse.com/ecommerce/',
   });
 
   console.log('Shadow DOM result:', result.data);
 }
 
 // Example 9: Error handling with retry
-async function errorHandlingWithRetry(actionHelpers: ActionHelpersService) {
+async function errorHandlingWithRetry(actionHelpers: BrowserActionService) {
   const workflow: WorkflowDefinition = {
     version: '1.0',
     actions: [
@@ -356,10 +368,10 @@ async function errorHandlingWithRetry(actionHelpers: ActionHelpersService) {
     },
   };
 
-  const result = await actionHelpers.scrapeWithActions<{
+  const result = await actionHelpers.scrapeWithWorkflow<{
     content: string;
-  }>('https://example.com', workflow, {
-    baseUrl: 'https://example.com',
+  }>('https://www.scrapingcourse.com/ecommerce/', workflow, {
+    baseUrl: 'https://www.scrapingcourse.com/ecommerce/',
   });
 
   if (result.success) {
@@ -370,7 +382,7 @@ async function errorHandlingWithRetry(actionHelpers: ActionHelpersService) {
 }
 
 // Example 10: Real-world e-commerce price scraping
-async function ecommercePriceScraping(actionHelpers: ActionHelpersService) {
+async function ecommercePriceScraping(actionHelpers: BrowserActionService) {
   const workflow: WorkflowDefinition = {
     version: '1.0',
     actions: [
@@ -380,32 +392,32 @@ async function ecommercePriceScraping(actionHelpers: ActionHelpersService) {
       },
       {
         action: 'waitFor',
-        target: { type: 'css', value: '.product-info' },
+        target: { type: 'css', value: '.product_title' },
         options: { timeout: 15000 },
       },
       {
         action: 'scroll',
-        target: { type: 'css', value: '.product-info' },
+        target: { type: 'css', value: '.product_title' },
       },
       {
         id: 'productName',
         action: 'extract',
-        target: { type: 'css', value: 'h1.product-title' },
+        target: { type: 'css', value: 'h1.product_title' },
       },
       {
         id: 'price',
         action: 'extract',
-        target: { type: 'css', value: '.price-current' },
+        target: { type: 'css', value: '.product-price' },
       },
       {
         id: 'availability',
         action: 'extract',
-        target: { type: 'css', value: '.stock-status' },
+        target: { type: 'css', value: '.stock' },
       },
       {
-        id: 'rating',
+        id: 'sku',
         action: 'extract',
-        target: { type: 'css', value: '.rating-score' },
+        target: { type: 'css', value: '.sku' },
       },
       {
         action: 'screenshot',
@@ -419,27 +431,42 @@ async function ecommercePriceScraping(actionHelpers: ActionHelpersService) {
     },
   };
 
-  const result = await actionHelpers.scrapeWithActions<{
+  const result = await actionHelpers.scrapeWithWorkflow<{
     productName: string;
     price: string;
     availability: string;
-    rating: string;
-  }>('https://example.com', workflow, {
-    productUrl: 'https://example.com/products/12345',
-  });
+    sku: string;
+  }>(
+    'https://www.scrapingcourse.com/ecommerce/product/abominable-hoodie/',
+    workflow,
+    {
+      productUrl:
+        'https://www.scrapingcourse.com/ecommerce/product/abominable-hoodie/',
+    },
+  );
 
   console.log('E-commerce product data:', result.data);
 }
 
-export {
-  simpleExtraction,
-  formAutomation,
-  conditionalWorkflow,
-  xpathSelectors,
-  javascriptEvaluation,
-  screenshotDebugging,
-  dropdownSelection,
-  shadowDOMSupport,
-  errorHandlingWithRetry,
-  ecommercePriceScraping,
-};
+if (require.main === module) {
+  void (async () => {
+    const app = await NestFactory.createApplicationContext(AppModule, {
+      logger: false,
+    });
+    const service = await app.resolve(BrowserActionService);
+    try {
+      await simpleExtraction(service);
+      await formAutomation(service);
+      await conditionalWorkflow(service);
+      await xpathSelectors(service);
+      await javascriptEvaluation(service);
+      await screenshotDebugging(service);
+      await dropdownSelection(service);
+      await shadowDOMSupport(service);
+      await errorHandlingWithRetry(service);
+      await ecommercePriceScraping(service);
+    } finally {
+      await app.close();
+    }
+  })();
+}
