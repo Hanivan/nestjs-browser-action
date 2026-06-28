@@ -96,7 +96,11 @@ export class PageService {
 
   async closePage(): Promise<void> {
     if (this.currentPage) {
-      await this.currentPage.close();
+      try {
+        await this.currentPage.close();
+      } catch {
+        /* page already closed externally */
+      }
       this.currentPage = undefined;
     }
     if (this.currentBrowser) {

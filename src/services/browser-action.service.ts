@@ -57,6 +57,11 @@ import {
   TLS_CAPTURE_URL,
 } from '../constants/browser-action.constants';
 
+const isTargetClosed = (err: unknown): boolean =>
+  err instanceof Error &&
+  (err.message.includes('Target closed') ||
+    err.message.includes('No target with given id'));
+
 @Injectable({ scope: Scope.TRANSIENT })
 export class BrowserActionService {
   private readonly logger: LoggerWithLevel;
@@ -650,19 +655,24 @@ export class BrowserActionService {
     let pages = 0;
 
     for (let i = 0; i < max; i++) {
-      const items = await containerFn(page);
-      all.push(...items);
-      pages++;
+      try {
+        const items = await containerFn(page);
+        all.push(...items);
+        pages++;
 
-      if (!opts.selector) break;
-      const btn = await this.findPaginationElement(page, opts.selector);
-      if (!btn) break;
+        if (!opts.selector) break;
+        const btn = await this.findPaginationElement(page, opts.selector);
+        if (!btn) break;
 
-      await Promise.all([
-        page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
-        btn.click(),
-      ]);
-      await delay(wait);
+        await Promise.all([
+          page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
+          btn.click(),
+        ]);
+        await delay(wait);
+      } catch (err) {
+        if (isTargetClosed(err)) break;
+        throw err;
+      }
     }
 
     return { items: all, pages };
@@ -678,24 +688,36 @@ export class BrowserActionService {
     let previousCount = 0;
     let clicks = 0;
 
+    let lastItems: T[] = [];
     for (let i = 0; i < max; i++) {
-      const items = await containerFn(page);
-      if (items.length === previousCount) {
-        return { items, pages: clicks + 1 };
+      try {
+        const items = await containerFn(page);
+        if (items.length === previousCount) {
+          return { items, pages: clicks + 1 };
+        }
+        lastItems = items;
+        previousCount = items.length;
+
+        if (!opts.selector) break;
+        const btn = await this.findPaginationElement(page, opts.selector);
+        if (!btn) break;
+
+        await btn.click();
+        clicks++;
+        await delay(wait);
+      } catch (err) {
+        if (isTargetClosed(err)) break;
+        throw err;
       }
-      previousCount = items.length;
-
-      if (!opts.selector) break;
-      const btn = await this.findPaginationElement(page, opts.selector);
-      if (!btn) break;
-
-      await btn.click();
-      clicks++;
-      await delay(wait);
     }
 
-    const finalItems = await containerFn(page);
-    return { items: finalItems, pages: clicks + 1 };
+    try {
+      const finalItems = await containerFn(page);
+      return { items: finalItems, pages: clicks + 1 };
+    } catch (err) {
+      if (isTargetClosed(err)) return { items: lastItems, pages: clicks + 1 };
+      throw err;
+    }
   }
 
   private async paginateInfiniteScroll<T>(
@@ -708,38 +730,57 @@ export class BrowserActionService {
     let previousCount = 0;
     let scrolls = 0;
 
+    let lastItems: T[] = [];
     for (let i = 0; i < max; i++) {
-      const items = await containerFn(page);
+      try {
+        const items = await containerFn(page);
 
-      if (opts.endSelector) {
-        const endEl = await this.findPaginationElement(page, opts.endSelector);
-        if (endEl) return { items, pages: scrolls + 1 };
-      }
+        if (opts.endSelector) {
+          const endEl = await this.findPaginationElement(
+            page,
+            opts.endSelector,
+          );
+          if (endEl) return { items, pages: scrolls + 1 };
+        }
 
-      if (items.length === previousCount) return { items, pages: scrolls + 1 };
-      previousCount = items.length;
+        if (items.length === previousCount)
+          return { items, pages: scrolls + 1 };
+        lastItems = items;
+        previousCount = items.length;
 
-      if (opts.selector) {
-        const sentinel = await this.findPaginationElement(page, opts.selector);
-        if (sentinel) {
-          await page.evaluate((el) => el.scrollIntoView(), sentinel);
+        if (opts.selector) {
+          const sentinel = await this.findPaginationElement(
+            page,
+            opts.selector,
+          );
+          if (sentinel) {
+            await page.evaluate((el) => el.scrollIntoView(), sentinel);
+          } else {
+            await page.evaluate(() =>
+              window.scrollTo(0, document.body.scrollHeight),
+            );
+          }
         } else {
           await page.evaluate(() =>
             window.scrollTo(0, document.body.scrollHeight),
           );
         }
-      } else {
-        await page.evaluate(() =>
-          window.scrollTo(0, document.body.scrollHeight),
-        );
-      }
 
-      scrolls++;
-      await delay(wait);
+        scrolls++;
+        await delay(wait);
+      } catch (err) {
+        if (isTargetClosed(err)) break;
+        throw err;
+      }
     }
 
-    const finalItems = await containerFn(page);
-    return { items: finalItems, pages: scrolls + 1 };
+    try {
+      const finalItems = await containerFn(page);
+      return { items: finalItems, pages: scrolls + 1 };
+    } catch (err) {
+      if (isTargetClosed(err)) return { items: lastItems, pages: scrolls + 1 };
+      throw err;
+    }
   }
 
   private async paginateUrlIncrement<T>(
