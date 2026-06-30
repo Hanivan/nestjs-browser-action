@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.20.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.19.0...v0.20.0) (2026-06-30)
+
+
+### Features
+
+* extend isTargetClosed to cover detached frames, harden url-increment, add pagination test suite ([a1a8138](https://github.com/Hanivan/nestjs-browser-action/commit/a1a81380f3a4f70f8f4baa4317bf4a34ad2297d0))
+
 # [0.19.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.18.0...v0.19.0) (2026-06-28)
 
 
