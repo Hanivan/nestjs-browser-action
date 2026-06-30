@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.1](https://github.com/Hanivan/nestjs-browser-action/compare/v0.20.0...v0.20.1) (2026-06-30)
+
+
+### Bug Fixes
+
+* harden browser lifecycle — dead-browser eviction, context-destroyed recovery, and closePage guarantees ([d06cf4d](https://github.com/Hanivan/nestjs-browser-action/commit/d06cf4d4aab34b38cf85a4ee754a9f0400ac93b0))
+
 # [0.20.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.19.0...v0.20.0) (2026-06-30)
 
 
