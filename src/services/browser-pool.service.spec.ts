@@ -67,6 +67,23 @@ describe('BrowserPoolService', () => {
     expect(service).toBeDefined();
   });
 
+  it('evicts a disconnected browser from available pool on acquire and returns a healthy one', async () => {
+    await service.onModuleInit(); // 2 browsers in pool (min: 2)
+
+    const b1 = await service.acquire();
+    const b2 = await service.acquire();
+
+    // Simulate b1 disconnecting mid-flight (Chrome crash) before release
+    (b1 as any).connected = false;
+    service.release(b1);
+    service.release(b2);
+
+    // acquire() must skip the dead b1, evict it, and return the healthy b2
+    const acquired = await service.acquire();
+    expect(acquired).toBe(b2);
+    expect(service.getAvailableCount()).toBe(0); // b2 is now in use
+  });
+
   it('should initialize pool with min browsers on module init', async () => {
     await service.onModuleInit();
 

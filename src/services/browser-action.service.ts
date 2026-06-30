@@ -62,7 +62,11 @@ const isTargetClosed = (err: unknown): boolean =>
   (err.message.includes('Target closed') ||
     err.message.includes('No target with given id') ||
     err.message.includes('detached Frame') ||
-    err.message.includes('Attempted to use detached'));
+    err.message.includes('Attempted to use detached') ||
+    err.message.includes('Execution context was destroyed') ||
+    err.message.includes('context was destroyed') ||
+    err.message.includes('Session closed') ||
+    err.message.includes('Navigating frame was detached'));
 
 @Injectable({ scope: Scope.TRANSIENT })
 export class BrowserActionService {
@@ -104,9 +108,12 @@ export class BrowserActionService {
       cloak,
       scraperOptions?.interceptResource,
     );
-    const result = await page.screenshot({ path, ...options });
-    await this.pageService.closePage();
-    return result as unknown as Buffer;
+    try {
+      const result = await page.screenshot({ path, ...options });
+      return result as unknown as Buffer;
+    } finally {
+      await this.pageService.closePage();
+    }
   }
 
   async generatePDF(
@@ -127,9 +134,12 @@ export class BrowserActionService {
       cloak,
       scraperOptions?.interceptResource,
     );
-    const pdf = await page.pdf({ path, ...options });
-    await this.pageService.closePage();
-    return Buffer.from(pdf);
+    try {
+      const pdf = await page.pdf({ path, ...options });
+      return Buffer.from(pdf);
+    } finally {
+      await this.pageService.closePage();
+    }
   }
 
   /**
@@ -149,10 +159,14 @@ export class BrowserActionService {
       ),
     );
     const page = await this.pageService.navigateTo(url);
-    const rawJson = await page.evaluate(() => document.body.innerText);
-    await this.pageService.closePage();
+    let rawJson: string;
+    try {
+      rawJson = await page.evaluate(() => document.body.innerText);
+    } finally {
+      await this.pageService.closePage();
+    }
 
-    const data = JSON.parse(rawJson) as Record<string, unknown>;
+    const data = JSON.parse(rawJson!) as Record<string, unknown>;
     const fingerprint = this.buildTlsFingerprint(data);
 
     await fs.mkdir(dirname(path), { recursive: true });
@@ -223,34 +237,36 @@ export class BrowserActionService {
     // back to the real puppeteer signature so callbacks stay type-checked.
     const evalOne = page['$eval'].bind(page) as Page['$eval'];
 
-    await Promise.all(
-      Object.entries(selectors).map(async ([key, rawSelector]) => {
-        const { selector, attribute } = this.parseSelector(rawSelector);
-        try {
-          const value = attribute
-            ? await evalOne(
-                selector,
-                (el, attr) => el.getAttribute(attr),
-                attribute,
-              )
-            : await evalOne(selector, (el) => el.textContent);
+    try {
+      await Promise.all(
+        Object.entries(selectors).map(async ([key, rawSelector]) => {
+          const { selector, attribute } = this.parseSelector(rawSelector);
+          try {
+            const value = attribute
+              ? await evalOne(
+                  selector,
+                  (el, attr) => el.getAttribute(attr),
+                  attribute,
+                )
+              : await evalOne(selector, (el) => el.textContent);
 
-          result[key] = options?.pipes?.[key]
-            ? this.pipeEngine.apply(
-                typeof value === 'string' ? value : String(value ?? ''),
-                options.pipes[key],
-                url,
-              )
-            : value;
-        } catch (err) {
-          this.logger.warn(
-            `Failed to scrape '${key}' (${rawSelector}): ${err instanceof Error ? err.message : String(err)}`,
-          );
-        }
-      }),
-    );
-
-    await this.pageService.closePage();
+            result[key] = options?.pipes?.[key]
+              ? this.pipeEngine.apply(
+                  typeof value === 'string' ? value : String(value ?? ''),
+                  options.pipes[key],
+                  url,
+                )
+              : value;
+          } catch (err) {
+            this.logger.warn(
+              `Failed to scrape '${key}' (${rawSelector}): ${err instanceof Error ? err.message : String(err)}`,
+            );
+          }
+        }),
+      );
+    } finally {
+      await this.pageService.closePage();
+    }
     return result;
   }
 

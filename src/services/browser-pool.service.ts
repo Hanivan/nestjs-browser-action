@@ -316,6 +316,12 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
       if (this.available.size > 0) {
         const browser = this.getNextAvailable();
         this.available.delete(browser);
+        // ponytail: evict dead browsers inline — disconnected event fires async
+        // so a stale browser can sit in available between release() and acquire().
+        if (!browser.connected) {
+          this.evict(browser);
+          continue;
+        }
         this.inUse.add(browser);
         this.touch(browser);
         return browser;

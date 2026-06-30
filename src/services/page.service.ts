@@ -38,7 +38,13 @@ export class PageService {
       this.currentBrowser = await this.browserManager.acquireBrowser();
       this.dedicated = false;
     }
-    this.currentPage = await this.currentBrowser.newPage();
+    try {
+      this.currentPage = await this.currentBrowser.newPage();
+    } catch (err) {
+      // newPage() failed — release the browser we just acquired so it goes back to the pool
+      await this.closePage();
+      throw err;
+    }
     this.intercepting = !!interceptResource;
     if (interceptResource) {
       await this.enableResourceInterception(this.currentPage);
