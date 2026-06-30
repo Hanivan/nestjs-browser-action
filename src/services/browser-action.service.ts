@@ -60,7 +60,9 @@ import {
 const isTargetClosed = (err: unknown): boolean =>
   err instanceof Error &&
   (err.message.includes('Target closed') ||
-    err.message.includes('No target with given id'));
+    err.message.includes('No target with given id') ||
+    err.message.includes('detached Frame') ||
+    err.message.includes('Attempted to use detached'));
 
 @Injectable({ scope: Scope.TRANSIENT })
 export class BrowserActionService {
@@ -689,6 +691,8 @@ export class BrowserActionService {
         await delay(wait);
       } catch (err) {
         if (isTargetClosed(err)) break;
+        // Navigation timeout or other recoverable error — return what we have
+        if (err instanceof Error && err.message.includes('TimeoutError')) break;
         throw err;
       }
     }
@@ -813,12 +817,18 @@ export class BrowserActionService {
     let pagesScraped = 0;
 
     for (let p = startPage; p < startPage + max; p++) {
-      const url = urlTemplate.replace('{page}', String(p));
-      const items = await containerFn(url);
-      if (items.length === 0) break;
-      all.push(...items);
-      pagesScraped++;
-      if (p < startPage + max - 1) await delay(wait);
+      try {
+        const url = urlTemplate.replace('{page}', String(p));
+        const items = await containerFn(url);
+        if (items.length === 0) break;
+        all.push(...items);
+        pagesScraped++;
+        if (p < startPage + max - 1) await delay(wait);
+      } catch (err) {
+        // Return whatever was accumulated so far rather than losing all pages
+        if (isTargetClosed(err)) break;
+        throw err;
+      }
     }
 
     return { items: all, pages: pagesScraped };
