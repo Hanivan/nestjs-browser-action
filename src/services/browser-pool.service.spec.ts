@@ -84,6 +84,25 @@ describe('BrowserPoolService', () => {
     expect(service.getAvailableCount()).toBe(0); // b2 is now in use
   });
 
+  it('evicts a dead browser on release and recreates to keep min', async () => {
+    await service.onModuleInit(); // 2 browsers (min: 2)
+
+    const b1 = await service.acquire();
+    expect(service.getPoolSize()).toBe(2);
+
+    // b1 dies while in-use, then is released back to the pool
+    (b1 as any).connected = false;
+    service.release(b1);
+    // recreate is async (handleDisconnect) — let the microtask queue drain
+    await new Promise((r) => setImmediate(r));
+
+    // dead b1 is gone; a replacement was spun up to restore min=2
+    expect(service.getPoolSize()).toBe(2);
+    const pooled = mockBrowsers.filter((b) => (b as any).connected);
+    expect(pooled).not.toContain(b1);
+    expect(mockCloak.launch).toHaveBeenCalledTimes(3); // 2 init + 1 recreate
+  });
+
   it('should initialize pool with min browsers on module init', async () => {
     await service.onModuleInit();
 

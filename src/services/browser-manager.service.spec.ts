@@ -19,6 +19,8 @@ describe('BrowserManagerService', () => {
             onModuleInit: jest.fn(),
             onModuleDestroy: jest.fn(),
             getLogLevel: jest.fn().mockReturnValue('log' as const),
+            getPoolSize: jest.fn().mockReturnValue(0),
+            getAvailableCount: jest.fn().mockReturnValue(0),
           },
         },
       ],

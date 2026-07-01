@@ -10,7 +10,7 @@
   <a href="https://www.npmjs.com/package/@hanivanrizky/nestjs-browser-action" target="_blank"><img src="https://img.shields.io/npm/v/@hanivanrizky/nestjs-browser-action.svg" alt="NPM Version" /></a>
   <a href="https://www.npmjs.com/package/@hanivanrizky/nestjs-browser-action" target="_blank"><img src="https://img.shields.io/npm/l/@hanivanrizky/nestjs-browser-action.svg" alt="Package License" /></a>
   <a href="https://www.npmjs.com/package/@hanivanrizky/nestjs-browser-action" target="_blank"><img src="https://img.shields.io/npm/dm/@hanivanrizky/nestjs-browser-action.svg" alt="NPM Downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-409%20passed-brightgreen.svg" alt="Tests: 409 passed" />
+  <img src="https://img.shields.io/badge/tests-410%20passed-brightgreen.svg" alt="Tests: 410 passed" />
 </p>
 
 > **⚠️ Status: Experimental** — personal use only; API subject to change.
@@ -39,7 +39,7 @@
 - **(.\_.) Remote Chrome**: Connect to remote Chrome instances via CDP (browserURL / browserWSEndpoint)
 - **(>\_<) TLS Fingerprint**: Capture the browser's own TLS/HTTP handshake (ja3/ja4, ciphers, http2 akamai, headers) for use with `nestjs-xpath-parser`'s CycleTLS engine
 - **(☆^O^☆) TypeScript Generics**: Full generic type support for type-safe results
-- **(o_o) Fully Tested**: 409 tests across 39 suites
+- **(o_o) Fully Tested**: 410 tests across 39 suites
 
 ## Installation
 

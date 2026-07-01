@@ -301,6 +301,28 @@ strategy: 'least-recently-used'
 - **Automatic Management:** Acquire and release automatically
 - **Scalability:** Handle concurrent requests efficiently
 - **Cleanup:** Idle browsers automatically closed
+- **Self-healing:** Disconnected/crashed browsers are evicted on acquire and release, and the pool recreates browsers to restore `min`
+
+## Concurrency Model
+
+`BrowserActionService` is a singleton, but every call to `evaluateWebsite()` /
+`scrape()` / `scrapeContainerFields()` acquires its **own** browser + page from
+the pool and releases them when done. This makes a single injected service safe
+under concurrent calls — e.g. a RabbitMQ consumer with `prefetchCount > 1`, or
+any handler invoked in parallel.
+
+The pool is the concurrency limiter. **Set `pool.max` ≥ your peak concurrency**
+(e.g. RMQ prefetch count). If `max` is lower, extra concurrent calls block on
+`acquire()` until a browser frees up (or reject after `acquireTimeoutMs`) —
+they are serialized, not run in parallel.
+
+```typescript
+// prefetchCount: 4  ->  pool.max must be >= 4 for true parallelism
+BrowserActionModule.forRoot({ pool: { min: 2, max: 4 } });
+```
+
+Set `logLevel: 'debug'` to trace pool activity — tagged `[POOL]`, `[MANAGER]`,
+and `[PAGE]` lines show acquire/reuse/release/evict/reap and per-page lifecycle.
 
 ## Security
 

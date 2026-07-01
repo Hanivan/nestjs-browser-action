@@ -21,6 +21,12 @@ const mockCleansingService = {
   cleanse: jest.fn((v) => v),
 } as unknown as CleansingService;
 
+// resolve() hands back the same mock page service so navigateTo/closePage
+// assertions still observe the calls the service makes per-invocation.
+const mockModuleRef = {
+  resolve: jest.fn().mockResolvedValue(mockPageService),
+} as unknown as import('@nestjs/core').ModuleRef;
+
 describe('BrowserActionService.scrapeContainerFields', () => {
   let service: BrowserActionService;
 
@@ -30,6 +36,7 @@ describe('BrowserActionService.scrapeContainerFields', () => {
       mockPageService,
       mockCookieService,
       mockCleansingService,
+      mockModuleRef,
     );
   });
 

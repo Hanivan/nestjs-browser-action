@@ -1,4 +1,5 @@
-import { Injectable, Scope, Optional, Inject } from '@nestjs/common';
+import { Injectable, Optional, Inject } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { promises as fs } from 'fs';
 import { dirname } from 'path';
 import { isURL } from 'class-validator';
@@ -68,7 +69,11 @@ const isTargetClosed = (err: unknown): boolean =>
     err.message.includes('Session closed') ||
     err.message.includes('Navigating frame was detached'));
 
-@Injectable({ scope: Scope.TRANSIENT })
+// Singleton-safe: BrowserActionService holds no per-request page state — each
+// public method resolves its own transient PageService via newPage(). This lets
+// implementers inject it into their own singletons without concurrent requests
+// sharing (and tearing down) one page. See newPage() below.
+@Injectable()
 export class BrowserActionService {
   private readonly logger: LoggerWithLevel;
   private readonly pipeEngine = new PipeEngine();
@@ -78,6 +83,7 @@ export class BrowserActionService {
     private readonly pageService: PageService,
     private readonly cookieService: CookieService,
     private readonly cleansingService: CleansingService,
+    private readonly moduleRef: ModuleRef,
     @Optional()
     @Inject(BROWSER_ACTION_OPTIONS)
     private readonly moduleOptions?: BrowserActionOptions,
@@ -88,6 +94,21 @@ export class BrowserActionService {
     );
     this.activeDebugLogMaxLength =
       moduleOptions?.debugLogMaxLength ?? DEFAULT_DEBUG_LOG_MAX_LENGTH;
+  }
+
+  /**
+   * Resolve a fresh, isolated PageService for a single public call.
+   *
+   * PageService is transient and holds mutable currentPage/currentBrowser
+   * state. If every call shared one instance (as constructor injection into a
+   * singleton would force), concurrent scrapes would stomp each other's page
+   * and one would be torn down mid-flight. Resolving per call gives each its
+   * own page slot while all still share the one BrowserPoolService singleton.
+   *
+   * The constructor-injected `this.pageService` is used only for getLogLevel().
+   */
+  private async newPage(): Promise<PageService> {
+    return this.moduleRef.resolve(PageService, undefined, { strict: false });
   }
 
   async takeScreenshot(
@@ -102,7 +123,8 @@ export class BrowserActionService {
     const cloak = scraperOptions?.useRandomUserAgent
       ? { ...scraperOptions?.cloak, userAgent: getRandomUserAgent() }
       : scraperOptions?.cloak;
-    const page = await this.pageService.navigateTo(
+    const pageService = await this.newPage();
+    const page = await pageService.navigateTo(
       url,
       this.buildNavOptions(scraperOptions),
       cloak,
@@ -112,7 +134,7 @@ export class BrowserActionService {
       const result = await page.screenshot({ path, ...options });
       return result as unknown as Buffer;
     } finally {
-      await this.pageService.closePage();
+      await pageService.closePage();
     }
   }
 
@@ -128,7 +150,8 @@ export class BrowserActionService {
     const cloak = scraperOptions?.useRandomUserAgent
       ? { ...scraperOptions?.cloak, userAgent: getRandomUserAgent() }
       : scraperOptions?.cloak;
-    const page = await this.pageService.navigateTo(
+    const pageService = await this.newPage();
+    const page = await pageService.navigateTo(
       url,
       this.buildNavOptions(scraperOptions),
       cloak,
@@ -138,7 +161,7 @@ export class BrowserActionService {
       const pdf = await page.pdf({ path, ...options });
       return Buffer.from(pdf);
     } finally {
-      await this.pageService.closePage();
+      await pageService.closePage();
     }
   }
 
@@ -158,12 +181,13 @@ export class BrowserActionService {
         `Capturing TLS fingerprint from ${url}`,
       ),
     );
-    const page = await this.pageService.navigateTo(url);
+    const pageService = await this.newPage();
+    const page = await pageService.navigateTo(url);
     let rawJson: string;
     try {
       rawJson = await page.evaluate(() => document.body.innerText);
     } finally {
-      await this.pageService.closePage();
+      await pageService.closePage();
     }
 
     const data = JSON.parse(rawJson!) as Record<string, unknown>;
@@ -225,7 +249,8 @@ export class BrowserActionService {
       ? { ...options?.cloak, userAgent: getRandomUserAgent() }
       : options?.cloak;
 
-    const page = await this.pageService.navigateTo(
+    const pageService = await this.newPage();
+    const page = await pageService.navigateTo(
       url,
       this.buildNavOptions(options),
       cloak,
@@ -265,7 +290,7 @@ export class BrowserActionService {
         }),
       );
     } finally {
-      await this.pageService.closePage();
+      await pageService.closePage();
     }
     return result;
   }
@@ -307,7 +332,8 @@ export class BrowserActionService {
       ? { ...options?.cloak, userAgent: getRandomUserAgent() }
       : options?.cloak;
 
-    const page = await this.pageService.navigateTo(
+    const pageService = await this.newPage();
+    const page = await pageService.navigateTo(
       url,
       this.buildNavOptions(options),
       cloak,
@@ -396,7 +422,7 @@ export class BrowserActionService {
       }),
     );
 
-    await this.pageService.closePage();
+    await pageService.closePage();
     return result;
   }
 
@@ -416,16 +442,17 @@ export class BrowserActionService {
       ? { ...options?.cloak, userAgent: getRandomUserAgent() }
       : options?.cloak;
 
+    const pageService = await this.newPage();
     let page: Page;
     try {
-      page = await this.pageService.navigateTo(
+      page = await pageService.navigateTo(
         url,
         this.buildNavOptions(options),
         cloak,
         options?.interceptResource,
       );
     } catch (err) {
-      await this.pageService.closePage();
+      await pageService.closePage();
       throw err;
     }
 
@@ -462,7 +489,7 @@ export class BrowserActionService {
 
       return { items, pagination: raw.pagination };
     } finally {
-      await this.pageService.closePage();
+      await pageService.closePage();
     }
   }
 
@@ -573,16 +600,17 @@ export class BrowserActionService {
       ? { ...scraperOpts.cloak, userAgent: getRandomUserAgent() }
       : scraperOpts.cloak;
 
+    const pageService = await this.newPage();
     let page: Page;
     try {
-      page = await this.pageService.navigateTo(
+      page = await pageService.navigateTo(
         url,
         this.buildNavOptions(scraperOpts),
         cloak,
         scraperOpts.interceptResource,
       );
     } catch (err) {
-      await this.pageService.closePage();
+      await pageService.closePage();
       throw err;
     }
 
@@ -640,7 +668,7 @@ export class BrowserActionService {
         return { results: items, totalPages: pages };
       }
     } finally {
-      await this.pageService.closePage();
+      await pageService.closePage();
     }
   }
 
@@ -1000,7 +1028,9 @@ export class BrowserActionService {
     const cloak = scraperOptions?.useRandomUserAgent
       ? { ...scraperOptions?.cloak, userAgent: getRandomUserAgent() }
       : scraperOptions?.cloak;
-    const page = await this.pageService.navigateTo(
+    // Returns the open page for the caller to drive; caller owns closing it.
+    const pageService = await this.newPage();
+    const page = await pageService.navigateTo(
       url,
       this.buildNavOptions(scraperOptions),
       cloak,
@@ -1021,7 +1051,8 @@ export class BrowserActionService {
     const cloak = options?.useRandomUserAgent
       ? { ...options?.cloak, userAgent: getRandomUserAgent() }
       : options?.cloak;
-    const page = await this.pageService.navigateTo(
+    const pageService = await this.newPage();
+    const page = await pageService.navigateTo(
       url,
       this.buildNavOptions(options),
       cloak,
@@ -1031,7 +1062,7 @@ export class BrowserActionService {
       typeof script === 'function'
         ? await page.evaluate(script)
         : await page.evaluate(script);
-    await this.pageService.closePage();
+    await pageService.closePage();
     return result as T;
   }
 
@@ -1053,7 +1084,8 @@ export class BrowserActionService {
         `Starting workflow execution for ${url}`,
       ),
     );
-    const page = await this.pageService.navigateTo(
+    const pageService = await this.newPage();
+    const page = await pageService.navigateTo(
       url,
       undefined,
       workflow.cloak,
@@ -1093,7 +1125,7 @@ export class BrowserActionService {
 
           if (!errorConfig.continue) {
             result.errors.push(errorMessage);
-            await this.pageService.closePage();
+            await pageService.closePage();
             return result;
           }
         }
@@ -1107,7 +1139,7 @@ export class BrowserActionService {
       result.errors.push(errorMessage);
       this.logger.error(`Workflow execution failed: ${errorMessage}`);
     } finally {
-      await this.pageService.closePage();
+      await pageService.closePage();
     }
 
     return result;

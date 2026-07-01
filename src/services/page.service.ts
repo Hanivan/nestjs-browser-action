@@ -29,7 +29,9 @@ export class PageService {
     cloak?: CloakOptions,
     interceptResource?: boolean,
   ): Promise<Page> {
-    this.logger.debug('Creating new page');
+    this.logger.debug(
+      `[PAGE] creating page (dedicated=${!!cloak} intercept=${!!interceptResource})`,
+    );
     if (cloak) {
       this.currentBrowser =
         await this.browserManager.createDedicatedBrowser(cloak);
@@ -84,7 +86,9 @@ export class PageService {
     if (!this.currentPage) {
       await this.createPage(cloak, interceptResource);
     }
-    this.logger.debug(`Navigating to ${url}`);
+    this.logger.debug(
+      `[PAGE] navigating to ${url} (reusedPage=${!needsNewPage})`,
+    );
     if (!this.currentPage) throw new Error('Failed to create page');
 
     const gotoOptions: {
@@ -93,15 +97,27 @@ export class PageService {
     } = {};
     if (options?.waitUntil) gotoOptions.waitUntil = options.waitUntil;
     if (options?.timeout !== undefined) gotoOptions.timeout = options.timeout;
-    await this.currentPage.goto(
-      url,
-      Object.keys(gotoOptions).length ? gotoOptions : undefined,
-    );
+    try {
+      await this.currentPage.goto(
+        url,
+        Object.keys(gotoOptions).length ? gotoOptions : undefined,
+      );
+    } catch (err) {
+      // SPAs often block domcontentloaded/load lifecycle indefinitely while
+      // the HTML structure is already present. Allow navigation timeout through
+      // so extraction can still run on whatever the page has rendered.
+      if (err instanceof Error && err.message.includes('Navigation timeout')) {
+        this.logger.warn(`Navigation timeout on goto — continuing: ${url}`);
+      } else {
+        throw err;
+      }
+    }
     return this.currentPage;
   }
 
   async closePage(): Promise<void> {
     if (this.currentPage) {
+      this.logger.debug(`[PAGE] closing page (dedicated=${this.dedicated})`);
       try {
         await this.currentPage.close();
       } catch {

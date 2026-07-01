@@ -270,10 +270,14 @@ interface BrowserActionOptions {
   // Browser context options
   contextOptions?: BrowserContextOptions;
 
-  // Connection pool configuration
+  // Connection pool configuration.
+  // The pool is the concurrency limiter: each evaluateWebsite()/scrape() call
+  // takes its own browser+page. Set `max` >= your peak concurrency (e.g. RMQ
+  // prefetch) or concurrent calls block on acquire() and are serialized.
+  // See docs/methods/browser-control.md#concurrency-model.
   pool?: {
     min?: number;              // Minimum pool size (default: 2)
-    max?: number;              // Maximum pool size (default: 10)
+    max?: number;              // Maximum pool size (default: 10) — set >= peak concurrency
     idleTimeoutMs?: number;    // Close idle browsers down to min after this (default: 30000ms, 0 disables)
     acquireTimeoutMs?: number; // Reject acquire() if none free within this (default: 30000ms, 0 waits forever)
     strategy?: 'round-robin' | 'least-recently-used'; // Pool selection (default: 'round-robin')
@@ -282,7 +286,7 @@ interface BrowserActionOptions {
   // Multi-context support
   multiContext?: boolean;
 
-  // Logging
+  // Logging. 'debug' emits [POOL]/[MANAGER]/[PAGE] tags tracing pool + page lifecycle.
   logLevel?: 'log' | 'error' | 'warn' | 'debug' | 'verbose';
 
   // Remote Chrome CDP connection

@@ -60,6 +60,10 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
   private reaper?: ReturnType<typeof setInterval>;
   private destroyed = false;
   private isShuttingDown = false;
+  // Short human-readable id per browser so pool logs are traceable across
+  // acquire → release → evict without leaking the full ws endpoint.
+  private ids = new WeakMap<Browser, string>();
+  private idSeq = 0;
 
   constructor(
     @Inject(BROWSER_ACTION_OPTIONS)
@@ -136,6 +140,21 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
     this.lastUsed.set(browser, Date.now());
   }
 
+  /** Stable short id for a browser (assigned on first sight). */
+  private idOf(browser: Browser): string {
+    let id = this.ids.get(browser);
+    if (!id) {
+      id = `b${++this.idSeq}`;
+      this.ids.set(browser, id);
+    }
+    return id;
+  }
+
+  /** One-line pool snapshot for `[POOL]` debug logs. */
+  private stats(): string {
+    return `size=${this.pool.length} avail=${this.available.size} inUse=${this.inUse.size} waiters=${this.waiters.length} max=${this.maxSize}`;
+  }
+
   private startReaper(): void {
     if (this.reaper || this.idleTimeoutMs <= 0) return;
     this.reaper = setInterval(() => this.reapIdle(), this.idleTimeoutMs);
@@ -150,9 +169,10 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
       if (this.pool.length <= this.minSize) break;
       const last = this.lastUsed.get(browser) ?? now;
       if (now - last >= this.idleTimeoutMs) {
+        const id = this.idOf(browser);
         this.evict(browser);
         void this.closeBrowser(browser);
-        this.logger.debug('Reaped idle browser');
+        this.logger.debug(`[POOL] reaped idle ${id} | ${this.stats()}`);
       }
     }
   }
@@ -319,11 +339,17 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
         // ponytail: evict dead browsers inline — disconnected event fires async
         // so a stale browser can sit in available between release() and acquire().
         if (!browser.connected) {
+          this.logger.debug(
+            `[POOL] acquire skipped dead ${this.idOf(browser)} — evicting | ${this.stats()}`,
+          );
           this.evict(browser);
           continue;
         }
         this.inUse.add(browser);
         this.touch(browser);
+        this.logger.debug(
+          `[POOL] acquire reuse ${this.idOf(browser)} | ${this.stats()}`,
+        );
         return browser;
       }
 
@@ -332,9 +358,15 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
         this.pool.push(browser);
         this.inUse.add(browser);
         this.touch(browser);
+        this.logger.debug(
+          `[POOL] acquire grew ${this.idOf(browser)} | ${this.stats()}`,
+        );
         return browser;
       }
 
+      this.logger.debug(
+        `[POOL] acquire wait — pool exhausted | ${this.stats()}`,
+      );
       await this.waitForAvailable();
     }
   }
@@ -368,15 +400,34 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
     const waiter = this.waiters.shift();
     if (waiter) {
       if (waiter.timer) clearTimeout(waiter.timer);
+      this.logger.debug(`[POOL] wake waiter | ${this.stats()}`);
       waiter.resolve();
     }
   }
 
   release(browser: Browser): void {
     if (this.inUse.has(browser)) {
+      // Evict on return if it died mid-use — keeps available/stats honest and
+      // triggers min-pool recreate instead of handing a dead browser back out.
+      if (!browser.connected) {
+        const id = this.idOf(browser);
+        void this.handleDisconnect(browser);
+        this.logger.debug(
+          `[POOL] release dead ${id} — evicted on return | ${this.stats()}`,
+        );
+        this.signalWaiter();
+        return;
+      }
       this.inUse.delete(browser);
       this.available.add(browser);
       this.touch(browser);
+      this.logger.debug(
+        `[POOL] release ${this.idOf(browser)} | ${this.stats()}`,
+      );
+    } else {
+      this.logger.debug(
+        `[POOL] release ignored ${this.idOf(browser)} (not in-use) | ${this.stats()}`,
+      );
     }
     this.signalWaiter();
   }
@@ -391,6 +442,7 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
       browser.off('disconnected', handler);
       this.disconnectListeners.delete(browser);
     }
+    this.logger.debug(`[POOL] evict ${this.idOf(browser)} | ${this.stats()}`);
   }
 
   private async closeBrowser(browser: Browser): Promise<void> {
@@ -418,6 +470,9 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
         this.pool.push(replacement);
         this.available.add(replacement);
         this.touch(replacement);
+        this.logger.debug(
+          `[POOL] recreated ${this.idOf(replacement)} to restore min=${this.minSize} | ${this.stats()}`,
+        );
         this.signalWaiter();
       }
     } catch {
