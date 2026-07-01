@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.21.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.20.1...v0.21.0) (2026-07-01)
+
+
+### Features
+
+* make BrowserActionService singleton-safe for concurrent scrapes ([4d9f986](https://github.com/Hanivan/nestjs-browser-action/commit/4d9f98647e296910cec4c9bdc3768d732be7cc0d))
+
 ## [0.20.1](https://github.com/Hanivan/nestjs-browser-action/compare/v0.20.0...v0.20.1) (2026-06-30)
 
 
