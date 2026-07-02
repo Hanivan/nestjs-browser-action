@@ -1,4 +1,10 @@
-import { Module, DynamicModule, Provider, Global } from '@nestjs/common';
+import {
+  Module,
+  DynamicModule,
+  Provider,
+  Global,
+  LogLevel,
+} from '@nestjs/common';
 import type { Browser, Page } from 'puppeteer-core';
 import {
   BrowserActionModuleOptions,
@@ -40,6 +46,49 @@ import { PageController } from './services/page-controller';
 import type { BrowserActionOptions } from './interfaces/browser-action-options';
 import { DEFAULT_DEBUG_LOG_MAX_LENGTH } from './constants/browser-action.constants';
 
+const POOL_MODE_SERVICES = [
+  BrowserPoolService,
+  BrowserManagerService,
+  PageService,
+  BrowserActionService,
+  CookieService,
+  CleansingService,
+] as const;
+
+const POOL_MODE_EXPORTS = [
+  BrowserManagerService,
+  PageService,
+  BrowserActionService,
+  CookieService,
+  CleansingService,
+] as const;
+
+function resolveLogLevel(
+  logLevel: LogLevel | LogLevel[] | undefined,
+): LogLevel {
+  return (Array.isArray(logLevel) ? logLevel[0] : logLevel) || 'log';
+}
+
+async function launchNamedBrowser(
+  options: BrowserActionModuleOptions,
+): Promise<Browser> {
+  const logger = new LoggerWithLevel(
+    'BrowserActionModule',
+    resolveLogLevel(options.logLevel),
+  );
+  return options.remote
+    ? await connectRemoteBrowser(options.remote, logger)
+    : await launchLocalBrowser(options, undefined, logger);
+}
+
+function namedBrowserHolderProvider(name: string): Provider {
+  return {
+    provide: getBrowserHolderToken(name),
+    useFactory: (browser: Browser): BrowserHolder => new BrowserHolder(browser),
+    inject: [getBrowserToken(name)],
+  };
+}
+
 @Global()
 @Module({})
 export class BrowserActionModule {
@@ -73,22 +122,8 @@ export class BrowserActionModule {
 
     return {
       module: BrowserActionModule,
-      providers: [
-        optionsProvider,
-        BrowserPoolService,
-        BrowserManagerService,
-        PageService,
-        BrowserActionService,
-        CookieService,
-        CleansingService,
-      ],
-      exports: [
-        BrowserManagerService,
-        PageService,
-        BrowserActionService,
-        CookieService,
-        CleansingService,
-      ],
+      providers: [optionsProvider, ...POOL_MODE_SERVICES],
+      exports: [...POOL_MODE_EXPORTS],
     };
   }
 
@@ -105,23 +140,9 @@ export class BrowserActionModule {
     };
     const browserProvider: Provider = {
       provide: getBrowserToken(name),
-      useFactory: async (): Promise<Browser> => {
-        const logLevel =
-          (Array.isArray(options.logLevel)
-            ? options.logLevel[0]
-            : options.logLevel) || 'log';
-        const logger = new LoggerWithLevel('BrowserActionModule', logLevel);
-        return options.remote
-          ? await connectRemoteBrowser(options.remote, logger)
-          : await launchLocalBrowser(options, undefined, logger);
-      },
+      useFactory: (): Promise<Browser> => launchNamedBrowser(options),
     };
-    const holderProvider: Provider = {
-      provide: getBrowserHolderToken(name),
-      useFactory: (browser: Browser): BrowserHolder =>
-        new BrowserHolder(browser),
-      inject: [getBrowserToken(name)],
-    };
+    const holderProvider = namedBrowserHolderProvider(name);
     const shutdownProvider: Provider = {
       provide: `${getBrowserToken(name)}Shutdown`,
       useFactory: (holder: BrowserHolder): NamedBrowserShutdown =>
@@ -160,22 +181,8 @@ export class BrowserActionModule {
     return {
       module: BrowserActionModule,
       imports: options.imports || [],
-      providers: [
-        asyncOptionsProvider,
-        BrowserPoolService,
-        BrowserManagerService,
-        PageService,
-        BrowserActionService,
-        CookieService,
-        CleansingService,
-      ],
-      exports: [
-        BrowserManagerService,
-        PageService,
-        BrowserActionService,
-        CookieService,
-        CleansingService,
-      ],
+      providers: [asyncOptionsProvider, ...POOL_MODE_SERVICES],
+      exports: [...POOL_MODE_EXPORTS],
     };
   }
 
@@ -197,26 +204,11 @@ export class BrowserActionModule {
     };
     const browserProvider: Provider = {
       provide: getBrowserToken(name),
-      useFactory: async (
-        resolved: BrowserActionModuleOptions,
-      ): Promise<Browser> => {
-        const logLevel =
-          (Array.isArray(resolved.logLevel)
-            ? resolved.logLevel[0]
-            : resolved.logLevel) || 'log';
-        const logger = new LoggerWithLevel('BrowserActionModule', logLevel);
-        return resolved.remote
-          ? await connectRemoteBrowser(resolved.remote, logger)
-          : await launchLocalBrowser(resolved, undefined, logger);
-      },
+      useFactory: (resolved: BrowserActionModuleOptions): Promise<Browser> =>
+        launchNamedBrowser(resolved),
       inject: [optionsToken],
     };
-    const holderProvider: Provider = {
-      provide: getBrowserHolderToken(name),
-      useFactory: (browser: Browser): BrowserHolder =>
-        new BrowserHolder(browser),
-      inject: [getBrowserToken(name)],
-    };
+    const holderProvider = namedBrowserHolderProvider(name);
     const shutdownProvider: Provider = {
       provide: `${getBrowserToken(name)}Shutdown`,
       useFactory: (
@@ -256,15 +248,11 @@ export class BrowserActionModule {
           page: Page,
           options: BrowserActionOptions,
         ): PageController => {
-          const logLevel =
-            (Array.isArray(options.logLevel)
-              ? options.logLevel[0]
-              : options.logLevel) || 'log';
           const debugLen =
             options.debugLogMaxLength ?? DEFAULT_DEBUG_LOG_MAX_LENGTH;
           const logger = new LoggerWithLevel(
             `PageController:${browserName}/${pageName}`,
-            logLevel,
+            resolveLogLevel(options.logLevel),
           );
           const pipeEngine = new PipeEngine();
           const extraction = new ExtractionOperator(pipeEngine, logger);
