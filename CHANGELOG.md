@@ -1,5 +1,17 @@
 # Changelog
 
+# [0.22.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.21.0...v0.22.0) (2026-07-02)
+
+
+### Bug Fixes
+
+* thread debugLogMaxLength as call param, fix stale decorator docs ([924d261](https://github.com/Hanivan/nestjs-browser-action/commit/924d2615c359080cbb62226113c1f6aad160800c))
+
+
+### Features
+
+* reboot to named-browser DI, add PageController, fix headed-mode focus stalls ([2d226b3](https://github.com/Hanivan/nestjs-browser-action/commit/2d226b3b56c8e9e2e12336c0764d51a0e5a4cc65))
+
 # [0.21.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.20.1...v0.21.0) (2026-07-01)
 
 
