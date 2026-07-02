@@ -25,3 +25,14 @@ export * from './constants';
 
 // Decorators
 export * from './decorators';
+
+// Common utilities
+export * from './common';
+
+// Operators
+export * from './operators';
+
+// Page Session & Controller
+export * from './services/browser-holder';
+export * from './services/page-session';
+export * from './services/page-controller';

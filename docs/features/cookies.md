@@ -21,14 +21,14 @@ class CookieService {
   saveCookies(
     page: Page,
     sessionName: string,
-    options?: SaveCookieOptions
-  ): Promise<void>;
+    options?: CookieSaveOptions
+  ): Promise<CookieSession>;
 
   loadCookies(
     page: Page,
     sessionName: string,
-    options?: LoadCookieOptions
-  ): Promise<void>;
+    options?: CookieLoadOptions
+  ): Promise<CookieSession>;
 
   deleteCookies(sessionName: string): Promise<void>;
 
@@ -262,8 +262,9 @@ export class AppModule {}
 ### Save Cookie Options
 
 ```typescript
-interface SaveCookieOptions {
-  overwrite?: boolean;              // Overwrite existing session (default: false)
+interface CookieSaveOptions {
+  cookiesDir?: string;               // Override the module's configured cookies directory
+  overwrite?: boolean;               // Overwrite existing session (default: false)
   metadata?: Record<string, unknown>; // Additional metadata to store
 }
 ```
@@ -292,8 +293,9 @@ await this.cookieService.saveCookies(page, 'session', {
 ### Load Cookie Options
 
 ```typescript
-interface LoadCookieOptions {
-  throwIfNotExists?: boolean;  // Throw error if session doesn't exist (default: true)
+interface CookieLoadOptions {
+  cookiesDir?: string;          // Override the module's configured cookies directory
+  throwIfNotExists?: boolean;   // Throw error if session doesn't exist (default: true)
 }
 ```
 

@@ -15,6 +15,7 @@ EXAMPLES_DIR="src/examples"
 EXAMPLES=(
   "container-extraction-example.ts"
   "cookie-persistence-example.ts"
+  "named-browser-example.ts"
   "pagination-example.ts"
   "pipes-example.ts"
   "workflow-example.ts"

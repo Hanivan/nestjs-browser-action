@@ -102,4 +102,16 @@ export interface BrowserActionOptions {
    * @default false
    */
   lazyInit?: boolean;
+
+  /**
+   * Presence of this field switches `BrowserActionModule.forRoot()` /
+   * `forRootAsync()` from the default connection-pool mode into named-browser
+   * mode: a single dedicated browser is launched (or connected, if `remote`
+   * is set) and registered under DI tokens keyed by this name, for use with
+   * `BrowserActionModule.forFeature(pages, name)` and the
+   * `InjectBrowser`/`InjectPage`/`InjectPageController` decorators. Must be
+   * unique per process — a duplicate `name` across `forRoot()`/`forRootAsync()`
+   * calls throws.
+   */
+  name?: string;
 }

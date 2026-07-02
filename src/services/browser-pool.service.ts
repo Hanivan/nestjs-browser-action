@@ -5,40 +5,29 @@ import {
   Inject,
 } from '@nestjs/common';
 import type { Browser } from 'puppeteer-core';
-import { connect } from 'puppeteer-core';
 import {
   BROWSER_ACTION_OPTIONS,
   DEFAULT_POOL_OPTIONS,
-  DEFAULT_REMOTE_OPTIONS,
-  ERROR_MESSAGES,
 } from '../constants/browser-action.constants';
 import type {
   BrowserActionOptions,
   CloakOptions,
-  RemoteOptions,
 } from '../interfaces/browser-action-options';
 import type { LogLevel } from '@nestjs/common';
 import { sanitizeForLog } from '../utils/sanitize.util';
 import { LoggerWithLevel } from '../utils/logger.util';
-import { delay } from '../utils/delay.util';
-import { loadCloakPuppeteer } from '../utils/cloak.loader';
+import {
+  launchLocalBrowser,
+  connectRemoteBrowser,
+  validateRemoteOptions,
+} from '../utils/browser-launcher';
 
-/** Security: Chromium flags that must never be passed via user input */
-const BLOCKED_CHROMIUM_FLAGS = new Set([
-  '--remote-debugging-port',
-  '--remote-allow-origins',
-  '--load-extension',
-  '--disable-web-security',
-  '--no-sandbox',
-  '--disable-features=IsolateOrigins',
-  '--disable-site-isolation-trials',
-  '--allow-running-insecure-content',
-  '--reduce-security-for-testing',
-  '--disable-setuid-sandbox',
-  '--single-process',
-  '--no-zygote',
-]);
-
+/**
+ * @deprecated Pool-based scraping is deprecated and will be removed in v1.0.
+ * Register a named browser with `BrowserActionModule.forRoot({ name: 'main', ... })`,
+ * declare pages with `BrowserActionModule.forFeature(['myPage'], 'main')`, and use
+ * `@InjectPageController('myPage', 'main')` instead.
+ */
 @Injectable()
 export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
   private readonly logger: LoggerWithLevel;
@@ -87,7 +76,7 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
       DEFAULT_POOL_OPTIONS.acquireTimeoutMs;
 
     // Validate remote options
-    this.validateRemoteOptions(this.options.remote);
+    validateRemoteOptions(this.options.remote);
 
     const remote = this.options.remote;
     if (remote?.browserURL) {
@@ -181,27 +170,27 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
     return this.logger.getLogLevel();
   }
 
-  private validateRemoteOptions(remote?: RemoteOptions): void {
-    if (!remote) return;
-
-    const hasURL = !!remote.browserURL;
-    const hasWSEndpoint = !!remote.browserWSEndpoint;
-
-    if (hasURL && hasWSEndpoint) {
-      throw new Error(ERROR_MESSAGES.REMOTE_BOTH_PROVIDED);
-    }
-
-    if (!hasURL && !hasWSEndpoint) {
-      throw new Error(ERROR_MESSAGES.REMOTE_NONE_PROVIDED);
-    }
-  }
-
   private async createBrowser(): Promise<Browser> {
     if (this.options.remote) {
-      return await this.connectWithRetry(this.options.remote);
+      const browser = await connectRemoteBrowser(
+        this.options.remote,
+        this.logger,
+      );
+
+      const disconnectHandler = () => {
+        this.logger.warn('Remote Chrome disconnected; evicting from pool');
+        void this.handleDisconnect(browser);
+      };
+      browser.on('disconnected', disconnectHandler);
+      this.disconnectListeners.set(browser, disconnectHandler);
+      return browser;
     }
 
-    const browser = await this.launchLocal();
+    const browser = await launchLocalBrowser(
+      this.options,
+      undefined,
+      this.logger,
+    );
 
     const disconnectHandler = () => {
       this.logger.warn('Browser disconnected; evicting from pool');
@@ -210,49 +199,6 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
     browser.on('disconnected', disconnectHandler);
     this.disconnectListeners.set(browser, disconnectHandler);
     return browser;
-  }
-
-  private warnOnDangerousFlags(args?: string[]): void {
-    if (!args) return;
-    for (const arg of args) {
-      const flagName = arg.split('=')[0];
-      if (BLOCKED_CHROMIUM_FLAGS.has(flagName)) {
-        this.logger.warn(
-          `Potentially dangerous Chromium flag detected: ${flagName}. ` +
-            `Only use this flag if you understand the security implications.`,
-        );
-      }
-    }
-  }
-
-  private async launchLocal(cloakOverride?: CloakOptions): Promise<Browser> {
-    const { launch, launchPersistentContext } = await loadCloakPuppeteer();
-
-    const cloak: CloakOptions = {
-      ...(this.options.cloak ?? {}),
-      ...(cloakOverride ?? {}),
-    };
-    const headless = this.options.launchOptions?.headless ?? cloak.headless;
-    const launchOptions = {
-      ...(cloak.launchOptions ?? {}),
-      ...(this.options.launchOptions as Record<string, unknown> | undefined),
-    };
-    // Security: warn on potentially dangerous Chromium flags (developer responsibility)
-    if (Array.isArray(launchOptions.args)) {
-      this.warnOnDangerousFlags(launchOptions.args);
-    }
-    const cloakOptions = {
-      ...cloak,
-      ...(typeof headless === 'boolean' ? { headless } : {}),
-      launchOptions,
-    };
-
-    return cloak.userDataDir
-      ? await launchPersistentContext({
-          ...cloakOptions,
-          userDataDir: cloak.userDataDir,
-        })
-      : await launch(cloakOptions);
   }
 
   /**
@@ -267,65 +213,11 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
       );
     }
     this.logger.debug('Launching dedicated (off-pool) browser');
-    return await this.launchLocal(cloakOverride);
+    return await launchLocalBrowser(this.options, cloakOverride, this.logger);
   }
 
   async destroyDedicatedBrowser(browser: Browser): Promise<void> {
     await this.closeBrowser(browser);
-  }
-
-  private async connectWithRetry(
-    remoteOptions: RemoteOptions,
-  ): Promise<Browser> {
-    const {
-      browserURL,
-      browserWSEndpoint,
-      retryMax = DEFAULT_REMOTE_OPTIONS.retryMax,
-      retryDelay = DEFAULT_REMOTE_OPTIONS.retryDelay,
-    } = remoteOptions;
-
-    const connectOptions: { browserURL?: string; browserWSEndpoint?: string } =
-      {};
-    if (browserURL) {
-      connectOptions.browserURL = browserURL;
-    } else if (browserWSEndpoint) {
-      connectOptions.browserWSEndpoint = browserWSEndpoint;
-    }
-
-    let lastError: Error | undefined;
-
-    for (let attempt = 1; attempt <= retryMax; attempt++) {
-      try {
-        this.logger.debug(
-          `Connecting to remote Chrome (attempt ${attempt}/${retryMax})`,
-        );
-
-        const browser = await connect(connectOptions);
-
-        const disconnectHandler = () => {
-          this.logger.warn('Remote Chrome disconnected; evicting from pool');
-          void this.handleDisconnect(browser);
-        };
-        browser.on('disconnected', disconnectHandler);
-        this.disconnectListeners.set(browser, disconnectHandler);
-
-        this.logger.debug('Successfully connected to remote Chrome');
-        return browser;
-      } catch (error) {
-        lastError = error as Error;
-        this.logger.warn(
-          `Connection attempt ${attempt}/${retryMax} failed: ${lastError.message}`,
-        );
-
-        if (attempt < retryMax) {
-          await delay(retryDelay);
-        }
-      }
-    }
-
-    throw new Error(
-      `Failed to connect to remote Chrome after ${retryMax} attempts: ${lastError?.message}`,
-    );
   }
 
   async acquire(): Promise<Browser> {

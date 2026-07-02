@@ -192,13 +192,13 @@ Manage cookie persistence.
 
 #### Methods
 
-##### `saveCookies(page, sessionName, options?): Promise<void>`
+##### `saveCookies(page, sessionName, options?): Promise<CookieSession>`
 
 Save cookies to file.
 
 **See:** [Cookie Management](../features/cookies.md)
 
-##### `loadCookies(page, sessionName, options?): Promise<void>`
+##### `loadCookies(page, sessionName, options?): Promise<CookieSession>`
 
 Load cookies from file.
 
@@ -623,19 +623,21 @@ interface ScrapeCleansingOptions {
 }
 ```
 
-### SaveCookieOptions
+### CookieSaveOptions
 
 ```typescript
-interface SaveCookieOptions {
+interface CookieSaveOptions {
+  cookiesDir?: string;
   overwrite?: boolean;
   metadata?: Record<string, unknown>;
 }
 ```
 
-### LoadCookieOptions
+### CookieLoadOptions
 
 ```typescript
-interface LoadCookieOptions {
+interface CookieLoadOptions {
+  cookiesDir?: string;
   throwIfNotExists?: boolean;
 }
 ```

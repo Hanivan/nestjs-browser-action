@@ -274,7 +274,7 @@ describe('BrowserActionService — pagination strategies', () => {
 
       const btn = {
         click: jest.fn().mockResolvedValue(undefined),
-      } as unknown as Element;
+      } as unknown as HTMLElement;
 
       jest
         .spyOn(service as any, 'executeContainerExtraction')
@@ -304,7 +304,7 @@ describe('BrowserActionService — pagination strategies', () => {
 
       const btn = {
         click: jest.fn().mockResolvedValue(undefined),
-      } as unknown as Element;
+      } as unknown as HTMLElement;
       (page.$ as jest.Mock).mockResolvedValue(btn);
 
       // previousCount starts at 0; first call returns 1 item → grows → click.
@@ -413,7 +413,7 @@ describe('BrowserActionService — pagination strategies', () => {
 
       const btn = {
         click: jest.fn().mockResolvedValue(undefined),
-      } as unknown as Element;
+      } as unknown as HTMLElement;
 
       jest
         .spyOn(service as any, 'executeContainerExtraction')

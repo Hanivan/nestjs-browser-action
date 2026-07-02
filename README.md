@@ -10,7 +10,7 @@
   <a href="https://www.npmjs.com/package/@hanivanrizky/nestjs-browser-action" target="_blank"><img src="https://img.shields.io/npm/v/@hanivanrizky/nestjs-browser-action.svg" alt="NPM Version" /></a>
   <a href="https://www.npmjs.com/package/@hanivanrizky/nestjs-browser-action" target="_blank"><img src="https://img.shields.io/npm/l/@hanivanrizky/nestjs-browser-action.svg" alt="Package License" /></a>
   <a href="https://www.npmjs.com/package/@hanivanrizky/nestjs-browser-action" target="_blank"><img src="https://img.shields.io/npm/dm/@hanivanrizky/nestjs-browser-action.svg" alt="NPM Downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-410%20passed-brightgreen.svg" alt="Tests: 410 passed" />
+  <img src="https://img.shields.io/badge/tests-457%20passed-brightgreen.svg" alt="Tests: 457 passed" />
 </p>
 
 > **⚠️ Status: Experimental** — personal use only; API subject to change.
@@ -39,7 +39,8 @@
 - **(.\_.) Remote Chrome**: Connect to remote Chrome instances via CDP (browserURL / browserWSEndpoint)
 - **(>\_<) TLS Fingerprint**: Capture the browser's own TLS/HTTP handshake (ja3/ja4, ciphers, http2 akamai, headers) for use with `nestjs-xpath-parser`'s CycleTLS engine
 - **(☆^O^☆) TypeScript Generics**: Full generic type support for type-safe results
-- **(o_o) Fully Tested**: 410 tests across 39 suites
+- **(o_o) Fully Tested**: 444 tests across 49 suites
+- **(☆^O^☆) Named Browsers & Pages (v0.22+)**: persistent named browser/page pairs with `PageController` — cookies/state carry over across calls, no open/close per scrape
 
 ## Installation
 
@@ -53,21 +54,7 @@ npm install @hanivanrizky/nestjs-browser-action
 
 ## Quick Start
 
-### Import the Module
-
-**Basic usage:**
-
-```typescript
-import { Module } from '@nestjs/common';
-import { BrowserActionModule } from '@hanivanrizky/nestjs-browser-action';
-
-@Module({
-  imports: [BrowserActionModule.forRoot()],
-})
-export class AppModule {}
-```
-
-**With pool and cookie options:**
+### Register a Named Browser + Pages
 
 ```typescript
 import { Module } from '@nestjs/common';
@@ -75,17 +62,14 @@ import { BrowserActionModule } from '@hanivanrizky/nestjs-browser-action';
 
 @Module({
   imports: [
-    BrowserActionModule.forRoot({
-      pool: { min: 2, max: 10 },
-      cookies: { enabled: true, cookiesDir: './cookies' },
-      logLevel: 'log',
-    }),
+    BrowserActionModule.forRoot({ name: 'stealth', cloak: { headless: true } }),
+    BrowserActionModule.forFeature(['products'], 'stealth'),
   ],
 })
 export class AppModule {}
 ```
 
-**Async configuration:**
+**With cookies and async config:**
 
 ```typescript
 import { Module } from '@nestjs/common';
@@ -96,36 +80,41 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
   imports: [
     ConfigModule.forRoot(),
     BrowserActionModule.forRootAsync({
+      name: 'stealth',
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        pool: {
-          min: configService.get<number>('POOL_MIN', 2),
-          max: configService.get<number>('POOL_MAX', 10),
-        },
         cloak: {
           proxy: { server: configService.get<string>('PROXY_URL', '') },
         },
+        cookies: { enabled: true, cookiesDir: './cookies' },
         logLevel: configService.get<string>('LOG_LEVEL', 'log'),
       }),
       inject: [ConfigService],
     }),
+    BrowserActionModule.forFeature(['products'], 'stealth'),
   ],
 })
 export class AppModule {}
 ```
 
-### Inject the Service
+### Inject the Page Controller
 
 ```typescript
 import { Injectable } from '@nestjs/common';
-import { BrowserActionService } from '@hanivanrizky/nestjs-browser-action';
+import {
+  InjectPageController,
+  PageController,
+} from '@hanivanrizky/nestjs-browser-action';
 
 @Injectable()
 export class YourService {
-  constructor(private readonly browserAction: BrowserActionService) {}
+  constructor(
+    @InjectPageController('products', 'stealth')
+    private readonly products: PageController,
+  ) {}
 
   async scrapeProducts() {
-    const result = await this.browserAction.evaluateWebsite({
+    const result = await this.products.evaluateWebsite({
       url: 'https://www.scrapingcourse.com/ecommerce/',
       patterns: [
         {
@@ -157,6 +146,49 @@ export class YourService {
 }
 ```
 
+> Pool mode (`forRoot()`/`forRootAsync()` without `name`, plain
+> `BrowserActionService`) still works but is deprecated — see
+> [Named Browsers & Pages (v0.22+)](#named-browsers--pages-v022) for full
+> details, decorators, and the pool → controller migration table.
+
+## Named Browsers & Pages (v0.22+)
+
+Persistent, named browser + page pairs — an alternative to pool mode for
+workloads that want cookies/localStorage/navigation state to carry over
+between calls (login sessions, authenticated crawls) instead of a fresh
+page opened and closed per scrape. Full details, decorators, auto-recreate
+semantics, and a pool → controller migration table live in
+[Named Browsers & Pages](docs/features/named-browsers.md).
+
+```typescript
+import { Module, Injectable } from '@nestjs/common';
+import {
+  BrowserActionModule,
+  InjectPageController,
+  PageController,
+} from '@hanivanrizky/nestjs-browser-action';
+
+@Module({
+  imports: [
+    BrowserActionModule.forRoot({ name: 'stealth', cloak: { headless: true } }),
+    BrowserActionModule.forFeature(['login', 'search'], 'stealth'),
+  ],
+})
+export class AppModule {}
+
+@Injectable()
+export class MyService {
+  constructor(
+    @InjectPageController('login', 'stealth')
+    private readonly login: PageController,
+  ) {}
+
+  async run() {
+    return this.login.scrape('https://example.com', { title: 'h1' });
+  }
+}
+```
+
 ## Documentation
 
 ### Features
@@ -166,6 +198,7 @@ export class YourService {
 - [Data Cleaning Pipes](docs/features/pipes.md) - Transform extracted data with pipes
 - [Cookie Management](docs/features/cookies.md) - Session persistence
 - [Workflow Actions](docs/methods/workflow.md) - Declarative step-by-step automation
+- [Named Browsers & Pages](docs/features/named-browsers.md) - Persistent named browser/page pairs with `PageController`
 
 ### Reference
 
@@ -330,6 +363,14 @@ pnpm format
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/yourusername/amazing-feature`)
 5. Open a Pull Request
+
+## Acknowledgments
+
+The [Named Browsers & Pages](#named-browsers--pages-v022) DI pattern
+(`forRoot({ name })` + `forFeature(pages, name)` +
+`@InjectBrowser`/`@InjectPage`/`@InjectPageController`) was inspired by
+[oblakstudio/nestjs-puppeteer](https://github.com/oblakstudio/nestjs-puppeteer).
+Thanks to the maintainers for the clean named-instance design.
 
 ## License
 
