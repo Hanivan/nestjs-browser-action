@@ -34,32 +34,29 @@ export class WorkflowOperator {
     private readonly pipeEngine: PipeEngine,
     private readonly cleansingService: CleansingService,
     private readonly logger: LoggerWithLevel,
-    private debugLogMaxLength: number,
     // Accessor rather than a captured instance: BrowserActionService allows
     // its cookieService field to be swapped after construction (see specs
     // that stub it post-construction), so we must resolve it fresh per call.
     private readonly getCookieService: () => CookieService,
   ) {}
 
-  setDebugLogMaxLength(n: number): void {
-    this.debugLogMaxLength = n;
-  }
-
   async executeAction(
     page: Page,
     action: WorkflowAction,
     context: VariableContext,
+    debugLogMaxLength = 0,
   ): Promise<void> {
     // Check condition
     if (action.condition) {
       const shouldExecute = await this.evaluateCondition(
         page,
         action.condition,
+        debugLogMaxLength,
       );
       if (!shouldExecute) {
         this.logger.debug(
           truncateLog(
-            this.debugLogMaxLength,
+            debugLogMaxLength,
             `Skipping action due to condition: ${action.action}`,
           ),
         );
@@ -73,20 +70,26 @@ export class WorkflowOperator {
       ? `[${action.action}] id="${action.id}"`
       : `[${action.action}]`;
     this.logger.debug(
-      truncateLog(this.debugLogMaxLength, `Executing action: ${actionLabel}`),
+      truncateLog(debugLogMaxLength, `Executing action: ${actionLabel}`),
     );
 
     const maxRetries = Math.min(action.options?.retry ?? 0, 100);
     const retryDelay = Math.min(action.options?.retryDelay ?? 0, 300_000);
     for (let attempt = 0; ; attempt++) {
       try {
-        await this.dispatchAction(page, action, value, context);
+        await this.dispatchAction(
+          page,
+          action,
+          value,
+          context,
+          debugLogMaxLength,
+        );
         return;
       } catch (err) {
         if (attempt >= maxRetries) throw err;
         this.logger.warn(
           truncateLog(
-            this.debugLogMaxLength,
+            debugLogMaxLength,
             `Action ${actionLabel} failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying: ${err instanceof Error ? err.message : String(err)}`,
           ),
         );
@@ -100,6 +103,7 @@ export class WorkflowOperator {
     action: WorkflowAction,
     value: string,
     context: VariableContext,
+    debugLogMaxLength: number,
   ): Promise<void> {
     switch (action.action) {
       case 'navigate': {
@@ -120,7 +124,7 @@ export class WorkflowOperator {
           throw new Error(`Invalid or disallowed URL: ${value}`);
         }
         this.logger.debug(
-          truncateLog(this.debugLogMaxLength, `  navigate → ${value}`),
+          truncateLog(debugLogMaxLength, `  navigate → ${value}`),
         );
         await page.goto(
           value,
@@ -132,7 +136,7 @@ export class WorkflowOperator {
       case 'wait':
         this.logger.debug(
           truncateLog(
-            this.debugLogMaxLength,
+            debugLogMaxLength,
             `  wait ${Number(action.value) || 0}ms`,
           ),
         );
@@ -142,7 +146,7 @@ export class WorkflowOperator {
       case 'waitFor':
         this.logger.debug(
           truncateLog(
-            this.debugLogMaxLength,
+            debugLogMaxLength,
             `  waitFor target: ${this.describeTarget(action.target!)}`,
           ),
         );
@@ -152,41 +156,58 @@ export class WorkflowOperator {
       case 'click':
         this.logger.debug(
           truncateLog(
-            this.debugLogMaxLength,
+            debugLogMaxLength,
             `  click target: ${this.describeTarget(action.target!)}`,
           ),
         );
-        await this.clickElement(page, action.target!, action.options);
+        await this.clickElement(
+          page,
+          action.target!,
+          action.options,
+          debugLogMaxLength,
+        );
         break;
 
       case 'type':
         this.logger.debug(
           truncateLog(
-            this.debugLogMaxLength,
+            debugLogMaxLength,
             `  type target: ${this.describeTarget(action.target!)} value: "${value}"`,
           ),
         );
-        await this.typeText(page, action.target!, value, action.options);
+        await this.typeText(
+          page,
+          action.target!,
+          value,
+          action.options,
+          debugLogMaxLength,
+        );
         break;
 
       case 'select':
         this.logger.debug(
           truncateLog(
-            this.debugLogMaxLength,
+            debugLogMaxLength,
             `  select target: ${this.describeTarget(action.target!)} value: "${value}"`,
           ),
         );
-        await this.selectOption(page, action.target!, value, action.options);
+        await this.selectOption(
+          page,
+          action.target!,
+          value,
+          action.options,
+          debugLogMaxLength,
+        );
         break;
 
       case 'scroll':
         this.logger.debug(
           truncateLog(
-            this.debugLogMaxLength,
+            debugLogMaxLength,
             `  scroll target: ${this.describeTarget(action.target!)}`,
           ),
         );
-        await this.scrollToElement(page, action.target!);
+        await this.scrollToElement(page, action.target!, debugLogMaxLength);
         break;
 
       case 'extract': {
@@ -196,7 +217,7 @@ export class WorkflowOperator {
 
         if (!action.target) {
           this.logger.debug(
-            truncateLog(this.debugLogMaxLength, `  extract full page HTML`),
+            truncateLog(debugLogMaxLength, `  extract full page HTML`),
           );
           if (action.id) context[action.id] = await page.content();
           break;
@@ -204,7 +225,7 @@ export class WorkflowOperator {
 
         this.logger.debug(
           truncateLog(
-            this.debugLogMaxLength,
+            debugLogMaxLength,
             `  extract target: ${this.describeTarget(action.target)} as="${extractAs}"${extractAttr ? ` attr="${extractAttr}"` : ''}${extractOptions.multiple ? ' multiple=true' : ''}`,
           ),
         );
@@ -220,7 +241,7 @@ export class WorkflowOperator {
             context[action.id] = allValues;
             this.logger.debug(
               truncateLog(
-                this.debugLogMaxLength,
+                debugLogMaxLength,
                 `  extracted ${Array.isArray(allValues) ? allValues.length : 1} item(s) → id="${action.id}"`,
               ),
             );
@@ -231,12 +252,13 @@ export class WorkflowOperator {
             action.target,
             extractAs,
             extractAttr,
+            debugLogMaxLength,
           );
           if (action.id) {
             context[action.id] = extractedValue;
             this.logger.debug(
               truncateLog(
-                this.debugLogMaxLength,
+                debugLogMaxLength,
                 `  extracted → id="${action.id}": ${JSON.stringify(extractedValue)}`,
               ),
             );
@@ -250,10 +272,7 @@ export class WorkflowOperator {
           action.value || `${DEFAULT_SCREENSHOT_FILENAME}-${Date.now()}.png`,
         );
         this.logger.debug(
-          truncateLog(
-            this.debugLogMaxLength,
-            `  screenshot → ${screenshotPath}`,
-          ),
+          truncateLog(debugLogMaxLength, `  screenshot → ${screenshotPath}`),
         );
         await page.screenshot({ path: screenshotPath });
         break;
@@ -273,12 +292,12 @@ export class WorkflowOperator {
         }
 
         this.logger.debug(
-          truncateLog(this.debugLogMaxLength, `Evaluating: ${evalCode}`),
+          truncateLog(debugLogMaxLength, `Evaluating: ${evalCode}`),
         );
         const evalResult = await page.evaluate(evalCode);
         this.logger.debug(
           truncateLog(
-            this.debugLogMaxLength,
+            debugLogMaxLength,
             `Result: ${JSON.stringify(evalResult)}`,
           ),
         );
@@ -300,7 +319,7 @@ export class WorkflowOperator {
         const rawValue = this.resolveRawValue(valueKey, context);
         this.logger.debug(
           truncateLog(
-            this.debugLogMaxLength,
+            debugLogMaxLength,
             `  cleanse raw: ${JSON.stringify(rawValue)}`,
           ),
         );
@@ -313,7 +332,7 @@ export class WorkflowOperator {
           context[action.id] = cleanedValue;
           this.logger.debug(
             truncateLog(
-              this.debugLogMaxLength,
+              debugLogMaxLength,
               `Cleansed value for '${action.id}': ${JSON.stringify(cleanedValue)}`,
             ),
           );
@@ -326,7 +345,7 @@ export class WorkflowOperator {
         const overwrite = action.options?.overwrite ?? false;
         this.logger.debug(
           truncateLog(
-            this.debugLogMaxLength,
+            debugLogMaxLength,
             `  saveCookies session="${sessionName}" overwrite=${overwrite}`,
           ),
         );
@@ -350,7 +369,7 @@ export class WorkflowOperator {
           action.onError !== 'skip' && action.onError !== 'continue';
         this.logger.debug(
           truncateLog(
-            this.debugLogMaxLength,
+            debugLogMaxLength,
             `  loadCookies session="${sessionName}"`,
           ),
         );
@@ -365,7 +384,7 @@ export class WorkflowOperator {
         const sessionName = String(value);
         this.logger.debug(
           truncateLog(
-            this.debugLogMaxLength,
+            debugLogMaxLength,
             `  clearCookies session="${sessionName}"`,
           ),
         );
@@ -374,7 +393,7 @@ export class WorkflowOperator {
       }
 
       case 'listCookies': {
-        this.logger.debug(truncateLog(this.debugLogMaxLength, `  listCookies`));
+        this.logger.debug(truncateLog(debugLogMaxLength, `  listCookies`));
         const sessions = await this.getCookieService().listCookies();
 
         if (action.id) {
@@ -386,11 +405,16 @@ export class WorkflowOperator {
       case 'hover':
         this.logger.debug(
           truncateLog(
-            this.debugLogMaxLength,
+            debugLogMaxLength,
             `  hover target: ${this.describeTarget(action.target!)}`,
           ),
         );
-        await this.hoverElement(page, action.target!, action.options);
+        await this.hoverElement(
+          page,
+          action.target!,
+          action.options,
+          debugLogMaxLength,
+        );
         break;
 
       case 'keyPress':
@@ -398,7 +422,7 @@ export class WorkflowOperator {
           throw new Error('keyPress action requires a key value');
         }
         this.logger.debug(
-          truncateLog(this.debugLogMaxLength, `  keyPress key="${value}"`),
+          truncateLog(debugLogMaxLength, `  keyPress key="${value}"`),
         );
         await page.keyboard.press(value as KeyInput);
         break;
@@ -406,17 +430,17 @@ export class WorkflowOperator {
       case 'clear':
         this.logger.debug(
           truncateLog(
-            this.debugLogMaxLength,
+            debugLogMaxLength,
             `  clear target: ${this.describeTarget(action.target!)}`,
           ),
         );
-        await this.clearElement(page, action.target!);
+        await this.clearElement(page, action.target!, debugLogMaxLength);
         break;
 
       case 'waitForNetwork':
         this.logger.debug(
           truncateLog(
-            this.debugLogMaxLength,
+            debugLogMaxLength,
             `  waitForNetwork timeout=${action.options?.timeout ?? DEFAULT_ACTION_TIMEOUT}ms`,
           ),
         );
@@ -428,7 +452,7 @@ export class WorkflowOperator {
       case 'reload':
         this.logger.debug(
           truncateLog(
-            this.debugLogMaxLength,
+            debugLogMaxLength,
             `  reload waitUntil="${action.options?.waitUntil ?? 'load'}"`,
           ),
         );
@@ -447,7 +471,7 @@ export class WorkflowOperator {
         }
         this.logger.debug(
           truncateLog(
-            this.debugLogMaxLength,
+            debugLogMaxLength,
             `  scrapeContainer container="${o.container}"`,
           ),
         );
@@ -467,7 +491,7 @@ export class WorkflowOperator {
           }
           this.logger.debug(
             truncateLog(
-              this.debugLogMaxLength,
+              debugLogMaxLength,
               `  scrapeContainer → id="${action.id}": ${containerResult.items.length} items`,
             ),
           );
@@ -484,7 +508,7 @@ export class WorkflowOperator {
         }
         this.logger.debug(
           truncateLog(
-            this.debugLogMaxLength,
+            debugLogMaxLength,
             `  extractPagination container="${o.container}"`,
           ),
         );
@@ -501,7 +525,7 @@ export class WorkflowOperator {
           context[action.id] = paginationResult;
           this.logger.debug(
             truncateLog(
-              this.debugLogMaxLength,
+              debugLogMaxLength,
               `  extractPagination → id="${action.id}": nextUrl=${paginationResult.nextUrl}`,
             ),
           );
@@ -519,16 +543,25 @@ export class WorkflowOperator {
   async evaluateCondition(
     page: Page,
     condition: WorkflowAction['condition'],
+    debugLogMaxLength = 0,
   ): Promise<boolean> {
     if (!condition) return true;
 
     if (condition.ifExists) {
-      const element = await this.findElement(page, condition.ifExists);
+      const element = await this.findElement(
+        page,
+        condition.ifExists,
+        debugLogMaxLength,
+      );
       return element !== null;
     }
 
     if (condition.unlessExists) {
-      const element = await this.findElement(page, condition.unlessExists);
+      const element = await this.findElement(
+        page,
+        condition.unlessExists,
+        debugLogMaxLength,
+      );
       return element === null;
     }
 
@@ -547,10 +580,11 @@ export class WorkflowOperator {
   private async findElement(
     page: Page,
     target: ActionTarget,
+    debugLogMaxLength = 0,
   ): Promise<ElementHandle<Node> | null> {
     this.logger.debug(
       truncateLog(
-        this.debugLogMaxLength,
+        debugLogMaxLength,
         `  findElement: ${this.describeTarget(target)}`,
       ),
     );
@@ -559,7 +593,7 @@ export class WorkflowOperator {
       const el = await this.findElementInShadowRoot(page, target);
       this.logger.debug(
         truncateLog(
-          this.debugLogMaxLength,
+          debugLogMaxLength,
           `  findElement result: ${el ? 'found' : 'NOT FOUND'}`,
         ),
       );
@@ -572,7 +606,7 @@ export class WorkflowOperator {
       ) as Promise<ElementHandle<Node> | null>);
       this.logger.debug(
         truncateLog(
-          this.debugLogMaxLength,
+          debugLogMaxLength,
           `  findElement result: ${el ? 'found' : 'NOT FOUND'}`,
         ),
       );
@@ -593,7 +627,7 @@ export class WorkflowOperator {
       .then((handle) => handle.asElement());
     this.logger.debug(
       truncateLog(
-        this.debugLogMaxLength,
+        debugLogMaxLength,
         `  findElement result: ${el ? 'found' : 'NOT FOUND'}`,
       ),
     );
@@ -663,8 +697,9 @@ export class WorkflowOperator {
     page: Page,
     target: ActionTarget,
     options?: WorkflowAction['options'],
+    debugLogMaxLength = 0,
   ): Promise<void> {
-    const element = await this.findElement(page, target);
+    const element = await this.findElement(page, target, debugLogMaxLength);
     if (!element) {
       throw new Error(`Element not found: ${target.value}`);
     }
@@ -686,8 +721,9 @@ export class WorkflowOperator {
     target: ActionTarget,
     value: string,
     options?: WorkflowAction['options'],
+    debugLogMaxLength = 0,
   ): Promise<void> {
-    const element = await this.findElement(page, target);
+    const element = await this.findElement(page, target, debugLogMaxLength);
     if (!element) {
       throw new Error(`Element not found: ${target.value}`);
     }
@@ -709,8 +745,9 @@ export class WorkflowOperator {
     target: ActionTarget,
     value: string,
     options?: WorkflowAction['options'],
+    debugLogMaxLength = 0,
   ): Promise<void> {
-    const element = await this.findElement(page, target);
+    const element = await this.findElement(page, target, debugLogMaxLength);
     if (!element) {
       throw new Error(`Element not found: ${target.value}`);
     }
@@ -724,8 +761,9 @@ export class WorkflowOperator {
   private async scrollToElement(
     page: Page,
     target: ActionTarget,
+    debugLogMaxLength = 0,
   ): Promise<void> {
-    const element = await this.findElement(page, target);
+    const element = await this.findElement(page, target, debugLogMaxLength);
     if (!element) {
       throw new Error(`Element not found: ${target.value}`);
     }
@@ -763,8 +801,9 @@ export class WorkflowOperator {
     page: Page,
     target: ActionTarget,
     options?: WorkflowAction['options'],
+    debugLogMaxLength = 0,
   ): Promise<void> {
-    const element = await this.findElement(page, target);
+    const element = await this.findElement(page, target, debugLogMaxLength);
     if (!element) {
       throw new Error(`Element not found: ${target.value}`);
     }
@@ -773,8 +812,12 @@ export class WorkflowOperator {
     await elem.hover();
   }
 
-  private async clearElement(page: Page, target: ActionTarget): Promise<void> {
-    const element = await this.findElement(page, target);
+  private async clearElement(
+    page: Page,
+    target: ActionTarget,
+    debugLogMaxLength = 0,
+  ): Promise<void> {
+    const element = await this.findElement(page, target, debugLogMaxLength);
     if (!element) {
       throw new Error(`Element not found: ${target.value}`);
     }

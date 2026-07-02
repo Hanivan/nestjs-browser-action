@@ -73,6 +73,8 @@ pnpm release                  # release-it (bumps version, changelog, git tag)
 - **BrowserActionService** uses `PipeEngine` directly (private field); does NOT call `CleansingService.cleanse()` for scraping
 - **CLEANSING_PROFILES**: 5 preset `CleanerStepRules` objects (price, phone, email, date, currency) keyed by `CleansingProfile` enum
 - Module registration: `forRoot(options)` / `forRootAsync(options)` for full DI; `register(options)` for lightweight use
+- **Operators** (`src/operators/*.operator.ts`): stateless-per-call classes (Extraction/Container/Workflow/Pagination/Capture) driving `PageController`/`BrowserActionService`. Do NOT store per-call config (e.g. `debugLogMaxLength`) as mutable constructor/instance state — concurrent calls race on it. Thread it as an explicit call parameter through the method chain instead (default `0` = no-op, e.g. `truncateLog`).
+- **`docs/features/named-browsers.md`** is the source-of-truth doc for the `@InjectBrowser`/`@InjectPage`/`@InjectPageController` DI pattern (`forRoot({ name })` + `forFeature`). When editing decorator docs elsewhere (`docs/api-reference.md`, `docs/methods/*.md`), cross-check signatures against `src/decorators/*.decorator.ts` first — they've drifted out of sync before (found stale zero-arg pool-mode-era examples in two files).
 
 ## Database
 N/A — this is a library with no database dependency.

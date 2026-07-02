@@ -10,8 +10,8 @@ import type { VariableContext } from '../interfaces/workflow-options';
 
 const logger = new LoggerWithLevel('test', 'error');
 const pipeEngine = new PipeEngine();
-const extraction = new ExtractionOperator(pipeEngine, logger, 250);
-const container = new ContainerOperator(extraction, pipeEngine, logger, 250);
+const extraction = new ExtractionOperator(pipeEngine, logger);
+const container = new ContainerOperator(extraction, pipeEngine, logger);
 
 describe('WorkflowOperator', () => {
   const op = new WorkflowOperator(
@@ -20,7 +20,6 @@ describe('WorkflowOperator', () => {
     pipeEngine,
     {} as unknown as CleansingService,
     logger,
-    250,
     () => ({}) as unknown as CookieService,
   );
 

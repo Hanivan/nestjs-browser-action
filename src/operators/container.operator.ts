@@ -20,12 +20,7 @@ export class ContainerOperator {
     private readonly extraction: ExtractionOperator,
     private readonly pipeEngine: PipeEngine,
     private readonly logger: LoggerWithLevel,
-    private debugLogMaxLength: number,
   ) {}
-
-  setDebugLogMaxLength(n: number): void {
-    this.debugLogMaxLength = n;
-  }
 
   async executeContainerExtraction<T = Record<string, unknown>>(
     page: Page,

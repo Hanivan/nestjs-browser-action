@@ -48,7 +48,9 @@ class CrawlerService {
    * emulation keeps both tabs active, so neither stalls waiting for focus.
    */
   private async runConcurrent() {
-    this.logger.log('[concurrent] login workflow + products scrape in parallel');
+    this.logger.log(
+      '[concurrent] login workflow + products scrape in parallel',
+    );
     const startedAt = Date.now();
 
     try {

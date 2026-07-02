@@ -7,10 +7,10 @@ import type { ContainerDescriptor } from '../interfaces/types';
 
 const logger = new LoggerWithLevel('test', 'error');
 const pipeEngine = new PipeEngine();
-const extraction = new ExtractionOperator(pipeEngine, logger, 250);
+const extraction = new ExtractionOperator(pipeEngine, logger);
 
 describe('ContainerOperator', () => {
-  const op = new ContainerOperator(extraction, pipeEngine, logger, 250);
+  const op = new ContainerOperator(extraction, pipeEngine, logger);
 
   it('executeContainerExtraction maps container items to fields', async () => {
     const mockItems = [{ title: 'Item 1' }, { title: 'Item 2' }];

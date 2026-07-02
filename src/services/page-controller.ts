@@ -509,11 +509,6 @@ export class PageController {
 
     const debugLogMaxLength =
       workflow.debugLogMaxLength ?? this.debugLogMaxLength;
-    this.extraction.setDebugLogMaxLength(debugLogMaxLength);
-    this.capture.setDebugLogMaxLength(debugLogMaxLength);
-    this.container.setDebugLogMaxLength(debugLogMaxLength);
-    this.workflow.setDebugLogMaxLength(debugLogMaxLength);
-    this.pagination.setDebugLogMaxLength(debugLogMaxLength);
     this.logger.debug(
       truncateLog(debugLogMaxLength, `Starting workflow execution for ${url}`),
     );
@@ -537,7 +532,12 @@ export class PageController {
 
       for (const action of workflow.actions) {
         try {
-          await this.workflow.executeAction(page, action, context);
+          await this.workflow.executeAction(
+            page,
+            action,
+            context,
+            debugLogMaxLength,
+          );
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : String(error);

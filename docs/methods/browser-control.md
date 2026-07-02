@@ -129,52 +129,11 @@ async getCurrentResources() {
 
 ## Decorators
 
-### @InjectBrowser()
-
-Inject a browser instance (auto-acquired from pool, auto-released).
-
-```typescript
-import { Injectable } from '@nestjs/common';
-import { InjectBrowser } from '@hanivanrizky/nestjs-browser-action';
-import { Browser } from 'puppeteer';
-
-@Injectable()
-export class MyService {
-  constructor(
-    @InjectBrowser()
-    private readonly browser: Browser,
-  ) {}
-
-  async myMethod() {
-    const page = await this.browser.newPage();
-    await page.goto('https://example.com');
-    // Browser auto-released when service destroyed
-  }
-}
-```
-
-### @InjectPage()
-
-Inject a page instance (auto-created and closed).
-
-```typescript
-import { Injectable } from '@nestjs/common';
-import { InjectPage } from '@hanivanrizky/nestjs-browser-action';
-import { Page } from 'puppeteer';
-
-@Injectable()
-export class MyService {
-  constructor(
-    @InjectPage()
-    private readonly page: Page,
-  ) {}
-
-  async myMethod() {
-    await this.page.goto('https://example.com');
-    // Page auto-closed when service destroyed
-  }
-}
-```
+`@InjectBrowser`, `@InjectPage`, and `@InjectPageController` belong to the
+separate [Named Browsers & Pages](../features/named-browsers.md) DI pattern
+(`forRoot({ name })` + `forFeature(pages, name)`), not the pool described on
+this page — see that doc and the [API reference](../api-reference.md#decorators)
+for their signatures and the raw-`Page`-staleness caveat.
 
 ## Advanced Usage
 
@@ -388,12 +347,7 @@ async safeBrowserUsage() {
    }
    ```
 
-3. **Use decorators for simple cases:**
-   ```typescript
-   constructor(@InjectPage() private readonly page: Page) {}
-   ```
-
-4. **Configure pool appropriately:**
+3. **Configure pool appropriately:**
    - Set `min` to expected baseline concurrency
    - Set `max` to maximum acceptable resource usage
    - Use `idleTimeoutMs` to free unused resources

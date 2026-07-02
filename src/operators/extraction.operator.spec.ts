@@ -6,7 +6,6 @@ describe('ExtractionOperator', () => {
   const op = new ExtractionOperator(
     new PipeEngine(),
     new LoggerWithLevel('test', 'error'),
-    250,
   );
 
   it('parseSelector splits trailing @attr', () => {

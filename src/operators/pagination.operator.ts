@@ -28,14 +28,7 @@ const isTargetClosed = (err: unknown): boolean =>
  * that evaluateWebsite's paginated path delegates to.
  */
 export class PaginationOperator {
-  constructor(
-    private readonly logger: LoggerWithLevel,
-    private debugLogMaxLength: number,
-  ) {}
-
-  setDebugLogMaxLength(n: number): void {
-    this.debugLogMaxLength = n;
-  }
+  constructor(private readonly logger: LoggerWithLevel) {}
 
   /**
    * Find a single element by CSS selector or XPath expression.

@@ -21,12 +21,7 @@ export class ExtractionOperator {
   constructor(
     private readonly pipeEngine: PipeEngine,
     private readonly logger: LoggerWithLevel,
-    private debugLogMaxLength: number,
   ) {}
-
-  setDebugLogMaxLength(n: number): void {
-    this.debugLogMaxLength = n;
-  }
 
   /**
    * Split a trailing `@attr` off a selector, e.g.
@@ -226,6 +221,7 @@ export class ExtractionOperator {
     target: ActionTarget,
     as: ActionOptions['as'] = 'text',
     attribute?: string,
+    debugLogMaxLength = 0,
   ): Promise<string> {
     if (target.shadowHost && !target.value) {
       const host = await page.$(target.shadowHost);
@@ -245,7 +241,7 @@ export class ExtractionOperator {
       );
     }
 
-    const element = await this.findElement(page, target);
+    const element = await this.findElement(page, target, debugLogMaxLength);
     if (!element) {
       throw new Error(`Element not found: ${target.value}`);
     }
@@ -274,10 +270,11 @@ export class ExtractionOperator {
   private async findElement(
     page: Page,
     target: ActionTarget,
+    debugLogMaxLength = 0,
   ): Promise<ElementHandle<Node> | null> {
     this.logger.debug(
       truncateLog(
-        this.debugLogMaxLength,
+        debugLogMaxLength,
         `  findElement: ${this.describeTarget(target)}`,
       ),
     );
@@ -286,7 +283,7 @@ export class ExtractionOperator {
       const el = await this.findElementInShadowRoot(page, target);
       this.logger.debug(
         truncateLog(
-          this.debugLogMaxLength,
+          debugLogMaxLength,
           `  findElement result: ${el ? 'found' : 'NOT FOUND'}`,
         ),
       );
@@ -299,7 +296,7 @@ export class ExtractionOperator {
       ) as Promise<ElementHandle<Node> | null>);
       this.logger.debug(
         truncateLog(
-          this.debugLogMaxLength,
+          debugLogMaxLength,
           `  findElement result: ${el ? 'found' : 'NOT FOUND'}`,
         ),
       );
@@ -320,7 +317,7 @@ export class ExtractionOperator {
       .then((handle) => handle.asElement());
     this.logger.debug(
       truncateLog(
-        this.debugLogMaxLength,
+        debugLogMaxLength,
         `  findElement result: ${el ? 'found' : 'NOT FOUND'}`,
       ),
     );

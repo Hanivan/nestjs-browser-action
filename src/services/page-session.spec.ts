@@ -219,6 +219,50 @@ describe('PageSession', () => {
     expect(b.browser).toBe(relaunched);
   });
 
+  it('concurrent relaunches across sessions sharing one holder call the launcher once', async () => {
+    const freshA = mockPage();
+    const freshB = mockPage();
+    const relaunched = {
+      connected: true,
+      newPage: jest
+        .fn()
+        .mockResolvedValueOnce(freshA)
+        .mockResolvedValueOnce(freshB),
+    } as unknown as Browser;
+    (browserLauncher.launchLocalBrowser as jest.Mock).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          process.nextTick(() => resolve(relaunched));
+        }),
+    );
+
+    const holder = new BrowserHolder(mockBrowser(false));
+    const a = new PageSession('t', holder, mockPage(true), {}, logger);
+    const b = new PageSession('t', holder, mockPage(true), {}, logger);
+
+    const [pa, pb] = await Promise.all([a.ensureAlive(), b.ensureAlive()]);
+
+    expect(browserLauncher.launchLocalBrowser).toHaveBeenCalledTimes(1);
+    expect(pa).toBe(freshA);
+    expect(pb).toBe(freshB);
+    expect(holder.browser).toBe(relaunched);
+  });
+
+  it('warns and continues when focus emulation CDP call fails', async () => {
+    const warnSpy = jest.spyOn(logger, 'warn');
+    const page = mockPage();
+    (page as unknown as { createCDPSession: jest.Mock }).createCDPSession = jest
+      .fn()
+      .mockRejectedValue(new Error('not supported'));
+    const s = new PageSession('t', mockBrowser(), page, {}, logger);
+
+    await expect(s.goto('https://x.test')).resolves.toBe(page);
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('focus emulation failed'),
+    );
+  });
+
   it('relaunches local browser when browser is dead (no remote configured)', async () => {
     const fresh = mockPage();
     const relaunchedBrowser = mockBrowser(true, fresh);

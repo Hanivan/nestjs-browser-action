@@ -43,7 +43,6 @@ function buildController(page: Page, debugLogMaxLength?: number) {
     parseSelector: jest.fn().mockReturnValue({ selector: '.x' }),
     extractAllData: jest.fn(),
     extractData: jest.fn(),
-    setDebugLogMaxLength: jest.fn(),
   } as unknown as ExtractionOperator;
 
   const container = {
@@ -51,13 +50,11 @@ function buildController(page: Page, debugLogMaxLength?: number) {
       .fn()
       .mockResolvedValue({ items: [], pagination: undefined }),
     resolvePagination: jest.fn(),
-    setDebugLogMaxLength: jest.fn(),
   } as unknown as ContainerOperator;
 
   const workflow = {
     executeAction: jest.fn().mockResolvedValue(undefined),
     evaluateCondition: jest.fn(),
-    setDebugLogMaxLength: jest.fn(),
   } as unknown as WorkflowOperator;
 
   const pagination = {
@@ -65,14 +62,12 @@ function buildController(page: Page, debugLogMaxLength?: number) {
     paginateLoadMore: jest.fn(),
     paginateInfiniteScroll: jest.fn(),
     paginateUrlIncrement: jest.fn(),
-    setDebugLogMaxLength: jest.fn(),
   } as unknown as PaginationOperator;
 
   const capture = {
     screenshot: jest.fn().mockResolvedValue(Buffer.from('')),
     pdf: jest.fn().mockResolvedValue(Buffer.from('')),
     tlsFingerprint: jest.fn(),
-    setDebugLogMaxLength: jest.fn(),
   } as unknown as CaptureOperator;
 
   const controller = new PageController(
@@ -180,27 +175,36 @@ describe('PageController', () => {
 
   it('scrapeWithWorkflow: falls back to module-level debugLogMaxLength when workflow omits it', async () => {
     const page = mockPage();
-    const { controller, extraction, workflow } = buildController(page, 42);
+    const { controller, workflow } = buildController(page, 42);
 
     await controller.scrapeWithWorkflow('https://x.test', {
       version: '1',
-      actions: [],
+      actions: [{ action: 'wait', value: 0 } as never],
     });
 
-    expect(extraction.setDebugLogMaxLength).toHaveBeenCalledWith(42);
-    expect(workflow.setDebugLogMaxLength).toHaveBeenCalledWith(42);
+    expect(workflow.executeAction).toHaveBeenCalledWith(
+      page,
+      expect.anything(),
+      expect.anything(),
+      42,
+    );
   });
 
   it('scrapeWithWorkflow: workflow debugLogMaxLength overrides module-level value', async () => {
     const page = mockPage();
-    const { controller, extraction } = buildController(page, 42);
+    const { controller, workflow } = buildController(page, 42);
 
     await controller.scrapeWithWorkflow('https://x.test', {
       version: '1',
-      actions: [],
+      actions: [{ action: 'wait', value: 0 } as never],
       debugLogMaxLength: 9,
     });
 
-    expect(extraction.setDebugLogMaxLength).toHaveBeenCalledWith(9);
+    expect(workflow.executeAction).toHaveBeenCalledWith(
+      page,
+      expect.anything(),
+      expect.anything(),
+      9,
+    );
   });
 });

@@ -772,9 +772,12 @@ Type-safe workflow result.
 
 ## Decorators
 
-### @InjectBrowser()
+Decorators for the [Named Browsers & Pages](./features/named-browsers.md) DI
+pattern (`forRoot({ name })` + `forFeature(pages, name)`).
 
-Inject a browser instance (auto-acquired from pool, auto-released).
+### @InjectBrowser(name?)
+
+Inject the raw `Browser` registered by `forRoot({ name })`. `name` defaults to `'default'`.
 
 ```typescript
 import { InjectBrowser } from '@hanivanrizky/nestjs-browser-action';
@@ -783,15 +786,15 @@ import { Browser } from 'puppeteer-core';
 @Injectable()
 export class MyService {
   constructor(
-    @InjectBrowser()
+    @InjectBrowser('stealth')
     private readonly browser: Browser,
   ) {}
 }
 ```
 
-### @InjectPage()
+### @InjectPage(page, name?)
 
-Inject a page instance (auto-created and closed).
+Inject the raw `Page` registered by `forFeature(pages, name)`. `name` defaults to `'default'`.
 
 ```typescript
 import { InjectPage } from '@hanivanrizky/nestjs-browser-action';
@@ -800,8 +803,32 @@ import { Page } from 'puppeteer-core';
 @Injectable()
 export class MyService {
   constructor(
-    @InjectPage()
+    @InjectPage('login', 'stealth')
     private readonly page: Page,
+  ) {}
+}
+```
+
+**Static snapshot warning:** this is the `Page` instance that existed at
+DI-resolution time. If it later closes/crashes, `PageController` transparently
+recreates the page, but this injected reference still points at the dead one.
+Prefer `@InjectPageController` (below) for scraping — its `page` getter always
+returns the live page.
+
+### @InjectPageController(page, name?)
+
+Inject the `PageController` registered by `forFeature(pages, name)` — the
+primary API for a persistent named page. `name` defaults to `'default'`.
+
+```typescript
+import { InjectPageController } from '@hanivanrizky/nestjs-browser-action';
+import type { PageController } from '@hanivanrizky/nestjs-browser-action';
+
+@Injectable()
+export class MyService {
+  constructor(
+    @InjectPageController('login', 'stealth')
+    private readonly login: PageController,
   ) {}
 }
 ```

@@ -29,7 +29,7 @@ describe('PaginationOperator', () => {
 
   beforeEach(() => {
     logger = new LoggerWithLevel('PaginationOperatorSpec', 'error');
-    operator = new PaginationOperator(logger, 1000);
+    operator = new PaginationOperator(logger);
   });
 
   describe('paginateClickNext', () => {

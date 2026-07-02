@@ -68,10 +68,12 @@ export class PageSession {
       this.logger.debug(
         `[PAGE-SESSION:${this.name}] browser dead, relaunching`,
       );
-      this.holder.browser = this.options.remote
-        ? await connectRemoteBrowser(this.options.remote, this.logger)
-        : await launchLocalBrowser(this.options, undefined, this.logger);
-      this.currentPage = await this.holder.browser.newPage();
+      const browser = await this.holder.relaunch(() =>
+        this.options.remote
+          ? connectRemoteBrowser(this.options.remote, this.logger)
+          : launchLocalBrowser(this.options, undefined, this.logger),
+      );
+      this.currentPage = await browser.newPage();
     }
 
     // Old page (and its listener) is gone — drop the stale handler ref so
@@ -93,8 +95,11 @@ export class PageSession {
       });
       // Session stays open on purpose — closing it disables the emulation.
       this.focusEmulatedOn = page;
-    } catch {
-      /* best-effort — remote browsers may reject; fall through unfocused */
+    } catch (err) {
+      // best-effort — remote browsers may reject; fall through unfocused
+      this.logger.warn(
+        `[PAGE-SESSION:${this.name}] focus emulation failed — continuing without it: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
   }
 

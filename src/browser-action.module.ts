@@ -267,16 +267,11 @@ export class BrowserActionModule {
             logLevel,
           );
           const pipeEngine = new PipeEngine();
-          const extraction = new ExtractionOperator(
-            pipeEngine,
-            logger,
-            debugLen,
-          );
+          const extraction = new ExtractionOperator(pipeEngine, logger);
           const container = new ContainerOperator(
             extraction,
             pipeEngine,
             logger,
-            debugLen,
           );
           const cleansingService = new CleansingService(options);
           const cookieService = new CookieService(options);
@@ -286,11 +281,10 @@ export class BrowserActionModule {
             pipeEngine,
             cleansingService,
             logger,
-            debugLen,
             () => cookieService,
           );
-          const pagination = new PaginationOperator(logger, debugLen);
-          const capture = new CaptureOperator(logger, debugLen);
+          const pagination = new PaginationOperator(logger);
+          const capture = new CaptureOperator(logger);
           const session = new PageSession(
             browserName,
             holder,

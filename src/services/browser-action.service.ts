@@ -76,20 +76,12 @@ export class BrowserActionService {
     );
     this.activeDebugLogMaxLength =
       moduleOptions?.debugLogMaxLength ?? DEFAULT_DEBUG_LOG_MAX_LENGTH;
-    this.extraction = new ExtractionOperator(
-      this.pipeEngine,
-      this.logger,
-      this.activeDebugLogMaxLength,
-    );
-    this.capture = new CaptureOperator(
-      this.logger,
-      this.activeDebugLogMaxLength,
-    );
+    this.extraction = new ExtractionOperator(this.pipeEngine, this.logger);
+    this.capture = new CaptureOperator(this.logger);
     this.container = new ContainerOperator(
       this.extraction,
       this.pipeEngine,
       this.logger,
-      this.activeDebugLogMaxLength,
     );
     this.workflow = new WorkflowOperator(
       this.extraction,
@@ -97,16 +89,12 @@ export class BrowserActionService {
       this.pipeEngine,
       this.cleansingService,
       this.logger,
-      this.activeDebugLogMaxLength,
       // Accessor, not the instance: some specs stub `service.cookieService`
       // after construction (see browser-action.service.spec.ts), and this
       // keeps that live rather than frozen at construction time.
       () => this.cookieService,
     );
-    this.pagination = new PaginationOperator(
-      this.logger,
-      this.activeDebugLogMaxLength,
-    );
+    this.pagination = new PaginationOperator(this.logger);
   }
 
   /**
@@ -724,14 +712,6 @@ export class BrowserActionService {
       workflow.debugLogMaxLength ??
       this.moduleOptions?.debugLogMaxLength ??
       DEFAULT_DEBUG_LOG_MAX_LENGTH;
-    // Update operators so their debug-log truncation reflects the
-    // per-workflow override above (they read a mutable field, not a
-    // constructor-captured value).
-    this.extraction.setDebugLogMaxLength(this.activeDebugLogMaxLength);
-    this.capture.setDebugLogMaxLength(this.activeDebugLogMaxLength);
-    this.container.setDebugLogMaxLength(this.activeDebugLogMaxLength);
-    this.workflow.setDebugLogMaxLength(this.activeDebugLogMaxLength);
-    this.pagination.setDebugLogMaxLength(this.activeDebugLogMaxLength);
     this.logger.debug(
       truncateLog(
         this.activeDebugLogMaxLength,
@@ -758,7 +738,12 @@ export class BrowserActionService {
 
       for (const action of workflow.actions) {
         try {
-          await this.workflow.executeAction(page, action, context);
+          await this.workflow.executeAction(
+            page,
+            action,
+            context,
+            this.activeDebugLogMaxLength,
+          );
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : String(error);
@@ -856,6 +841,7 @@ export class BrowserActionService {
       page,
       { ...action, condition: undefined },
       context,
+      this.activeDebugLogMaxLength,
     );
   }
 
@@ -868,6 +854,10 @@ export class BrowserActionService {
     page: Page,
     condition: WorkflowAction['condition'],
   ): Promise<boolean> {
-    return this.workflow.evaluateCondition(page, condition);
+    return this.workflow.evaluateCondition(
+      page,
+      condition,
+      this.activeDebugLogMaxLength,
+    );
   }
 }

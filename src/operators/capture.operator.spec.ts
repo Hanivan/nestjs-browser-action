@@ -2,7 +2,7 @@ import { CaptureOperator } from './capture.operator';
 import { LoggerWithLevel } from '../utils/logger.util';
 
 describe('CaptureOperator', () => {
-  const op = new CaptureOperator(new LoggerWithLevel('test', 'error'), 250);
+  const op = new CaptureOperator(new LoggerWithLevel('test', 'error'));
 
   it('screenshot delegates to page.screenshot with path', async () => {
     const screenshot = jest.fn().mockResolvedValue(Buffer.from('img'));

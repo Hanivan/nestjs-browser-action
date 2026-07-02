@@ -10,14 +10,7 @@ import type { TlsFingerprint } from '../interfaces/tls-fingerprint';
  * per-caller with the deps it needs; holds no per-request page state.
  */
 export class CaptureOperator {
-  constructor(
-    private readonly logger: LoggerWithLevel,
-    private debugLogMaxLength: number,
-  ) {}
-
-  setDebugLogMaxLength(n: number): void {
-    this.debugLogMaxLength = n;
-  }
+  constructor(private readonly logger: LoggerWithLevel) {}
 
   async screenshot(
     page: Page,
