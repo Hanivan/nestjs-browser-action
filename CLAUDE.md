@@ -56,6 +56,7 @@ pnpm release                  # release-it (bumps version, changelog, git tag)
 - e2e tests live in `test/` with separate `jest-e2e.json` config
 - `dist/` is gitignored and excluded from ESLint; lint warnings on `dist/` files are irrelevant
 - To run a single spec: `pnpm test -- browser-action.service.evaluate` (pass the spec filename stem — Jest 30 removed `--testPathPattern`; `--testPathPatterns` doesn't match rootDir-relative paths)
+- **⚠️ If a local `ruflo`/hook integration is active**, `pnpm lint`/`pnpm test`/`pnpm typecheck` script aliases may be intercepted and produce fabricated or garbled output (e.g. a lint run reporting git status). If output looks wrong, bypass the alias: `pnpm exec eslint src/`, `pnpm exec jest [pattern]`, `pnpm exec tsc --noEmit`. (Plain `node ./node_modules/.bin/eslint` does NOT work — these are shell-wrapper scripts, not JS entrypoints, and fail with a syntax error. Use `pnpm exec`.)
 
 ## Code Style
 - Single quotes, trailing commas (Prettier config in `.prettierrc`)
@@ -135,6 +136,7 @@ Published to npm as `@hanivanrizky/nestjs-browser-action`. Release flow:
 **Cleanse in scrape**: `service.scrape(url, selectors, { pipes: { field: { trim: true, toLowerCase: true } } })`
 **Workflow cleanse action**: `{ action: 'cleanse', id: 'out', value: '${var}', options: { pipes: { trim: true } } }`
 **Release**: `pnpm release` (runs build + changelog + tag + publish automatically)
+**Add a new workflow action type**: extend `ActionType` in `src/interfaces/workflow-options.ts`, add the `case` in `src/operators/workflow.operator.ts`'s `executeAction` switch, AND add the action name to `VALID_ACTIONS` in `src/validators/workflow.validator.ts` — the validator is called by both production entry points (`scrapeWithWorkflow`, `PageController`) before any action runs, but is untouched by operator-level unit tests, so a missing whitelist entry makes the action unreachable in production while all tests still pass.
 
 ## Known Issues
 - `libxmljs2` native addon must be compiled for the current Node/OS — rebuild after upgrades

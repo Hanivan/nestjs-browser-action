@@ -377,3 +377,28 @@ describe('extractPagination action validation', () => {
     expect(() => validateWorkflow(workflow)).toThrow('linkSelector');
   });
 });
+
+describe('extractPatterns action validation', () => {
+  it('should pass with a valid extractPatterns action', () => {
+    const workflow: WorkflowDefinition = {
+      version: '1.0',
+      actions: [
+        {
+          action: 'extractPatterns',
+          id: 'result',
+          options: {
+            patterns: [
+              {
+                key: 'title',
+                patternType: 'css',
+                returnType: 'text',
+                patterns: ['h1'],
+              },
+            ],
+          },
+        },
+      ],
+    };
+    expect(() => validateWorkflow(workflow)).not.toThrow();
+  });
+});

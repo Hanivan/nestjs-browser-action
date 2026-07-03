@@ -2,6 +2,8 @@
 
 `evaluateWebsite()` supports opt-in multi-page extraction via `PaginationOptions`. When `pagination` is set and a container pattern is present (`meta.isContainer: true`), results are accumulated across pages into a single `EvaluateResult`.
 
+The same `PaginationOptions` shape is also accepted by the `extractPatterns` workflow action (as `options.patternPagination`), letting you paginate pattern-based extraction inline inside a `scrapeWithWorkflow()` call. One difference: `url-increment` there navigates the workflow's own page in place via `page.goto()` per URL, rather than opening a fresh page — see [Workflow Actions Reference — extractPatterns](../workflow-actions.md#extractpatterns).
+
 ## Strategies
 
 | Type | How it advances |

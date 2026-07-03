@@ -39,6 +39,7 @@ Key points:
 | `cleanse` | Cleanse extracted data with pipes | Data |
 | `scrapeContainer` | Extract structured list with optional pagination | Data |
 | `extractPagination` | Extract pagination links from the page | Data |
+| `extractPatterns` | Extract via evaluateWebsite-style PatternField[] (flat or container, with optional pagination) | Data |
 | `saveCookies` | Save cookies to file | Cookie |
 | `loadCookies` | Load cookies from file | Cookie |
 | `clearCookies` | Clear all cookies | Cookie |
@@ -748,6 +749,95 @@ const result = await actionHelpers.scrapeWithActions(
 );
 // result.data.paging.pages   → [{ label: '1', url: '...' }, ...]
 // result.data.paging.nextUrl → '...?page=4'
+```
+
+---
+
+### extractPatterns
+
+Extract data using the same `PatternField[]` payload shape `evaluateWebsite()` accepts — CSS or XPath patterns with fallback chains, container-based list extraction, and optional pagination — as a single step inside a workflow. Useful for combining login/navigation steps with pattern-based extraction in one `scrapeWithWorkflow()` call.
+
+If no pattern has `meta.isContainer: true`, extraction is flat (one object, CSS-only — matches `evaluateWebsite`'s own flat-path behavior, no XPath or fallback support in this mode). If one pattern has `meta.isContainer: true`, extraction returns a list of items from repeating container nodes, with full CSS/XPath and `meta.alterPattern` fallback support via the container fields.
+
+```typescript
+{
+  id: 'products',
+  action: 'extractPatterns',
+  options: {
+    patterns: [
+      {
+        key: 'container',
+        patternType: 'css',
+        returnType: 'text',
+        patterns: ['.product-card'],
+        meta: { isContainer: true },
+      },
+      {
+        key: 'name',
+        patternType: 'css',
+        returnType: 'text',
+        patterns: ['h2.name'],
+      },
+      {
+        key: 'price',
+        patternType: 'css',
+        returnType: 'text',
+        patterns: ['.price'],
+        pipes: { trim: true },
+      },
+    ],
+  },
+}
+```
+
+**Parameters (inside `options`):**
+- `patterns` (PatternField[]): Same shape as `evaluateWebsite()`'s `patterns` option (required) — see [Pattern-Based Extraction](../README.md#quick-examples) for the full `PatternField` shape
+- `patternPagination` (PaginationOptions): Optional — drives multi-page extraction. Requires a container pattern; throws if set on a flat (no-container) pattern set
+  - `type`: `'click-next' | 'load-more' | 'infinite-scroll' | 'url-increment'`
+  - `selector`, `endSelector`, `urlTemplate`, `startPage`, `maxPages`, `waitAfter` — same fields as `evaluateWebsite()`'s `pagination` option
+
+**Result stored in context:**
+- Flat case: `context[id]` → single extracted object
+- Container case: `context[id]` → `T[]` — the extracted items array
+- Container + `patternPagination`: `context[id]` → merged items across all pages; `context[id + '_pagination']` → `{ pages: number }` (total pages walked)
+
+**`url-increment` pagination note:** unlike `evaluateWebsite`, which opens a fresh page per URL, this action navigates the workflow's own page in place via `page.goto()` for each subsequent URL. After the action completes, the workflow's page is left on the last paginated URL — plan any subsequent actions in the same workflow accordingly.
+
+**Example — login then extract:**
+```typescript
+{
+  version: '1.0',
+  actions: [
+    { action: 'navigate', value: 'https://example.com/login' },
+    { action: 'fill', target: { type: 'css', value: '#username' }, value: 'user' },
+    { action: 'fill', target: { type: 'css', value: '#password' }, value: 'pass' },
+    { action: 'click', target: { type: 'css', value: '[type=submit]' } },
+    { action: 'navigate', value: 'https://example.com/dashboard/items' },
+    {
+      id: 'items',
+      action: 'extractPatterns',
+      options: {
+        patterns: [
+          {
+            key: 'container',
+            patternType: 'css',
+            returnType: 'text',
+            patterns: ['.item-row'],
+            meta: { isContainer: true },
+          },
+          { key: 'title', patternType: 'css', returnType: 'text', patterns: ['.title'] },
+        ],
+        patternPagination: {
+          type: 'click-next',
+          selector: 'a.next-page',
+          maxPages: 5,
+        },
+      },
+    },
+  ],
+}
+// result.data.items              → [{ title: '...' }, ...]
+// result.data.items_pagination   → { pages: 3 }
 ```
 
 ---

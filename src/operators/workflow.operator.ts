@@ -8,13 +8,18 @@ import { delay } from '../utils/delay.util';
 import { truncateLog } from '../utils/truncate-log.util';
 import { ExtractionOperator } from './extraction.operator';
 import { ContainerOperator } from './container.operator';
+import { PaginationOperator } from './pagination.operator';
+import { convertPatternsToDescriptor } from '../utils/pattern-converter.util';
 import type {
   WorkflowAction,
   ActionTarget,
   ActionOptions,
   VariableContext,
 } from '../interfaces/workflow-options';
-import type { ContainerDescriptor } from '../interfaces/types';
+import type {
+  ContainerDescriptor,
+  PaginationOptions,
+} from '../interfaces/types';
 import {
   DEFAULT_ACTION_TIMEOUT,
   DEFAULT_NAVIGATION_TIMEOUT,
@@ -38,6 +43,7 @@ export class WorkflowOperator {
     // its cookieService field to be swapped after construction (see specs
     // that stub it post-construction), so we must resolve it fresh per call.
     private readonly getCookieService: () => CookieService,
+    private readonly pagination: PaginationOperator,
   ) {}
 
   async executeAction(
@@ -527,6 +533,165 @@ export class WorkflowOperator {
             truncateLog(
               debugLogMaxLength,
               `  extractPagination → id="${action.id}": nextUrl=${paginationResult.nextUrl}`,
+            ),
+          );
+        }
+        break;
+      }
+
+      case 'extractPatterns': {
+        const o = action.options;
+        if (!o?.patterns || o.patterns.length === 0) {
+          throw new Error('extractPatterns requires options.patterns');
+        }
+        this.logger.debug(
+          truncateLog(
+            debugLogMaxLength,
+            `  extractPatterns ${o.patterns.length} pattern(s)`,
+          ),
+        );
+
+        const converted = convertPatternsToDescriptor(o.patterns);
+
+        if (o.patternPagination && converted.kind === 'flat') {
+          throw new Error(
+            'pagination requires a container pattern (meta.isContainer: true)',
+          );
+        }
+
+        if (converted.kind === 'flat') {
+          const result = await this.extraction.extractSingle(
+            page,
+            page.url(),
+            converted.selectors,
+            converted.pipes,
+          );
+          if (action.id) {
+            context[action.id] = result;
+            this.logger.debug(
+              truncateLog(
+                debugLogMaxLength,
+                `  extractPatterns → id="${action.id}": flat result`,
+              ),
+            );
+          }
+          break;
+        }
+
+        const descriptor = converted.descriptor;
+        const applyPipes = (
+          items: Record<string, unknown>[],
+        ): Record<string, unknown>[] =>
+          items.map((item) => {
+            const out: Record<string, unknown> = {};
+            for (const key of Object.keys(item)) {
+              const val = item[key];
+              const rule = converted.pipes[key];
+              if (!rule) {
+                out[key] = val;
+                continue;
+              }
+              const toStr = (v: unknown) =>
+                typeof v === 'string' ? v : String(v as string);
+              out[key] = Array.isArray(val)
+                ? val.map((v) =>
+                    v == null
+                      ? null
+                      : this.pipeEngine.apply(toStr(v), rule, page.url()),
+                  )
+                : val == null
+                  ? null
+                  : this.pipeEngine.apply(toStr(val), rule, page.url());
+            }
+            return out;
+          });
+
+        if (!o.patternPagination) {
+          const raw = await this.container.executeContainerExtraction(
+            page,
+            descriptor,
+            o.currentPage ?? 1,
+          );
+          const items = applyPipes(
+            raw.items as unknown as Record<string, unknown>[],
+          );
+          if (action.id) {
+            context[action.id] = items;
+            this.logger.debug(
+              truncateLog(
+                debugLogMaxLength,
+                `  extractPatterns → id="${action.id}": ${items.length} item(s)`,
+              ),
+            );
+          }
+          break;
+        }
+
+        const popts: PaginationOptions = o.patternPagination;
+        // Signature required by PaginationOperator's containerFn:
+        // (page: Page) => Promise<T[]>; this action always operates on the
+        // single outer `page`, never a distinct one, so the param is unused.
+        const containerFn = async (
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          _page: Page,
+        ): Promise<Record<string, unknown>[]> => {
+          const raw = await this.container.executeContainerExtraction(
+            page,
+            descriptor,
+            1,
+          );
+          return applyPipes(raw.items as unknown as Record<string, unknown>[]);
+        };
+
+        let items: Record<string, unknown>[];
+        let pages: number;
+
+        if (popts.type === 'click-next') {
+          ({ items, pages } = await this.pagination.paginateClickNext(
+            page,
+            containerFn,
+            popts,
+          ));
+        } else if (popts.type === 'load-more') {
+          ({ items, pages } = await this.pagination.paginateLoadMore(
+            page,
+            containerFn,
+            popts,
+          ));
+        } else if (popts.type === 'infinite-scroll') {
+          ({ items, pages } = await this.pagination.paginateInfiniteScroll(
+            page,
+            containerFn,
+            popts,
+          ));
+        } else {
+          const template = popts.urlTemplate ?? page.url();
+          const startPage = popts.startPage ?? 2;
+
+          const page1Items = await containerFn(page);
+
+          const { items: restItems, pages: restPages } =
+            await this.pagination.paginateUrlIncrement(
+              template,
+              async (pageUrl: string) => {
+                await page.goto(pageUrl, { waitUntil: 'domcontentloaded' });
+                return containerFn(page);
+              },
+              popts,
+              startPage,
+            );
+
+          items = [...page1Items, ...restItems];
+          pages = 1 + restPages;
+        }
+
+        if (action.id) {
+          context[action.id] = items;
+          context[`${action.id}_pagination`] = { pages };
+          this.logger.debug(
+            truncateLog(
+              debugLogMaxLength,
+              `  extractPatterns → id="${action.id}": ${items.length} item(s) across ${pages} page(s)`,
             ),
           );
         }

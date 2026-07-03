@@ -6,6 +6,8 @@
 import type {
   FieldDescriptor,
   PaginationDescriptor,
+  PaginationOptions,
+  PatternField,
   CleanerStepRules,
 } from './types';
 import type { CloakOptions } from './browser-action-options';
@@ -44,7 +46,8 @@ export type ActionType =
   | 'waitForNetwork' // Wait for network idle
   | 'reload' // Reload the page
   | 'scrapeContainer' // Scrape container fields
-  | 'extractPagination'; // Extract pagination links
+  | 'extractPagination' // Extract pagination links
+  | 'extractPatterns'; // Extract via evaluateWebsite-style PatternField[]
 
 /**
  * Condition for conditional action execution
@@ -85,6 +88,9 @@ export interface ActionOptions {
   linkSelector?: string;
   labelSelector?: string;
   currentPage?: number;
+  // extractPatterns options
+  patterns?: PatternField[];
+  patternPagination?: PaginationOptions;
 }
 
 /**

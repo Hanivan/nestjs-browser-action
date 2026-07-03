@@ -1,6 +1,7 @@
 import { Injectable, Optional, Inject } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { sanitizeScreenshotPath } from '../utils/path.util';
+import { convertPatternsToDescriptor } from '../utils/pattern-converter.util';
 import { validateWorkflow } from '../validators/workflow.validator';
 
 import type { Page, ScreenshotOptions, PDFOptions } from 'puppeteer-core';
@@ -30,8 +31,6 @@ import {
   ContainerScrapeResult,
   EvaluateOptions,
   EvaluateResult,
-  PipeOptions,
-  FieldDescriptor,
 } from '../interfaces/types';
 import { getRandomUserAgent } from '../utils/user-agent.util';
 import type { TlsFingerprint } from '../interfaces/tls-fingerprint';
@@ -83,6 +82,7 @@ export class BrowserActionService {
       this.pipeEngine,
       this.logger,
     );
+    this.pagination = new PaginationOperator(this.logger);
     this.workflow = new WorkflowOperator(
       this.extraction,
       this.container,
@@ -93,8 +93,8 @@ export class BrowserActionService {
       // after construction (see browser-action.service.spec.ts), and this
       // keeps that live rather than frozen at construction time.
       () => this.cookieService,
+      this.pagination,
     );
-    this.pagination = new PaginationOperator(this.logger);
   }
 
   /**
@@ -451,56 +451,23 @@ export class BrowserActionService {
       throw new Error('evaluateWebsite requires a url');
     }
 
-    const containerPattern = patterns.find((p) => p.meta?.isContainer);
+    const converted = convertPatternsToDescriptor<T>(patterns);
 
-    if (!containerPattern) {
+    if (converted.kind === 'flat') {
       if (pagination) {
         throw new Error(
           'pagination requires a container pattern (meta.isContainer: true)',
         );
       }
-      const selectors = Object.fromEntries(
-        patterns.map((p) => [p.key, p.patterns[0]]),
-      );
-      const pipes: PipeOptions = Object.fromEntries(
-        patterns.filter((p) => p.pipes).map((p) => [p.key, p.pipes!]),
-      );
-      const rawResult = await this.scrape(url, selectors, {
+      const rawResult = await this.scrape(url, converted.selectors, {
         ...scraperOptions,
-        pipes,
+        pipes: converted.pipes,
       });
       return { results: [rawResult as T] };
     }
 
-    const fieldPatterns = patterns.filter(
-      (p) => !p.meta?.isContainer && !p.meta?.isPage,
-    );
-
-    const fields = Object.fromEntries(
-      fieldPatterns.map((p) => [
-        p.key,
-        {
-          selector: p.patterns[0],
-          returnType:
-            p.returnType === 'rawHTML'
-              ? 'html'
-              : p.returnType === 'html'
-                ? 'html'
-                : 'text',
-          multiple: !!p.meta?.multiple,
-          fallback: [...p.patterns.slice(1), ...(p.meta?.alterPattern ?? [])],
-        } satisfies FieldDescriptor,
-      ]),
-    );
-
-    const descriptor: ContainerDescriptor<T> = {
-      container: containerPattern.patterns[0],
-      fields: fields as Record<string & keyof T, FieldDescriptor>,
-    };
-
-    const pipeMap: PipeOptions = Object.fromEntries(
-      fieldPatterns.filter((p) => p.pipes).map((p) => [p.key, p.pipes!]),
-    );
+    const descriptor = converted.descriptor;
+    const pipeMap = converted.pipes;
 
     if (!pagination) {
       const { items } = await this.scrapeContainerFields<T>(url, descriptor, {

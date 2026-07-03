@@ -53,6 +53,7 @@ const VALID_ACTIONS = new Set<ActionType>([
   'reload',
   'scrapeContainer',
   'extractPagination',
+  'extractPatterns',
 ]);
 
 /** Default limits */

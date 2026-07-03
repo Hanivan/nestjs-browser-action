@@ -334,6 +334,7 @@ export class BrowserActionModule {
           );
           const cleansingService = new CleansingService(options);
           const cookieService = new CookieService(options);
+          const pagination = new PaginationOperator(logger);
           const workflow = new WorkflowOperator(
             extraction,
             container,
@@ -341,8 +342,8 @@ export class BrowserActionModule {
             cleansingService,
             logger,
             () => cookieService,
+            pagination,
           );
-          const pagination = new PaginationOperator(logger);
           const capture = new CaptureOperator(logger);
           const session = new PageSession(
             browserName,

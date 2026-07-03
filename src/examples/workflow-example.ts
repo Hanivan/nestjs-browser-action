@@ -448,6 +448,70 @@ async function ecommercePriceScraping(actionHelpers: BrowserActionService) {
   console.log('E-commerce product data:', result.data);
 }
 
+// Example 11: extractPatterns — evaluateWebsite-style patterns inside a workflow
+async function extractPatternsAction(actionHelpers: BrowserActionService) {
+  const workflow: WorkflowDefinition = {
+    version: '1.0',
+    actions: [
+      {
+        action: 'navigate',
+        value: '${baseUrl}',
+      },
+      {
+        action: 'waitFor',
+        target: { type: 'css', value: '.product' },
+        options: { timeout: 15000 },
+      },
+      {
+        id: 'products',
+        action: 'extractPatterns',
+        options: {
+          patterns: [
+            {
+              key: 'container',
+              patternType: 'css',
+              returnType: 'text',
+              patterns: ['.product'],
+              meta: { isContainer: true },
+            },
+            {
+              key: 'name',
+              patternType: 'css',
+              returnType: 'text',
+              patterns: ['h2.woocommerce-loop-product__title'],
+              pipes: { trim: true },
+            },
+            {
+              key: 'price',
+              patternType: 'css',
+              returnType: 'text',
+              patterns: ['.price'],
+              pipes: { trim: true },
+            },
+          ],
+          // Optional: walk multiple pages, merging items — same shape as
+          // evaluateWebsite()'s `pagination` option. See docs/features/pagination.md.
+          patternPagination: {
+            type: 'click-next',
+            selector: 'a.next.page-numbers',
+            maxPages: 3,
+          },
+        },
+      },
+    ],
+  };
+
+  const result = await actionHelpers.scrapeWithWorkflow<{
+    products: Array<{ name: string; price: string }>;
+  }>('https://www.scrapingcourse.com/ecommerce/', workflow, {
+    baseUrl: 'https://www.scrapingcourse.com/ecommerce/',
+  });
+
+  console.log(
+    `extractPatterns result: ${result.data.products?.length} products`,
+  );
+}
+
 if (require.main === module) {
   void (async () => {
     const app = await NestFactory.createApplicationContext(AppModule, {
@@ -465,6 +529,7 @@ if (require.main === module) {
       await shadowDOMSupport(service);
       await errorHandlingWithRetry(service);
       await ecommercePriceScraping(service);
+      await extractPatternsAction(service);
     } finally {
       await app.close();
     }
