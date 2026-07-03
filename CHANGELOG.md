@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.23.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.22.0...v0.23.0) (2026-07-03)
+
+
+### Features
+
+* add named-browser lifecycle hardening, restore pool mode as first-class option ([c645e36](https://github.com/Hanivan/nestjs-browser-action/commit/c645e361de0632324776a087179163419edba76d))
+
 # [0.22.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.21.0...v0.22.0) (2026-07-02)
 
 
