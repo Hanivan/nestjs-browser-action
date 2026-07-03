@@ -79,36 +79,6 @@ import { BrowserActionModule } from '@hanivanrizky/nestjs-browser-action';
 export class AppModule {}
 ```
 
-**With cookies and async config:**
-
-```typescript
-import { Module } from '@nestjs/common';
-import { BrowserActionModule } from '@hanivanrizky/nestjs-browser-action';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-
-@Module({
-  imports: [
-    ConfigModule.forRoot(),
-    BrowserActionModule.forRootAsync({
-      name: 'stealth',
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        cloak: {
-          proxy: { server: configService.get<string>('PROXY_URL', '') },
-        },
-        cookies: { enabled: true, cookiesDir: './cookies' },
-        logLevel: configService.get<string>('LOG_LEVEL', 'log'),
-      }),
-      inject: [ConfigService],
-    }),
-    BrowserActionModule.forFeature(['products'], 'stealth'),
-  ],
-})
-export class AppModule {}
-```
-
-### Inject the Page Controller
-
 ```typescript
 import { Injectable } from '@nestjs/common';
 import {
@@ -141,13 +111,6 @@ export class YourService {
           patterns: ['h2.woocommerce-loop-product__title'],
           pipes: { trim: true },
         },
-        {
-          key: 'price',
-          patternType: 'css',
-          returnType: 'text',
-          patterns: ['.price'],
-          pipes: { trim: true },
-        },
       ],
     });
 
@@ -156,9 +119,9 @@ export class YourService {
 }
 ```
 
-Full details, decorators, auto-recreate semantics, and a pool ↔ controller
-migration table live in
-[Named Browsers & Pages](docs/features/named-browsers.md).
+Async config, cookies, and the `maxPages` page-count guard are covered in
+[Named Browsers & Pages](docs/features/named-browsers.md), along with
+decorators, auto-recreate semantics, and a pool ↔ controller migration table.
 
 ### Option B: Browser Pool
 
@@ -172,46 +135,11 @@ import { BrowserActionModule } from '@hanivanrizky/nestjs-browser-action';
 
 @Module({
   imports: [
-    BrowserActionModule.forRoot({
-      pool: { min: 2, max: 10 },
-      cookies: { enabled: true, cookiesDir: './cookies' },
-      logLevel: 'log',
-    }),
+    BrowserActionModule.forRoot({ pool: { min: 2, max: 10 } }),
   ],
 })
 export class AppModule {}
 ```
-
-**With async config:**
-
-```typescript
-import { Module } from '@nestjs/common';
-import { BrowserActionModule } from '@hanivanrizky/nestjs-browser-action';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-
-@Module({
-  imports: [
-    ConfigModule.forRoot(),
-    BrowserActionModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        pool: {
-          min: configService.get<number>('POOL_MIN', 2),
-          max: configService.get<number>('POOL_MAX', 10),
-        },
-        cloak: {
-          proxy: { server: configService.get<string>('PROXY_URL', '') },
-        },
-        logLevel: configService.get<string>('LOG_LEVEL', 'log'),
-      }),
-      inject: [ConfigService],
-    }),
-  ],
-})
-export class AppModule {}
-```
-
-**Inject the service:**
 
 ```typescript
 import { Injectable } from '@nestjs/common';
@@ -239,13 +167,6 @@ export class YourService {
           patterns: ['h2.woocommerce-loop-product__title'],
           pipes: { trim: true },
         },
-        {
-          key: 'price',
-          patternType: 'css',
-          returnType: 'text',
-          patterns: ['.price'],
-          pipes: { trim: true },
-        },
       ],
     });
 
@@ -255,8 +176,8 @@ export class YourService {
 ```
 
 > `BrowserActionModule.forRoot()`/`forRootAsync()` without a `name` gives
-> you pool mode (`BrowserActionService`); pass `name` for the named-browser
-> mode shown in Option A. See the
+> you pool mode; pass `name` for named-browser mode (Option A). Async config
+> and cookies work the same way on both — see the
 > [migration table](docs/features/named-browsers.md#migration-pool-method--controller-method)
 > if you're moving code between the two.
 
