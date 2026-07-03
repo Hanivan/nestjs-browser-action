@@ -25,6 +25,7 @@ jest.mock('./utils/browser-launcher', () => ({
           close: jest.fn(),
         } as unknown as Page),
         close: jest.fn(),
+        process: jest.fn().mockReturnValue(null),
       }) as unknown as Browser,
   ),
 }));

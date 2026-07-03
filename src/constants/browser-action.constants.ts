@@ -51,3 +51,9 @@ export const DEFAULT_COOKIE_OPTIONS = {
   autoLoad: false,
   defaultSessionName: 'default',
 } as const;
+
+/**
+ * Default warning threshold for the named-browser page-count guard
+ * (`forFeature` registrations per browser). Warns only — never throws.
+ */
+export const DEFAULT_MAX_PAGES_WARNING = 5;

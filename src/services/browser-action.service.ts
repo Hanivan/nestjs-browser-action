@@ -113,7 +113,6 @@ export class BrowserActionService {
   }
 
   /**
-   * @deprecated Pool-based scraping is deprecated and will be removed in v1.0.
    * Register a named browser with `BrowserActionModule.forRoot({ name: 'main', ... })`,
    * declare pages with `BrowserActionModule.forFeature(['myPage'], 'main')`, and use
    * `@InjectPageController('myPage', 'main')` instead.
@@ -145,7 +144,6 @@ export class BrowserActionService {
   }
 
   /**
-   * @deprecated Pool-based scraping is deprecated and will be removed in v1.0.
    * Register a named browser with `BrowserActionModule.forRoot({ name: 'main', ... })`,
    * declare pages with `BrowserActionModule.forFeature(['myPage'], 'main')`, and use
    * `@InjectPageController('myPage', 'main')` instead.
@@ -182,7 +180,6 @@ export class BrowserActionService {
    * JSON, and return the curated result. The request is made by the browser
    * itself, so the captured ja3/ja4/akamai reflect this browser's handshake.
    *
-   * @deprecated Pool-based scraping is deprecated and will be removed in v1.0.
    * Register a named browser with `BrowserActionModule.forRoot({ name: 'main', ... })`,
    * declare pages with `BrowserActionModule.forFeature(['myPage'], 'main')`, and use
    * `@InjectPageController('myPage', 'main')` instead.
@@ -207,7 +204,6 @@ export class BrowserActionService {
   }
 
   /**
-   * @deprecated Pool-based scraping is deprecated and will be removed in v1.0.
    * Register a named browser with `BrowserActionModule.forRoot({ name: 'main', ... })`,
    * declare pages with `BrowserActionModule.forFeature(['myPage'], 'main')`, and use
    * `@InjectPageController('myPage', 'main')` instead.
@@ -255,7 +251,6 @@ export class BrowserActionService {
   }
 
   /**
-   * @deprecated Pool-based scraping is deprecated and will be removed in v1.0.
    * Register a named browser with `BrowserActionModule.forRoot({ name: 'main', ... })`,
    * declare pages with `BrowserActionModule.forFeature(['myPage'], 'main')`, and use
    * `@InjectPageController('myPage', 'main')` instead.
@@ -371,7 +366,6 @@ export class BrowserActionService {
   }
 
   /**
-   * @deprecated Pool-based scraping is deprecated and will be removed in v1.0.
    * Register a named browser with `BrowserActionModule.forRoot({ name: 'main', ... })`,
    * declare pages with `BrowserActionModule.forFeature(['myPage'], 'main')`, and use
    * `@InjectPageController('myPage', 'main')` instead.
@@ -444,7 +438,6 @@ export class BrowserActionService {
   }
 
   /**
-   * @deprecated Pool-based scraping is deprecated and will be removed in v1.0.
    * Register a named browser with `BrowserActionModule.forRoot({ name: 'main', ... })`,
    * declare pages with `BrowserActionModule.forFeature(['myPage'], 'main')`, and use
    * `@InjectPageController('myPage', 'main')` instead.
@@ -630,7 +623,6 @@ export class BrowserActionService {
   }
 
   /**
-   * @deprecated Pool-based scraping is deprecated and will be removed in v1.0.
    * Register a named browser with `BrowserActionModule.forRoot({ name: 'main', ... })`,
    * declare pages with `BrowserActionModule.forFeature(['myPage'], 'main')`, and use
    * `@InjectPageController('myPage', 'main')` instead.
@@ -663,7 +655,6 @@ export class BrowserActionService {
   }
 
   /**
-   * @deprecated Pool-based scraping is deprecated and will be removed in v1.0.
    * Register a named browser with `BrowserActionModule.forRoot({ name: 'main', ... })`,
    * declare pages with `BrowserActionModule.forFeature(['myPage'], 'main')`, and use
    * `@InjectPageController('myPage', 'main')` instead.
@@ -695,7 +686,6 @@ export class BrowserActionService {
   }
 
   /**
-   * @deprecated Pool-based scraping is deprecated and will be removed in v1.0.
    * Register a named browser with `BrowserActionModule.forRoot({ name: 'main', ... })`,
    * declare pages with `BrowserActionModule.forFeature(['myPage'], 'main')`, and use
    * `@InjectPageController('myPage', 'main')` instead.
@@ -785,7 +775,6 @@ export class BrowserActionService {
   }
 
   /**
-   * @deprecated Pool-based scraping is deprecated and will be removed in v1.0.
    * Register a named browser with `BrowserActionModule.forRoot({ name: 'main', ... })`,
    * declare pages with `BrowserActionModule.forFeature(['myPage'], 'main')`, and use
    * `@InjectPageController('myPage', 'main')` instead.

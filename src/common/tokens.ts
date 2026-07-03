@@ -38,3 +38,23 @@ export function claimBrowserName(name: string): void {
 export function releaseBrowserName(name: string): void {
   registeredBrowserNames.delete(name);
 }
+
+/**
+ * Process-level page-count-per-browser registry, mirroring the
+ * `registeredBrowserNames` pattern above. `forFeature` calls are
+ * independent DynamicModules with no shared state, so this is how the
+ * page-count guard (browser-action.module.ts) accumulates a running total
+ * across multiple `forFeature(pages, name)` registrations targeting the
+ * same named browser.
+ */
+const pageCountByBrowser = new Map<string, number>();
+
+export function registerPages(browserName: string, count: number): number {
+  const total = (pageCountByBrowser.get(browserName) ?? 0) + count;
+  pageCountByBrowser.set(browserName, total);
+  return total;
+}
+
+export function releasePageCount(browserName: string): void {
+  pageCountByBrowser.delete(browserName);
+}

@@ -23,7 +23,6 @@ import {
 } from '../utils/browser-launcher';
 
 /**
- * @deprecated Pool-based scraping is deprecated and will be removed in v1.0.
  * Register a named browser with `BrowserActionModule.forRoot({ name: 'main', ... })`,
  * declare pages with `BrowserActionModule.forFeature(['myPage'], 'main')`, and use
  * `@InjectPageController('myPage', 'main')` instead.

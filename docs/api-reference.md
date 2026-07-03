@@ -315,6 +315,19 @@ interface BrowserActionOptions {
   // bootstraps but the scraper is not always needed.
   // @default false
   lazyInit?: boolean;
+
+  // Named-browser mode only: Health check configuration for passive monitoring.
+  // Pings browser.version() on intervalMs. Off by default (no timer runs).
+  // @named-mode-only
+  healthCheck?: {
+    intervalMs: number; // Health check ping interval in milliseconds (e.g., 30000)
+  };
+
+  // Named-browser mode only: Maximum pages sanity check (default: 5).
+  // Logs a warning at module init if forFeature(pages) calls exceed this count.
+  // Not an enforced limit — named-mode pages are fixed at DI-build time.
+  // @named-mode-only
+  maxPages?: number;
 }
 ```
 

@@ -257,6 +257,73 @@ export class CrawlerService {
 }
 ```
 
+## Lifecycle hardening
+
+Named-browser mode includes four opt-in-where-applicable safety nets around
+process lifecycle:
+
+### Shutdown-hook reminder
+
+Every local named browser logs a one-time warning on launch:
+
+```
+Call app.enableShutdownHooks() in main.ts to ensure graceful browser cleanup on Ctrl+C
+```
+
+`NamedBrowserShutdown.onApplicationShutdown()` (the hook that actually closes
+the browser) only fires if the host app calls `app.enableShutdownHooks()` in
+`main.ts` — Nest does not enable this by default. Skipped for `remote`
+browsers (no local process to warn about).
+
+### Liveness health check (opt-in)
+
+```typescript
+BrowserActionModule.forRoot({
+  name: 'stealth',
+  healthCheck: { intervalMs: 30000 }, // ping browser.version() every 30s
+});
+```
+
+On ping failure, logs a warning only — `[HEALTH:stealth] browser
+unreachable: <error>`. This is **passive observability**, not proactive
+recovery: it does not call `relaunch()` itself. The existing reactive
+recovery (a dead browser is relaunched on the next real `ensureAlive()` call
+via `PageController`) is unchanged. Off by default — no `healthCheck` option
+means no timer runs.
+
+### Page-count guard
+
+```typescript
+BrowserActionModule.forRoot({ name: 'stealth', maxPages: 5 }); // default: 5
+```
+
+If the total pages registered via `forFeature(pages, 'stealth')` calls
+exceeds `maxPages`, a warning is logged at module init:
+
+```
+Named browser "stealth" has 7 registered pages, exceeding the configured
+maxPages (5). This is a sanity warning, not an enforced limit — review your
+forFeature() calls.
+```
+
+This is a **registration-time sanity check, not a runtime cap** — named-mode
+pages are fixed at DI-build time (see `forFeature` above), so there is no
+way to "block" registration; the warning exists to catch accidental page
+sprawl (e.g. registering `forFeature` per-entity instead of per-workflow).
+
+### Orphan-process kill on abnormal exit
+
+Every local named browser registers a `process.on('exit')` handler that
+force-kills the underlying Chromium child process if it's still alive. This
+covers uncaught exceptions, unhandled rejections, and explicit
+`process.exit()` calls — all of which bypass Nest's `onApplicationShutdown`
+lifecycle entirely (only a normal `app.close()` or a signal with
+`enableShutdownHooks()` enabled goes through that path). It does **not**
+cover `SIGKILL` of the Node process itself — no user-land code runs on
+`SIGKILL`, by design in Node/POSIX. Skipped for `remote` browsers
+(`browser.process()` returns `null` for CDP connections — nothing local to
+kill).
+
 ## Migration: pool method → controller method
 
 `BrowserActionService` (pool mode) and `PageController` (named mode) share

@@ -1,6 +1,7 @@
 import { Injectable, OnApplicationShutdown } from '@nestjs/common';
-import { releaseBrowserName } from '../common/tokens';
+import { releaseBrowserName, releasePageCount } from '../common/tokens';
 import { BrowserHolder } from './browser-holder';
+import type { BrowserHealthCheck } from './browser-health-check';
 
 /**
  * Factory-provided named browsers have no lifecycle hooks of their own —
@@ -18,9 +19,11 @@ export class NamedBrowserShutdown implements OnApplicationShutdown {
     private readonly name: string,
     private readonly holder: BrowserHolder,
     private readonly isRemote: boolean,
+    private readonly healthCheck?: BrowserHealthCheck,
   ) {}
 
   async onApplicationShutdown(): Promise<void> {
+    this.healthCheck?.stop();
     try {
       const browser = this.holder.browser;
       if (browser.connected) {
@@ -31,6 +34,7 @@ export class NamedBrowserShutdown implements OnApplicationShutdown {
       /* browser already gone */
     } finally {
       releaseBrowserName(this.name);
+      releasePageCount(this.name);
     }
   }
 }

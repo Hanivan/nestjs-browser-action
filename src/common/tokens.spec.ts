@@ -5,6 +5,8 @@ import {
   getNamedOptionsToken,
   claimBrowserName,
   releaseBrowserName,
+  registerPages,
+  releasePageCount,
 } from './tokens';
 
 describe('tokens', () => {
@@ -48,6 +50,29 @@ describe('tokens', () => {
       claimBrowserName('dup');
       releaseBrowserName('dup');
       expect(() => claimBrowserName('dup')).not.toThrow();
+    });
+  });
+
+  describe('page-count registry', () => {
+    afterEach(() => {
+      releasePageCount('pages-test');
+      releasePageCount('pages-test-2');
+    });
+
+    it('accumulates page counts across multiple registerPages calls for the same browser', () => {
+      expect(registerPages('pages-test', 3)).toBe(3);
+      expect(registerPages('pages-test', 2)).toBe(5);
+    });
+
+    it('tracks separate browsers independently', () => {
+      expect(registerPages('pages-test', 4)).toBe(4);
+      expect(registerPages('pages-test-2', 1)).toBe(1);
+    });
+
+    it('releasePageCount resets the counter for that browser back to zero', () => {
+      registerPages('pages-test', 5);
+      releasePageCount('pages-test');
+      expect(registerPages('pages-test', 1)).toBe(1);
     });
   });
 });

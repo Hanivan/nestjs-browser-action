@@ -1,6 +1,10 @@
 import { NamedBrowserShutdown } from './named-browser-shutdown';
 import { BrowserHolder } from './browser-holder';
-import { claimBrowserName, releaseBrowserName } from '../common/tokens';
+import {
+  claimBrowserName,
+  releaseBrowserName,
+  registerPages,
+} from '../common/tokens';
 import type { Browser } from 'puppeteer-core';
 
 function mockBrowser(connected = true): Browser {
@@ -57,5 +61,48 @@ describe('NamedBrowserShutdown', () => {
 
     // Name released — claiming again must not throw
     expect(() => claimBrowserName('shut')).not.toThrow();
+  });
+
+  it('stops the health check before closing the browser, when one is provided', async () => {
+    const browser = mockBrowser();
+    const holder = new BrowserHolder(browser);
+    const healthCheck = { stop: jest.fn() };
+    const shutdown = new NamedBrowserShutdown(
+      'shut',
+      holder,
+      false,
+      healthCheck as unknown as import('./browser-health-check').BrowserHealthCheck,
+    );
+
+    await shutdown.onApplicationShutdown();
+
+    expect(healthCheck.stop).toHaveBeenCalled();
+    expect(browser.close).toHaveBeenCalled();
+  });
+
+  it('works with no health check provided (backward-compatible 3-arg construction)', async () => {
+    const browser = mockBrowser();
+    const shutdown = new NamedBrowserShutdown(
+      'shut',
+      new BrowserHolder(browser),
+      false,
+    );
+
+    await expect(shutdown.onApplicationShutdown()).resolves.not.toThrow();
+  });
+
+  it('releases the page count for this browser name on shutdown', async () => {
+    registerPages('shut', 3);
+    const browser = mockBrowser();
+    const shutdown = new NamedBrowserShutdown(
+      'shut',
+      new BrowserHolder(browser),
+      false,
+    );
+
+    await shutdown.onApplicationShutdown();
+
+    // If the count was released, a fresh registerPages call starts back at 1.
+    expect(registerPages('shut', 1)).toBe(1);
   });
 });

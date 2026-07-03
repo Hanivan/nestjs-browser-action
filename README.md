@@ -10,7 +10,7 @@
   <a href="https://www.npmjs.com/package/@hanivanrizky/nestjs-browser-action" target="_blank"><img src="https://img.shields.io/npm/v/@hanivanrizky/nestjs-browser-action.svg" alt="NPM Version" /></a>
   <a href="https://www.npmjs.com/package/@hanivanrizky/nestjs-browser-action" target="_blank"><img src="https://img.shields.io/npm/l/@hanivanrizky/nestjs-browser-action.svg" alt="Package License" /></a>
   <a href="https://www.npmjs.com/package/@hanivanrizky/nestjs-browser-action" target="_blank"><img src="https://img.shields.io/npm/dm/@hanivanrizky/nestjs-browser-action.svg" alt="NPM Downloads" /></a>
-  <img src="https://img.shields.io/badge/tests-463%20passed-brightgreen.svg" alt="Tests: 463 passed" />
+  <img src="https://img.shields.io/badge/tests-481%20passed-brightgreen.svg" alt="Tests: 481 passed" />
 </p>
 
 > **⚠️ Status: Experimental** — personal use only; API subject to change.
@@ -54,7 +54,17 @@ npm install @hanivanrizky/nestjs-browser-action
 
 ## Quick Start
 
-### Register a Named Browser + Pages
+Two ways to use this library — pick whichever fits your workload. Both are
+fully supported; neither is deprecated.
+
+- **[Named Browser + Pages](#option-a-named-browser--pages)** — persistent
+  browser/page pairs. Cookies, localStorage, and navigation state carry over
+  between calls. Best for login sessions and authenticated crawls.
+- **[Browser Pool](#option-b-browser-pool)** — a pool of browsers, each
+  `scrape()` call opens and closes a fresh page. Best for one-shot,
+  stateless scraping.
+
+### Option A: Named Browser + Pages
 
 ```typescript
 import { Module } from '@nestjs/common';
@@ -146,48 +156,109 @@ export class YourService {
 }
 ```
 
-> Pool mode (`forRoot()`/`forRootAsync()` without `name`, plain
-> `BrowserActionService`) still works but is deprecated — see
-> [Named Browsers & Pages (v0.22+)](#named-browsers--pages-v022) for full
-> details, decorators, and the pool → controller migration table.
-
-## Named Browsers & Pages (v0.22+)
-
-Persistent, named browser + page pairs — an alternative to pool mode for
-workloads that want cookies/localStorage/navigation state to carry over
-between calls (login sessions, authenticated crawls) instead of a fresh
-page opened and closed per scrape. Full details, decorators, auto-recreate
-semantics, and a pool → controller migration table live in
+Full details, decorators, auto-recreate semantics, and a pool ↔ controller
+migration table live in
 [Named Browsers & Pages](docs/features/named-browsers.md).
 
+### Option B: Browser Pool
+
+A pool of browsers; each `scrape()`/`scrapeAll()`/`evaluateWebsite()` call
+opens a fresh page and closes it when done. No persistent navigation state
+between calls.
+
 ```typescript
-import { Module, Injectable } from '@nestjs/common';
-import {
-  BrowserActionModule,
-  InjectPageController,
-  PageController,
-} from '@hanivanrizky/nestjs-browser-action';
+import { Module } from '@nestjs/common';
+import { BrowserActionModule } from '@hanivanrizky/nestjs-browser-action';
 
 @Module({
   imports: [
-    BrowserActionModule.forRoot({ name: 'stealth', cloak: { headless: true } }),
-    BrowserActionModule.forFeature(['login', 'search'], 'stealth'),
+    BrowserActionModule.forRoot({
+      pool: { min: 2, max: 10 },
+      cookies: { enabled: true, cookiesDir: './cookies' },
+      logLevel: 'log',
+    }),
   ],
 })
 export class AppModule {}
+```
+
+**With async config:**
+
+```typescript
+import { Module } from '@nestjs/common';
+import { BrowserActionModule } from '@hanivanrizky/nestjs-browser-action';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot(),
+    BrowserActionModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        pool: {
+          min: configService.get<number>('POOL_MIN', 2),
+          max: configService.get<number>('POOL_MAX', 10),
+        },
+        cloak: {
+          proxy: { server: configService.get<string>('PROXY_URL', '') },
+        },
+        logLevel: configService.get<string>('LOG_LEVEL', 'log'),
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+**Inject the service:**
+
+```typescript
+import { Injectable } from '@nestjs/common';
+import { BrowserActionService } from '@hanivanrizky/nestjs-browser-action';
 
 @Injectable()
-export class MyService {
-  constructor(
-    @InjectPageController('login', 'stealth')
-    private readonly login: PageController,
-  ) {}
+export class YourService {
+  constructor(private readonly browserAction: BrowserActionService) {}
 
-  async run() {
-    return this.login.scrape('https://example.com', { title: 'h1' });
+  async scrapeProducts() {
+    const result = await this.browserAction.evaluateWebsite({
+      url: 'https://www.scrapingcourse.com/ecommerce/',
+      patterns: [
+        {
+          key: 'container',
+          patternType: 'css',
+          returnType: 'text',
+          patterns: ['.product'],
+          meta: { isContainer: true },
+        },
+        {
+          key: 'name',
+          patternType: 'css',
+          returnType: 'text',
+          patterns: ['h2.woocommerce-loop-product__title'],
+          pipes: { trim: true },
+        },
+        {
+          key: 'price',
+          patternType: 'css',
+          returnType: 'text',
+          patterns: ['.price'],
+          pipes: { trim: true },
+        },
+      ],
+    });
+
+    return result.results;
   }
 }
 ```
+
+> `BrowserActionModule.forRoot()`/`forRootAsync()` without a `name` gives
+> you pool mode (`BrowserActionService`); pass `name` for the named-browser
+> mode shown in Option A. See the
+> [migration table](docs/features/named-browsers.md#migration-pool-method--controller-method)
+> if you're moving code between the two.
 
 ## Documentation
 
@@ -366,7 +437,7 @@ pnpm format
 
 ## Acknowledgments
 
-The [Named Browsers & Pages](#named-browsers--pages-v022) DI pattern
+The [Named Browsers & Pages](#option-a-named-browser--pages) DI pattern
 (`forRoot({ name })` + `forFeature(pages, name)` +
 `@InjectBrowser`/`@InjectPage`/`@InjectPageController`) was inspired by
 [oblakstudio/nestjs-puppeteer](https://github.com/oblakstudio/nestjs-puppeteer).

@@ -54,6 +54,19 @@ export interface RemoteOptions {
   retryDelay?: number;
 }
 
+/**
+ * Named-browser-mode liveness check. Pings the browser on an interval via
+ * `browser.version()`; on failure, logs a warning only — does not
+ * proactively relaunch. Existing reactive recovery (`ensureAlive()` on the
+ * next call) still handles restoration unchanged.
+ */
+export interface HealthCheckOptions {
+  /**
+   * Ping interval in milliseconds.
+   */
+  intervalMs: number;
+}
+
 export interface BrowserActionOptions {
   /**
    * Raw puppeteer-core launch options, forwarded to CloakBrowser's
@@ -114,4 +127,20 @@ export interface BrowserActionOptions {
    * calls throws.
    */
   name?: string;
+
+  /**
+   * Named-browser-mode only. Periodically pings the browser via
+   * `browser.version()` and logs a warning on failure. Off by default — no
+   * timer runs unless this is set.
+   */
+  healthCheck?: HealthCheckOptions;
+
+  /**
+   * Named-browser-mode only. Warns (does not throw) if `forFeature`
+   * registrations exceed this many pages on this named browser. A
+   * registration-time sanity check, not a runtime cap — pages are fixed at
+   * DI-build time in named-browser mode.
+   * @default 5
+   */
+  maxPages?: number;
 }

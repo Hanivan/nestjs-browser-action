@@ -18,6 +18,7 @@ import { CookieService } from './services/cookie.service';
 import { CleansingService } from './services/cleansing.service';
 import { NamedBrowserShutdown } from './services/named-browser-shutdown';
 import { BrowserHolder } from './services/browser-holder';
+import { BrowserHealthCheck } from './services/browser-health-check';
 import { BROWSER_ACTION_OPTIONS } from './constants';
 import {
   claimBrowserName,
@@ -26,6 +27,7 @@ import {
   getPageToken,
   getPageControllerToken,
   getNamedOptionsToken,
+  registerPages,
 } from './common/tokens';
 import {
   launchLocalBrowser,
@@ -44,7 +46,10 @@ import {
 import { PageSession } from './services/page-session';
 import { PageController } from './services/page-controller';
 import type { BrowserActionOptions } from './interfaces/browser-action-options';
-import { DEFAULT_DEBUG_LOG_MAX_LENGTH } from './constants/browser-action.constants';
+import {
+  DEFAULT_DEBUG_LOG_MAX_LENGTH,
+  DEFAULT_MAX_PAGES_WARNING,
+} from './constants/browser-action.constants';
 
 const POOL_MODE_SERVICES = [
   BrowserPoolService,
@@ -76,16 +81,63 @@ async function launchNamedBrowser(
     'BrowserActionModule',
     resolveLogLevel(options.logLevel),
   );
-  return options.remote
-    ? await connectRemoteBrowser(options.remote, logger)
-    : await launchLocalBrowser(options, undefined, logger);
+  if (options.remote) {
+    return await connectRemoteBrowser(options.remote, logger);
+  }
+
+  const browser = await launchLocalBrowser(options, undefined, logger);
+  logger.warn(
+    'Call app.enableShutdownHooks() in main.ts to ensure graceful browser cleanup on Ctrl+C',
+  );
+  const childProcess = browser.process();
+  if (childProcess) {
+    process.once('exit', () => {
+      if (!childProcess.killed) childProcess.kill();
+    });
+  }
+  return browser;
 }
+
+/**
+ * Test-only alias — `launchNamedBrowser` itself stays unexported (internal
+ * wiring for `forNamedBrowser`/`forNamedBrowserAsync`); this lets
+ * browser-action.module.spec.ts drive it directly without going through
+ * Nest's DI container.
+ */
+export const __test__launchNamedBrowser = launchNamedBrowser;
 
 function namedBrowserHolderProvider(name: string): Provider {
   return {
     provide: getBrowserHolderToken(name),
     useFactory: (browser: Browser): BrowserHolder => new BrowserHolder(browser),
     inject: [getBrowserToken(name)],
+  };
+}
+
+function getHealthCheckToken(name: string): string {
+  return `${getBrowserToken(name)}HealthCheck`;
+}
+
+function namedBrowserHealthCheckProvider(
+  name: string,
+  optionsToken: string,
+): Provider {
+  return {
+    provide: getHealthCheckToken(name),
+    useFactory: (
+      holder: BrowserHolder,
+      options: BrowserActionModuleOptions,
+    ): BrowserHealthCheck | undefined => {
+      if (!options.healthCheck) return undefined;
+      const logger = new LoggerWithLevel(
+        'BrowserActionModule',
+        resolveLogLevel(options.logLevel),
+      );
+      const check = new BrowserHealthCheck(name, holder, logger);
+      check.start(options.healthCheck.intervalMs);
+      return check;
+    },
+    inject: [getBrowserHolderToken(name), optionsToken],
   };
 }
 
@@ -109,8 +161,8 @@ export class BrowserActionModule {
   }
 
   /**
-   * Note: pool mode (no `name`) is deprecated; pass `name` to register a
-   * named browser instead. Removal targeted v1.0.
+   * Pool mode (no `name`) and named-browser mode (with `name`) are both
+   * fully supported. Pass `name` to register a named browser instead.
    */
   static forRoot(options: BrowserActionModuleOptions): DynamicModule {
     if (options.name) return this.forNamedBrowser(options);
@@ -143,11 +195,19 @@ export class BrowserActionModule {
       useFactory: (): Promise<Browser> => launchNamedBrowser(options),
     };
     const holderProvider = namedBrowserHolderProvider(name);
+    const optionsToken = getNamedOptionsToken(name);
+    const healthCheckProvider = namedBrowserHealthCheckProvider(
+      name,
+      optionsToken,
+    );
     const shutdownProvider: Provider = {
       provide: `${getBrowserToken(name)}Shutdown`,
-      useFactory: (holder: BrowserHolder): NamedBrowserShutdown =>
-        new NamedBrowserShutdown(name, holder, !!options.remote),
-      inject: [getBrowserHolderToken(name)],
+      useFactory: (
+        holder: BrowserHolder,
+        healthCheck?: BrowserHealthCheck,
+      ): NamedBrowserShutdown =>
+        new NamedBrowserShutdown(name, holder, !!options.remote, healthCheck),
+      inject: [getBrowserHolderToken(name), getHealthCheckToken(name)],
     };
 
     return {
@@ -157,6 +217,7 @@ export class BrowserActionModule {
         optionsProvider,
         browserProvider,
         holderProvider,
+        healthCheckProvider,
         shutdownProvider,
       ],
       exports: [browserProvider, holderProvider, optionsProvider],
@@ -164,8 +225,8 @@ export class BrowserActionModule {
   }
 
   /**
-   * Note: pool mode (no `name`) is deprecated; pass `name` to register a
-   * named browser instead. Removal targeted v1.0.
+   * Pool mode (no `name`) and named-browser mode (with `name`) are both
+   * fully supported. Pass `name` to register a named browser instead.
    */
   static forRootAsync(options: BrowserActionAsyncModuleOptions): DynamicModule {
     if (options.name) return this.forNamedBrowserAsync(options);
@@ -209,14 +270,23 @@ export class BrowserActionModule {
       inject: [optionsToken],
     };
     const holderProvider = namedBrowserHolderProvider(name);
+    const healthCheckProvider = namedBrowserHealthCheckProvider(
+      name,
+      optionsToken,
+    );
     const shutdownProvider: Provider = {
       provide: `${getBrowserToken(name)}Shutdown`,
       useFactory: (
         holder: BrowserHolder,
         resolved: BrowserActionModuleOptions,
+        healthCheck?: BrowserHealthCheck,
       ): NamedBrowserShutdown =>
-        new NamedBrowserShutdown(name, holder, !!resolved.remote),
-      inject: [getBrowserHolderToken(name), optionsToken],
+        new NamedBrowserShutdown(name, holder, !!resolved.remote, healthCheck),
+      inject: [
+        getBrowserHolderToken(name),
+        optionsToken,
+        getHealthCheckToken(name),
+      ],
     };
 
     return {
@@ -227,6 +297,7 @@ export class BrowserActionModule {
         optionsProvider,
         browserProvider,
         holderProvider,
+        healthCheckProvider,
         shutdownProvider,
       ],
       exports: [browserProvider, holderProvider, optionsProvider],
@@ -300,7 +371,31 @@ export class BrowserActionModule {
       return [pageProvider, controllerProvider];
     });
 
-    return { module: BrowserActionModule, providers, exports: providers };
+    const pageCountGuardProvider: Provider = {
+      provide: `${getBrowserToken(browserName)}PageCountGuard_${pages.join(',')}`,
+      useFactory: (options: BrowserActionModuleOptions): void => {
+        const total = registerPages(browserName, pages.length);
+        const max = options.maxPages ?? DEFAULT_MAX_PAGES_WARNING;
+        if (total > max) {
+          const logger = new LoggerWithLevel(
+            'BrowserActionModule',
+            resolveLogLevel(options.logLevel),
+          );
+          logger.warn(
+            `Named browser "${browserName}" has ${total} registered pages, ` +
+              `exceeding the configured maxPages (${max}). This is a sanity ` +
+              `warning, not an enforced limit — review your forFeature() calls.`,
+          );
+        }
+      },
+      inject: [getNamedOptionsToken(browserName)],
+    };
+
+    return {
+      module: BrowserActionModule,
+      providers: [...providers, pageCountGuardProvider],
+      exports: providers,
+    };
   }
 
   async onModuleDestroy() {
