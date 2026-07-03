@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.24.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.23.0...v0.24.0) (2026-07-03)
+
+
+### Features
+
+* add extractPatterns workflow action ([a951c4b](https://github.com/Hanivan/nestjs-browser-action/commit/a951c4ba52004886a5c745b925b167dfb5f389e3))
+
 # [0.23.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.22.0...v0.23.0) (2026-07-03)
 
 
