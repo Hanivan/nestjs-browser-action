@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.25.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.24.0...v0.25.0) (2026-09-20)
+
+
+### Features
+
+* **pipes:** add reverseOrder param to media-filter pipe ([0b405b3](https://github.com/Hanivan/nestjs-browser-action/commit/0b405b3e8fd05ba057d7dcd2fee63375d4479dca))
+
 # [0.24.0](https://github.com/Hanivan/nestjs-browser-action/compare/v0.23.0...v0.24.0) (2026-07-03)
 
 
