@@ -273,7 +273,7 @@ Alternative fallback pipe — executes fallback pipes if primary result is empty
 | `regex-replace--page` | Regex replace (page context) |
 | `regex-replace--url` | Regex replace (URL context) |
 | `extract-url-params` | Extract URL query params |
-| `media-filter` | Filter media URLs |
+| `media-filter` | Filter media URLs (drop `data:image/gif` tokens; set `reverseOrder: true` to reverse the kept tokens) |
 | `query-append` | Append query string params |
 | `json-path` | JSONPath extraction |
 | `query-remover` | Remove query params |
@@ -299,6 +299,7 @@ Alternative fallback pipe — executes fallback pipes if primary result is empty
   primaryPipes?: object[];    // ALT_FLAG
   fallbackPipes?: object[];   // ALT_FLAG
   fallbackOn?: string;        // ALT_FLAG
+  reverseOrder?: boolean;     // MEDIA_FILTER — reverse filtered token order
   [key: string]: unknown;     // any pipe-specific field
 }
 ```
