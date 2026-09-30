@@ -20,6 +20,8 @@ EXAMPLES=(
   "pipes-example.ts"
   "workflow-example.ts"
   "ghost-cursor-example.ts"
+  "obscura-example.ts"
+  "backend-compare-example.ts"
 )
 
 run_example() {

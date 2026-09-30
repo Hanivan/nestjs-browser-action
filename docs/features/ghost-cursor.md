@@ -21,7 +21,8 @@ Cursor is per page: on a `PageController`, successive workflows continue from th
 ```
 
 - Interstitial (`Just a moment...`): waits 5 s for auto-pass, else clicks the checkbox; pass = title changes.
-- Turnstile widget (`.cf-turnstile`): waits 3 s, else clicks the checkbox if token empty; pass = token filled.
+- Checkbox location: pierces Cloudflare's cross-origin iframe (closed shadow roots) over CDP to find the real `Verify you are human` checkbox and ghost-clicks its center. Falls back to the +30px guess when the frame has not rendered or the browser lacks the CDP methods (e.g. Obscura has no `DOM.getFrameOwner`).
+- Turnstile widget (`.cf-turnstile`, or a JS-rendered widget found by its `cf-chl-widget-*_response` input): waits 3 s, then ghost-clicks the checkbox if the token is still empty. Pass = token filled.
 - `context[id]` = `'passed' | 'failed' | 'none'`. Never throws on failure.
 
 ## Example: CF interstitial (lkmn.link)

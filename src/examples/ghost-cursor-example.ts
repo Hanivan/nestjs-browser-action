@@ -70,45 +70,28 @@ async function checkboxes(service: BrowserActionService) {
   console.log('Checkboxes:', JSON.stringify(result.data));
 }
 
-// Example 3: Turnstile widget without `.cf-turnstile` (JS-rendered) — click it
-// by hand via `offset`. Managed mode often auto-passes; clicking a passed
-// widget is harmless. Does not submit the form.
-async function turnstileOffset(service: BrowserActionService) {
-  const widget = '.waitlist-section__turnstile > div';
-  const token = '[name="cfTurnstileResponse"]';
+// Example 3: JS-rendered Turnstile (no `.cf-turnstile` wrapper) — solveChallenge
+// finds it by its response input and ghost-clicks the checkbox if managed mode
+// doesn't auto-pass. Does not submit the form.
+async function turnstileWidget(service: BrowserActionService) {
   const workflow: WorkflowDefinition = {
     version: '1.0',
     cursor: { type: 'ghost', debug: !headless },
     actions: [
-      { action: 'waitFor', target: { type: 'css', value: widget } },
-      { action: 'wait', value: 3000 },
       {
-        action: 'click',
-        target: { type: 'css', value: widget },
-        options: { offset: { x: 30, y: 'center' } },
+        action: 'waitFor',
+        target: { type: 'css', value: '[name="cfTurnstileResponse"]' },
       },
-      {
-        id: 'token',
-        action: 'evaluate',
-        value: `() => new Promise((resolve) => {
-          const end = Date.now() + 20000;
-          const tick = () => {
-            const v = document.querySelector('${token}')?.value;
-            if (v || Date.now() > end) return resolve(!!v);
-            setTimeout(tick, 250);
-          };
-          tick();
-        })`,
-      },
+      { id: 'cf', action: 'solveChallenge' },
     ],
   };
 
-  const result = await service.scrapeWithWorkflow<{ token: boolean }>(
+  const result = await service.scrapeWithWorkflow<{ cf: string }>(
     'https://newda.linkeun.com/',
     workflow,
   );
 
-  console.log('Turnstile via offset, token filled:', result.data.token);
+  console.log('Turnstile widget:', result.data.cf);
 }
 
 if (require.main === module) {
@@ -120,7 +103,7 @@ if (require.main === module) {
     try {
       await cfInterstitial(service);
       await checkboxes(service);
-      await turnstileOffset(service);
+      await turnstileWidget(service);
     } finally {
       await app.close();
     }

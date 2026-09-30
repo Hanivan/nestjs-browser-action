@@ -1,9 +1,13 @@
-import { Injectable, Scope } from '@nestjs/common';
-import type { Browser, Page } from 'puppeteer-core';
+import { Inject, Injectable, Scope } from '@nestjs/common';
+import type { Browser, BrowserContext, Page } from 'puppeteer-core';
 import { BrowserManagerService } from './browser-manager.service';
 import type { LogLevel } from '@nestjs/common';
 import { LoggerWithLevel } from '../utils/logger.util';
-import type { CloakOptions } from '../interfaces/browser-action-options';
+import type {
+  BrowserActionOptions,
+  CloakOptions,
+} from '../interfaces/browser-action-options';
+import { BROWSER_ACTION_OPTIONS } from '../constants/browser-action.constants';
 
 export interface NavigateOptions {
   waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2';
@@ -20,10 +24,15 @@ export class PageService {
   private readonly logger: LoggerWithLevel;
   private currentBrowser?: Browser;
   private currentPage?: Page;
+  private currentContext?: BrowserContext;
   private dedicated = false;
   private intercepting = false;
 
-  constructor(private readonly browserManager: BrowserManagerService) {
+  constructor(
+    private readonly browserManager: BrowserManagerService,
+    @Inject(BROWSER_ACTION_OPTIONS)
+    private readonly options: BrowserActionOptions,
+  ) {
     this.logger = new LoggerWithLevel(
       PageService.name,
       this.browserManager.getLogLevel(),
@@ -46,7 +55,15 @@ export class PageService {
       this.dedicated = false;
     }
     try {
-      this.currentPage = await this.currentBrowser.newPage();
+      if (this.options.multiContext) {
+        // Isolated cookies/storage per call, even when calls share a browser.
+        this.currentContext = await this.currentBrowser.createBrowserContext(
+          this.options.contextOptions,
+        );
+        this.currentPage = await this.currentContext.newPage();
+      } else {
+        this.currentPage = await this.currentBrowser.newPage();
+      }
     } catch (err) {
       // newPage() failed — release the browser we just acquired so it goes back to the pool
       await this.closePage();
@@ -129,6 +146,14 @@ export class PageService {
         /* page already closed externally */
       }
       this.currentPage = undefined;
+    }
+    if (this.currentContext) {
+      try {
+        await this.currentContext.close();
+      } catch {
+        /* context already gone with its browser */
+      }
+      this.currentContext = undefined;
     }
     if (this.currentBrowser) {
       if (this.dedicated) {

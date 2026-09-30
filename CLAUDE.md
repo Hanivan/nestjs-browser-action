@@ -43,7 +43,7 @@ pnpm build                    # nest build → dist/
 pnpm typecheck                # tsc --noEmit (zero errors expected)
 pnpm format                   # prettier --write src/ test/
 pnpm lint                     # eslint --fix (zero errors expected; warnings OK in src/)
-pnpm test                     # jest (545 tests, 56 suites)
+pnpm test                     # jest (553 tests, 56 suites)
 pnpm test:cov                 # jest --coverage
 pnpm test:e2e                 # jest --config ./test/jest-e2e.json
 pnpm release                  # release-it (bumps version, changelog, git tag)

@@ -283,7 +283,10 @@ interface BrowserActionOptions {
     strategy?: 'round-robin' | 'least-recently-used'; // Pool selection (default: 'round-robin')
   };
 
-  // Multi-context support
+  // Pool mode only: open each call's page in a fresh incognito browser context
+  // (browser.createBrowserContext(contextOptions)), closed when the call ends.
+  // Isolates cookies/storage even when concurrent calls share one pooled browser.
+  // contextOptions (e.g. proxyServer) only apply when this is true.
   multiContext?: boolean;
 
   // Logging. 'debug' emits [POOL]/[MANAGER]/[PAGE] tags tracing pool + page lifecycle.
