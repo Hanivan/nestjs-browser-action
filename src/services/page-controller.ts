@@ -537,6 +537,7 @@ export class PageController {
             action,
             context,
             debugLogMaxLength,
+            workflow.cursor,
           );
         } catch (error) {
           const errorMessage =

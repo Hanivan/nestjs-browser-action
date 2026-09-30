@@ -47,7 +47,8 @@ export type ActionType =
   | 'reload' // Reload the page
   | 'scrapeContainer' // Scrape container fields
   | 'extractPagination' // Extract pagination links
-  | 'extractPatterns'; // Extract via evaluateWebsite-style PatternField[]
+  | 'extractPatterns' // Extract via evaluateWebsite-style PatternField[]
+  | 'solveChallenge'; // Cloudflare Turnstile / interstitial (requires cursor)
 
 /**
  * Condition for conditional action execution
@@ -65,6 +66,20 @@ export type ErrorStrategy = 'continue' | 'fail' | 'skip';
 /**
  * Options for action execution
  */
+/**
+ * Human-like mouse via ghost-cursor (optional dependency).
+ * `debug` shows the cursor dot (headed runs).
+ */
+export type CursorConfig =
+  | 'ghost'
+  | { type: 'ghost'; moveSpeed?: number; debug?: boolean };
+
+/** Point relative to the element bounding box top-left. */
+export interface ActionOffset {
+  x: number | 'center';
+  y: number | 'center';
+}
+
 export interface ActionOptions {
   timeout?: number;
   delay?: number; // Delay between keystrokes (ms)
@@ -91,6 +106,8 @@ export interface ActionOptions {
   // extractPatterns options
   patterns?: PatternField[];
   patternPagination?: PaginationOptions;
+  // click/hover with cursor: point relative to element box
+  offset?: ActionOffset;
 }
 
 /**
@@ -138,6 +155,11 @@ export interface WorkflowDefinition {
    * Scripts (and xhr/fetch) stay enabled so JS-driven pages still run.
    */
   interceptResource?: boolean;
+  /**
+   * Human-like mouse for click/hover via ghost-cursor (optional dependency).
+   * Required by `offset` and `solveChallenge`.
+   */
+  cursor?: CursorConfig;
 }
 
 /**

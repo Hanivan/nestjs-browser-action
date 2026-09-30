@@ -93,6 +93,27 @@ describe('BrowserActionService', () => {
     expect(result).toEqual({ title: 'test content' });
   });
 
+  it('passes workflow.cursor to WorkflowOperator and warns on humanize', async () => {
+    const exec = jest
+      .spyOn(service['workflow'], 'executeAction')
+      .mockResolvedValue(undefined);
+    const warn = jest.spyOn(service['logger'], 'warn');
+    await service.scrapeWithWorkflow('https://example.com', {
+      version: '1',
+      cursor: 'ghost',
+      cloak: { humanize: true },
+      actions: [{ action: 'wait', value: 1 }],
+    });
+    expect(exec).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      expect.any(Number),
+      'ghost',
+    );
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('humanize'));
+  });
+
   describe('Cookie workflow actions', () => {
     let mockCookieService: any;
 

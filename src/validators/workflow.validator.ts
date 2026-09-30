@@ -54,6 +54,7 @@ const VALID_ACTIONS = new Set<ActionType>([
   'scrapeContainer',
   'extractPagination',
   'extractPatterns',
+  'solveChallenge',
 ]);
 
 /** Default limits */
@@ -97,6 +98,7 @@ function validateAction(
   action: WorkflowAction,
   index: number,
   opts: Required<WorkflowValidationOptions>,
+  hasCursor: boolean,
 ): void {
   const prefix = `actions[${index}]`;
 
@@ -187,6 +189,38 @@ function validateAction(
     if (action.action === 'cleanse' && o.pipes?.custom) {
       validatePipeConfigs(o.pipes.custom, `${prefix}.options.pipes.custom`);
     }
+
+    if (o.offset !== undefined) {
+      if (!hasCursor) {
+        throw new WorkflowValidationError(
+          `${prefix}.options.offset`,
+          action.action,
+          'offset requires workflow.cursor',
+        );
+      }
+      const ok = (v: unknown) =>
+        v === 'center' || (typeof v === 'number' && Number.isFinite(v));
+      if (
+        typeof o.offset !== 'object' ||
+        o.offset === null ||
+        !ok(o.offset.x) ||
+        !ok(o.offset.y)
+      ) {
+        throw new WorkflowValidationError(
+          `${prefix}.options.offset`,
+          action.action,
+          "offset.x and offset.y must be finite numbers or 'center'",
+        );
+      }
+    }
+  }
+
+  if (action.action === 'solveChallenge' && !hasCursor) {
+    throw new WorkflowValidationError(
+      prefix,
+      action.action,
+      'solveChallenge requires workflow.cursor',
+    );
   }
 
   // 3. Value validation per action type
@@ -418,9 +452,29 @@ export function validateWorkflow(
     );
   }
 
+  // 1b. Cursor config
+  if (workflow.cursor !== undefined) {
+    const c = workflow.cursor;
+    const valid =
+      c === 'ghost' ||
+      (typeof c === 'object' &&
+        c !== null &&
+        c.type === 'ghost' &&
+        (c.moveSpeed === undefined ||
+          (typeof c.moveSpeed === 'number' && c.moveSpeed > 0)));
+    if (!valid) {
+      throw new WorkflowValidationError(
+        'cursor',
+        undefined,
+        'Invalid cursor: expected "ghost" or { type: "ghost", moveSpeed?: >0, debug?: boolean }',
+      );
+    }
+  }
+
   // 2. Validate each action
+  const hasCursor = workflow.cursor !== undefined;
   for (let i = 0; i < workflow.actions.length; i++) {
-    validateAction(workflow.actions[i], i, opts);
+    validateAction(workflow.actions[i], i, opts, hasCursor);
   }
 
   // 3. Cloak override policy

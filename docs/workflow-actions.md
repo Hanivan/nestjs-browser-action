@@ -40,6 +40,7 @@ Key points:
 | `scrapeContainer` | Extract structured list with optional pagination | Data |
 | `extractPagination` | Extract pagination links from the page | Data |
 | `extractPatterns` | Extract via evaluateWebsite-style PatternField[] (flat or container, with optional pagination) | Data |
+| `solveChallenge` | Solve a Cloudflare Turnstile challenge (interstitial or widget) | Challenge |
 | `saveCookies` | Save cookies to file | Cookie |
 | `loadCookies` | Load cookies from file | Cookie |
 | `clearCookies` | Clear all cookies | Cookie |
@@ -164,6 +165,7 @@ Click on an element.
 - `options.scrollTo` (boolean): Scroll element into view before clicking
 - `options.waitForNavigation` (boolean): Wait for navigation after click
 - `options.navigationTimeout` (number): Navigation timeout in milliseconds
+- `options.offset` (`{ x: number | 'center', y: number | 'center' }`): Point relative to the element box's top-left; requires workflow `cursor` — see [Ghost Cursor](../features/ghost-cursor.md)
 
 **Example:**
 ```typescript
@@ -280,6 +282,7 @@ Hover over an element (triggers CSS `:hover` states, dropdowns, tooltips).
 
 **Parameters:**
 - `target` (ActionTarget): Element to hover over
+- `options.offset` (`{ x: number | 'center', y: number | 'center' }`): Point relative to the element box's top-left; requires workflow `cursor` — see [Ghost Cursor](../features/ghost-cursor.md)
 
 **Example:**
 ```typescript
@@ -842,6 +845,34 @@ If no pattern has `meta.isContainer: true`, extraction is flat (one object, CSS-
 
 ---
 
+## Challenge Actions
+
+### solveChallenge
+
+Solve a Cloudflare Turnstile challenge (interstitial or widget) using the workflow's ghost cursor. Requires workflow `cursor: 'ghost'`. See [Ghost Cursor](../features/ghost-cursor.md) for full details.
+
+```typescript
+{
+  action: 'solveChallenge',
+  id: 'cf',
+  options: { timeout: 20000 },
+}
+```
+
+**Parameters:**
+- `id` (string, optional): Store the result in context
+- `options.timeout` (number): Max wait for a pass signal after auto-pass window / click (default: 20000ms)
+
+**Result stored in context:** `context[id]` → `'passed' | 'failed' | 'none'`. Never throws on challenge failure.
+
+**Example:**
+```typescript
+{ action: 'solveChallenge' as const, id: 'cf' },
+{ action: 'evaluate' as const, id: 'title', value: 'document.title' },
+```
+
+---
+
 ## Cookie Actions
 
 ### saveCookies
@@ -1015,6 +1046,7 @@ interface ActionOptions {
   as?: 'text' | 'html' | 'outerHtml' | 'attribute'; // Extract mode (default: 'text')
   attribute?: string;            // Attribute name when as: 'attribute'
   waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2'; // navigate / reload
+  offset?: { x: number | 'center'; y: number | 'center' }; // click/hover point relative to element box; requires workflow cursor
   // scrapeContainer options
   container?: string;            // CSS/XPath container selector
   fields?: Record<string, FieldDescriptor>; // Field extraction rules
@@ -1222,4 +1254,5 @@ const workflow = {
 
 - [Workflow Documentation](../methods/workflow.md) - Detailed workflow guide
 - [Cookie Management](../features/cookies.md) - Cookie persistence
+- [Ghost Cursor](../features/ghost-cursor.md) - Human-like `click`/`hover` via `offset`, workflow-level `cursor`, and `solveChallenge`
 - [Pipe System](../features/pipes.md) - Data transformation

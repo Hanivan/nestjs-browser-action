@@ -20,6 +20,7 @@ import type {
   WorkflowDefinition,
   WorkflowAction,
   VariableContext,
+  CursorConfig,
 } from '../interfaces/workflow-options';
 import {
   SelectorMap,
@@ -665,6 +666,15 @@ export class BrowserActionService {
     // Security: validate workflow before execution (fail fast)
     validateWorkflow(workflow);
 
+    if (
+      workflow.cursor &&
+      (workflow.cloak?.humanize ?? this.moduleOptions?.cloak?.humanize)
+    ) {
+      this.logger.warn(
+        'workflow.cursor with cloak.humanize: both drive the mouse — disable humanize',
+      );
+    }
+
     this.activeDebugLogMaxLength =
       workflow.debugLogMaxLength ??
       this.moduleOptions?.debugLogMaxLength ??
@@ -700,6 +710,7 @@ export class BrowserActionService {
             action,
             context,
             this.activeDebugLogMaxLength,
+            workflow.cursor,
           );
         } catch (error) {
           const errorMessage =
@@ -785,6 +796,7 @@ export class BrowserActionService {
     page: Page,
     action: WorkflowAction,
     context: VariableContext,
+    cursor?: CursorConfig,
   ): Promise<void> {
     if (action.condition) {
       const shouldExecute = await this.evaluateCondition(
@@ -798,6 +810,7 @@ export class BrowserActionService {
       { ...action, condition: undefined },
       context,
       this.activeDebugLogMaxLength,
+      cursor,
     );
   }
 

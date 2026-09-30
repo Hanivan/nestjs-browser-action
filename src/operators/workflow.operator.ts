@@ -10,11 +10,14 @@ import { ExtractionOperator } from './extraction.operator';
 import { ContainerOperator } from './container.operator';
 import { PaginationOperator } from './pagination.operator';
 import { convertPatternsToDescriptor } from '../utils/pattern-converter.util';
+import { getCursor, offsetPoint } from '../utils/ghost-cursor';
+import { solveChallenge } from '../utils/challenge';
 import type {
   WorkflowAction,
   ActionTarget,
   ActionOptions,
   VariableContext,
+  CursorConfig,
 } from '../interfaces/workflow-options';
 import type {
   ContainerDescriptor,
@@ -51,6 +54,7 @@ export class WorkflowOperator {
     action: WorkflowAction,
     context: VariableContext,
     debugLogMaxLength = 0,
+    cursor?: CursorConfig,
   ): Promise<void> {
     // Check condition
     if (action.condition) {
@@ -89,6 +93,7 @@ export class WorkflowOperator {
           value,
           context,
           debugLogMaxLength,
+          cursor,
         );
         return;
       } catch (err) {
@@ -110,6 +115,7 @@ export class WorkflowOperator {
     value: string,
     context: VariableContext,
     debugLogMaxLength: number,
+    cursor?: CursorConfig,
   ): Promise<void> {
     switch (action.action) {
       case 'navigate': {
@@ -171,6 +177,7 @@ export class WorkflowOperator {
           action.target!,
           action.options,
           debugLogMaxLength,
+          cursor,
         );
         break;
 
@@ -420,6 +427,7 @@ export class WorkflowOperator {
           action.target!,
           action.options,
           debugLogMaxLength,
+          cursor,
         );
         break;
 
@@ -698,6 +706,20 @@ export class WorkflowOperator {
         break;
       }
 
+      case 'solveChallenge': {
+        if (!cursor) throw new Error('solveChallenge requires workflow.cursor');
+        const result = await solveChallenge(
+          page,
+          await getCursor(page, cursor),
+          action.options?.timeout,
+        );
+        this.logger.debug(
+          truncateLog(debugLogMaxLength, `  solveChallenge: ${result}`),
+        );
+        if (action.id) context[action.id] = result;
+        break;
+      }
+
       default: {
         const exhaustiveCheck: never = action.action;
         throw new Error(`Unknown action type: ${String(exhaustiveCheck)}`);
@@ -863,6 +885,7 @@ export class WorkflowOperator {
     target: ActionTarget,
     options?: WorkflowAction['options'],
     debugLogMaxLength = 0,
+    cursor?: CursorConfig,
   ): Promise<void> {
     const element = await this.findElement(page, target, debugLogMaxLength);
     if (!element) {
@@ -872,7 +895,11 @@ export class WorkflowOperator {
     await this.maybeScrollToElement(element, options?.scrollTo);
 
     const elem = element as ElementHandle<Element>;
-    await elem.click();
+    if (cursor) {
+      await this.cursorAct(page, elem, target, options, cursor, 'click');
+    } else {
+      await elem.click();
+    }
 
     if (options?.waitForNavigation) {
       await page.waitForNavigation({
@@ -967,6 +994,7 @@ export class WorkflowOperator {
     target: ActionTarget,
     options?: WorkflowAction['options'],
     debugLogMaxLength = 0,
+    cursor?: CursorConfig,
   ): Promise<void> {
     const element = await this.findElement(page, target, debugLogMaxLength);
     if (!element) {
@@ -974,7 +1002,37 @@ export class WorkflowOperator {
     }
     await this.maybeScrollToElement(element, options?.scrollTo);
     const elem = element as ElementHandle<Element>;
-    await elem.hover();
+    if (cursor) {
+      await this.cursorAct(page, elem, target, options, cursor, 'hover');
+    } else {
+      await elem.hover();
+    }
+  }
+
+  /** Ghost-cursor click/hover; `offset` targets a point relative to the element box. */
+  private async cursorAct(
+    page: Page,
+    elem: ElementHandle<Element>,
+    target: ActionTarget,
+    options: WorkflowAction['options'],
+    config: CursorConfig,
+    kind: 'click' | 'hover',
+  ): Promise<void> {
+    const cursor = await getCursor(page, config);
+    // ghost-cursor's own auto-scroll measures the viewport as
+    // document.body.clientHeight, so on pages whose body is taller than the
+    // window it skips below-fold elements and clicks empty space. Scroll
+    // ourselves first (no-op when already visible).
+    await elem.scrollIntoView();
+    if (options?.offset) {
+      const box = await elem.boundingBox();
+      if (!box) throw new Error(`Element not visible: ${target.value}`);
+      await cursor.moveTo(offsetPoint(box, options.offset));
+      if (kind === 'click') await cursor.click();
+      return;
+    }
+    if (kind === 'click') await cursor.click(elem);
+    else await cursor.move(elem);
   }
 
   private async clearElement(

@@ -399,6 +399,7 @@ type ActionType =
   | 'cleanse'            // Cleanse extracted data
   | 'scrapeContainer'    // Extract structured list + pagination
   | 'extractPagination'  // Extract pagination links only
+  | 'solveChallenge'     // Solve Cloudflare Turnstile challenge — see docs/features/ghost-cursor.md
   | 'saveCookies'        // Save cookies to file
   | 'loadCookies'        // Load cookies from file
   | 'clearCookies'       // Clear all cookies
@@ -423,6 +424,7 @@ interface ActionOptions {
   as?: 'text' | 'html' | 'outerHtml' | 'attribute'; // Extract mode (default: 'text')
   attribute?: string;            // Attribute name when as: 'attribute'
   waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2'; // navigate / reload
+  offset?: { x: number | 'center'; y: number | 'center' }; // click/hover point relative to element box; requires cursor — see docs/features/ghost-cursor.md
 }
 ```
 
@@ -450,6 +452,7 @@ interface WorkflowDefinition {
   onError?: WorkflowErrorConfig;
   cloak?: CloakOptions;  // Per-call stealth override (off-pool browser; not in remote mode)
   interceptResource?: boolean;  // Abort css/image/media/font requests; keep js (script/xhr/fetch)
+  cursor?: 'ghost' | { type: 'ghost'; moveSpeed?: number; debug?: boolean }; // Human-like mouse for click/hover — see docs/features/ghost-cursor.md
 }
 ```
 

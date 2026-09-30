@@ -30,7 +30,7 @@ src/
   enums/                       # CleansingType, CleansingProfile, …
   interfaces/                  # CleansingOptions, ScrapeCleansingOptions, WorkflowOptions, …
   types/                       # decode-html.d.ts and other ambient declarations
-examples/                      # runnable usage patterns (not compiled, excluded from tsconfig)
+  examples/                    # runnable usage patterns (excluded from tsconfig + ESLint; run via `pnpm test:examples [n]`)
 docs/features/                 # pipes.md and other feature docs
 test/                          # e2e specs (jest-e2e.json config)
 ```
@@ -43,14 +43,14 @@ pnpm build                    # nest build → dist/
 pnpm typecheck                # tsc --noEmit (zero errors expected)
 pnpm format                   # prettier --write src/ test/
 pnpm lint                     # eslint --fix (zero errors expected; warnings OK in src/)
-pnpm test                     # jest (363 tests, 37 suites)
+pnpm test                     # jest (545 tests, 56 suites)
 pnpm test:cov                 # jest --coverage
 pnpm test:e2e                 # jest --config ./test/jest-e2e.json
 pnpm release                  # release-it (bumps version, changelog, git tag)
 ```
 
 ## Build & Test
-- `pnpm build` compiles to `dist/` via `nest build`; `examples/` is excluded from tsconfig
+- `pnpm build` compiles to `dist/` via `nest build`
 - Jest rootDir is `src/`; test regex `.*\.spec\.ts$`; environment `node`
 - `libxmljs2` is a native addon — rebuild after OS/Node upgrades: `pnpm rebuild libxmljs2`
 - e2e tests live in `test/` with separate `jest-e2e.json` config
@@ -76,6 +76,7 @@ pnpm release                  # release-it (bumps version, changelog, git tag)
 - Module registration: `forRoot(options)` / `forRootAsync(options)` for full DI; `register(options)` for lightweight use
 - **Operators** (`src/operators/*.operator.ts`): stateless-per-call classes (Extraction/Container/Workflow/Pagination/Capture) driving `PageController`/`BrowserActionService`. Do NOT store per-call config (e.g. `debugLogMaxLength`) as mutable constructor/instance state — concurrent calls race on it. Thread it as an explicit call parameter through the method chain instead (default `0` = no-op, e.g. `truncateLog`).
 - **`docs/features/named-browsers.md`** is the source-of-truth doc for the `@InjectBrowser`/`@InjectPage`/`@InjectPageController` DI pattern (`forRoot({ name })` + `forFeature`). When editing decorator docs elsewhere (`docs/api-reference.md`, `docs/methods/*.md`), cross-check signatures against `src/decorators/*.decorator.ts` first — they've drifted out of sync before (found stale zero-arg pool-mode-era examples in two files).
+- **Ghost cursor** (`src/utils/ghost-cursor.ts`): `ghost-cursor` dep, lazy-loaded via `ghost-cursor.loader.ts` (mock that in specs). One cursor per `Page` (WeakMap). `workflow.cursor` is threaded as an explicit `executeAction` param. `solveChallenge` logic in `src/utils/challenge.ts`.
 
 ## Database
 N/A — this is a library with no database dependency.

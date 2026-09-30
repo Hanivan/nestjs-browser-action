@@ -12,6 +12,14 @@ import type {
   WorkflowAction,
 } from '../interfaces/workflow-options';
 import type { PatternField } from '../interfaces/types';
+import { getCursor } from '../utils/ghost-cursor';
+
+jest.mock('../utils/ghost-cursor', () => ({
+  ...jest.requireActual<typeof import('../utils/ghost-cursor')>(
+    '../utils/ghost-cursor',
+  ),
+  getCursor: jest.fn(),
+}));
 
 const logger = new LoggerWithLevel('test', 'error');
 const pipeEngine = new PipeEngine();
@@ -35,17 +43,17 @@ function makePage(overrides: Partial<Page> = {}): jest.Mocked<Page> {
   } as unknown as jest.Mocked<Page>;
 }
 
-describe('WorkflowOperator', () => {
-  const op = new WorkflowOperator(
-    extraction,
-    container,
-    pipeEngine,
-    {} as unknown as CleansingService,
-    logger,
-    () => ({}) as unknown as CookieService,
-    pagination,
-  );
+const op = new WorkflowOperator(
+  extraction,
+  container,
+  pipeEngine,
+  {} as unknown as CleansingService,
+  logger,
+  () => ({}) as unknown as CookieService,
+  pagination,
+);
 
+describe('WorkflowOperator', () => {
   it('executes a wait action via the moved dispatcher', async () => {
     const context: VariableContext = {};
     const page = {} as unknown as Page;
@@ -353,5 +361,141 @@ describe('WorkflowOperator', () => {
       ]);
       expect(context.products_pagination).toEqual({ pages: 2 });
     });
+  });
+});
+
+describe('cursor routing', () => {
+  const cursor = { click: jest.fn(), move: jest.fn(), moveTo: jest.fn() };
+  const makeEl = (box: unknown = { x: 10, y: 20, width: 100, height: 40 }) => ({
+    click: jest.fn(),
+    hover: jest.fn(),
+    scrollIntoView: jest.fn().mockResolvedValue(undefined),
+    boundingBox: jest.fn().mockResolvedValue(box),
+  });
+  const target = { type: 'css' as const, value: '#a' };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (getCursor as jest.Mock).mockResolvedValue(cursor);
+  });
+
+  it('click without cursor uses element.click (unchanged)', async () => {
+    const el = makeEl();
+    await op.executeAction(
+      makePage({ $: jest.fn().mockResolvedValue(el) } as never),
+      { action: 'click', target },
+      {},
+    );
+    expect(el.click).toHaveBeenCalled();
+    expect(getCursor).not.toHaveBeenCalled();
+  });
+
+  it('click with cursor uses cursor.click(element)', async () => {
+    const el = makeEl();
+    await op.executeAction(
+      makePage({ $: jest.fn().mockResolvedValue(el) } as never),
+      { action: 'click', target },
+      {},
+      0,
+      'ghost',
+    );
+    expect(cursor.click).toHaveBeenCalledWith(el);
+    expect(el.click).not.toHaveBeenCalled();
+  });
+
+  // ghost-cursor judges visibility by document.body.clientHeight, which on
+  // tall bodies misses below-fold elements — we must scroll first ourselves.
+  it('click with cursor scrolls element into view before moving', async () => {
+    const el = makeEl();
+    const order: string[] = [];
+    el.scrollIntoView.mockImplementation(async () => {
+      order.push('scrollIntoView');
+    });
+    cursor.click.mockImplementation(async () => {
+      order.push('cursor.click');
+    });
+    await op.executeAction(
+      makePage({ $: jest.fn().mockResolvedValue(el) } as never),
+      { action: 'click', target },
+      {},
+      0,
+      'ghost',
+    );
+    expect(order).toEqual(['scrollIntoView', 'cursor.click']);
+  });
+
+  it('click with offset moves to box + offset then clicks in place', async () => {
+    const el = makeEl();
+    await op.executeAction(
+      makePage({ $: jest.fn().mockResolvedValue(el) } as never),
+      { action: 'click', target, options: { offset: { x: 30, y: 'center' } } },
+      {},
+      0,
+      'ghost',
+    );
+    expect(cursor.moveTo).toHaveBeenCalledWith({ x: 40, y: 40 });
+    expect(cursor.click).toHaveBeenCalledWith();
+  });
+
+  it('click with offset scrolls the element into view before reading its box', async () => {
+    const el = makeEl();
+    const order: string[] = [];
+    el.scrollIntoView.mockImplementation(async () => {
+      order.push('scrollIntoView');
+    });
+    el.boundingBox.mockImplementation(async () => {
+      order.push('boundingBox');
+      return { x: 10, y: 20, width: 100, height: 40 };
+    });
+    await op.executeAction(
+      makePage({ $: jest.fn().mockResolvedValue(el) } as never),
+      { action: 'click', target, options: { offset: { x: 30, y: 'center' } } },
+      {},
+      0,
+      'ghost',
+    );
+    expect(el.scrollIntoView).toHaveBeenCalled();
+    expect(order).toEqual(['scrollIntoView', 'boundingBox']);
+  });
+
+  it('hover with cursor uses cursor.move(element)', async () => {
+    const el = makeEl();
+    await op.executeAction(
+      makePage({ $: jest.fn().mockResolvedValue(el) } as never),
+      { action: 'hover', target },
+      {},
+      0,
+      'ghost',
+    );
+    expect(cursor.move).toHaveBeenCalledWith(el);
+    expect(el.hover).not.toHaveBeenCalled();
+  });
+
+  it('offset on element without bounding box throws clearly', async () => {
+    const el = makeEl(null);
+    await expect(
+      op.executeAction(
+        makePage({ $: jest.fn().mockResolvedValue(el) } as never),
+        { action: 'click', target, options: { offset: { x: 1, y: 1 } } },
+        {},
+        0,
+        'ghost',
+      ),
+    ).rejects.toThrow('Element not visible: #a');
+  });
+
+  it('solveChallenge stores result under id', async () => {
+    const page = makePage({
+      title: jest.fn().mockResolvedValue('Home'),
+    } as never);
+    const context: VariableContext = {};
+    await op.executeAction(
+      page,
+      { action: 'solveChallenge', id: 'cf' },
+      context,
+      0,
+      'ghost',
+    );
+    expect(context.cf).toBe('none');
   });
 });

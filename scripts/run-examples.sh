@@ -19,6 +19,7 @@ EXAMPLES=(
   "pagination-example.ts"
   "pipes-example.ts"
   "workflow-example.ts"
+  "ghost-cursor-example.ts"
 )
 
 run_example() {

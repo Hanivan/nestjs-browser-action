@@ -187,6 +187,7 @@ describe('PageController', () => {
       expect.anything(),
       expect.anything(),
       42,
+      undefined,
     );
   });
 
@@ -205,6 +206,7 @@ describe('PageController', () => {
       expect.anything(),
       expect.anything(),
       9,
+      undefined,
     );
   });
 });

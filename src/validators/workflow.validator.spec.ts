@@ -4,7 +4,10 @@ import {
   WorkflowValidationError,
   WorkflowValidationOptions,
 } from './workflow.validator';
-import { WorkflowDefinition } from '../interfaces/workflow-options';
+import {
+  WorkflowDefinition,
+  WorkflowAction,
+} from '../interfaces/workflow-options';
 
 describe('validateWorkflow', () => {
   const baseWorkflow: WorkflowDefinition = {
@@ -376,6 +379,78 @@ describe('extractPagination action validation', () => {
     expect(() => validateWorkflow(workflow)).toThrow(WorkflowValidationError);
     expect(() => validateWorkflow(workflow)).toThrow('linkSelector');
   });
+});
+
+describe('cursor / offset / solveChallenge', () => {
+  const click = (offset: unknown) => ({
+    action: 'click' as const,
+    target: { type: 'css' as const, value: '#a' },
+    options: { offset } as unknown as WorkflowAction['options'],
+  });
+
+  it('accepts solveChallenge with cursor', () => {
+    expect(() =>
+      validateWorkflow({
+        version: '1',
+        cursor: 'ghost',
+        actions: [{ action: 'solveChallenge' }],
+      }),
+    ).not.toThrow();
+  });
+
+  it('rejects solveChallenge without cursor', () => {
+    expect(() =>
+      validateWorkflow({
+        version: '1',
+        actions: [{ action: 'solveChallenge' }],
+      }),
+    ).toThrow('solveChallenge requires workflow.cursor');
+  });
+
+  it('rejects offset without cursor', () => {
+    expect(() =>
+      validateWorkflow({
+        version: '1',
+        actions: [click({ x: 1, y: 1 })],
+      }),
+    ).toThrow('offset requires workflow.cursor');
+  });
+
+  it.each([[{ x: 'left', y: 1 }], [{ x: 1 }], [{ x: NaN, y: 1 }], ['center']])(
+    'rejects bad offset %p',
+    (offset) => {
+      expect(() =>
+        validateWorkflow({
+          version: '1',
+          cursor: 'ghost',
+          actions: [click(offset)],
+        }),
+      ).toThrow("offset.x and offset.y must be finite numbers or 'center'");
+    },
+  );
+
+  it('accepts center / numeric offset', () => {
+    expect(() =>
+      validateWorkflow({
+        version: '1',
+        cursor: 'ghost',
+        actions: [click({ x: 30, y: 'center' })],
+      }),
+    ).not.toThrow();
+  });
+
+  it.each([['mouse'], [{ type: 'human' }], [{ type: 'ghost', moveSpeed: -1 }]])(
+    'rejects bad cursor %p',
+    (cursor) => {
+      expect(() =>
+        validateWorkflow({
+          version: '1',
+          cursor: cursor as unknown as WorkflowDefinition['cursor'],
+          actions: [],
+        }),
+      ).toThrow('Invalid cursor');
+    },
+  );
 });
 
 describe('extractPatterns action validation', () => {
